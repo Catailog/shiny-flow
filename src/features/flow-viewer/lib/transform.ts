@@ -11,6 +11,7 @@ export function graphToFlow(graph: FlowGraph): { nodes: Node[]; edges: Edge[] } 
       label: n.label,
       route: n.id,
       isDeadEnd: n.isDeadEnd,
+      screenshot: n.screenshot,
     },
   }));
 

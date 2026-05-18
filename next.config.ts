@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    dangerouslyAllowSVG: true,
+    // base64 data URL 이미지 허용
+    unoptimized: true,
+  },
 };
 
 export default nextConfig;
