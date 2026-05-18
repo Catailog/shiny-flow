@@ -14,13 +14,13 @@ export function buildGraph(
     isDeadEnd: false,
   }));
 
-  // source를 파일 경로 → 라우트로 매핑
-  const fileToRoute = new Map(routes.map((r) => [r.filePath, r.route]));
+  // source를 파일 경로 → 라우트로 매핑 (경로 구분자 정규화 후 비교)
+  const fileToRoute = new Map(routes.map((r) => [normalizePath(r.filePath), r.route]));
 
   const edges: FlowEdge[] = rawEdges
     .map((edge) => ({
       ...edge,
-      source: fileToRoute.get(edge.sourceFile) ?? inferRouteFromPath(edge.sourceFile),
+      source: fileToRoute.get(normalizePath(edge.sourceFile)) ?? inferRouteFromPath(edge.sourceFile),
     }))
     .filter((edge) => {
       // source와 target이 모두 알려진 라우트여야 함
@@ -53,6 +53,10 @@ export function buildGraph(
     analyzedAt: new Date().toISOString(),
     projectPath,
   };
+}
+
+function normalizePath(filePath: string): string {
+  return filePath.replace(/\\/g, '/');
 }
 
 function routeToLabel(route: string): string {
