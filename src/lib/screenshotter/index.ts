@@ -10,6 +10,7 @@ export type ScreenshotOptions = {
   routes: string[];
   viewportWidth?: number;
   viewportHeight?: number;
+  deviceScaleFactor?: number;
   waitUntil?: 'load' | 'networkidle' | 'domcontentloaded';
   timeoutMs?: number;
 };
@@ -43,6 +44,7 @@ export async function captureScreenshots({
   routes,
   viewportWidth = 1280,
   viewportHeight = 800,
+  deviceScaleFactor = 2,
   waitUntil = 'networkidle',
   timeoutMs = 10000,
 }: ScreenshotOptions): Promise<ScreenshotResult[]> {
@@ -52,7 +54,8 @@ export async function captureScreenshots({
   const results: ScreenshotResult[] = [];
 
   try {
-    const page = await browser.newPage();
+    const context = await browser.newContext({ deviceScaleFactor });
+    const page = await context.newPage();
     await page.setViewportSize({ width: viewportWidth, height: viewportHeight });
 
     for (const route of routes) {
