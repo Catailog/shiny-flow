@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 type Props = {
   onAnalyze: (path: string) => void;
@@ -19,13 +20,12 @@ export function ProjectInput({ onAnalyze, isLoading }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full max-w-2xl gap-2">
-      <input
-        type="text"
+      <Input
         value={path}
         onChange={(e) => setPath(e.target.value)}
         placeholder="Next.js 프로젝트 절대 경로 (예: C:/Users/me/my-project)"
-        className="border-border bg-background text-foreground placeholder:text-muted-foreground focus:ring-brand-primary flex-1 rounded-lg border px-4 py-2 text-sm outline-none focus:ring-2"
         disabled={isLoading}
+        className="flex-1"
       />
       <Button type="submit" disabled={isLoading || !path.trim()}>
         {isLoading ? '분석 중...' : '분석'}

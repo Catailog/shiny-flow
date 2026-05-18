@@ -48,10 +48,11 @@ export function FlowViewer({ graph }: Props) {
         fitView
       >
         <Background />
-        <Controls />
+        <Controls style={{ bottom: 48 }} />
         <MiniMap
           nodeColor={(node) => (node.data?.isDeadEnd ? '#D4A373' : '#708A70')}
           maskColor="rgba(244,247,244,0.7)"
+          className="rounded-lg border border-border shadow-sm"
         />
       </ReactFlow>
     </div>
