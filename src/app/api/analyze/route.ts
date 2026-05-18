@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { analyzeProject } from '@/lib/analyzer';
-import { captureScreenshots } from '@/lib/screenshotter';
+import { ServerUnavailableError, captureScreenshots } from '@/lib/screenshotter';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -39,6 +39,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(graph);
   } catch (err) {
+    if (err instanceof ServerUnavailableError) {
+      return NextResponse.json({ error: err.message }, { status: 503 });
+    }
     const message = err instanceof Error ? err.message : '알 수 없는 오류';
     return NextResponse.json({ error: message }, { status: 500 });
   }

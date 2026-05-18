@@ -14,6 +14,30 @@ export type ScreenshotOptions = {
   timeoutMs?: number;
 };
 
+export class ServerUnavailableError extends Error {
+  constructor(baseUrl: string) {
+    super(`${baseUrl} 에 서버가 응답하지 않습니다. dev server가 실행 중인지 확인해주세요.`);
+    this.name = 'ServerUnavailableError';
+  }
+}
+
+async function checkServerAvailable(baseUrl: string, timeoutMs: number): Promise<void> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(baseUrl, { signal: controller.signal });
+    if (!res.ok && res.status >= 500) {
+      throw new ServerUnavailableError(baseUrl);
+    }
+  } catch (err) {
+    if (err instanceof ServerUnavailableError) throw err;
+    throw new ServerUnavailableError(baseUrl);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function captureScreenshots({
   baseUrl,
   routes,
@@ -22,6 +46,8 @@ export async function captureScreenshots({
   waitUntil = 'networkidle',
   timeoutMs = 10000,
 }: ScreenshotOptions): Promise<ScreenshotResult[]> {
+  await checkServerAvailable(baseUrl, 5000);
+
   const browser = await chromium.launch();
   const results: ScreenshotResult[] = [];
 
