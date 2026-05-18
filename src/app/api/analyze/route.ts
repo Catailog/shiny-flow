@@ -13,6 +13,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'path 파라미터가 필요합니다.' }, { status: 400 });
   }
 
+  // 백슬래시를 슬래시로 정규화 (Windows 경로 URL 입력 대응)
+  const normalizedPath = projectPath.replace(/\\/g, '/');
+
   if (screenshot && !baseUrl) {
     return NextResponse.json(
       { error: 'screenshot=true 사용 시 baseUrl 파라미터가 필요합니다.' },
@@ -21,7 +24,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const graph = await analyzeProject(projectPath);
+    const graph = await analyzeProject(normalizedPath);
 
     if (screenshot && baseUrl) {
       const routes = graph.nodes.map((n) => n.id);
