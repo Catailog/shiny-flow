@@ -63,9 +63,13 @@ export function FlowNode({ data }: Props) {
 
       {src && (
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="max-w-5xl p-0">
+          <DialogContent className="max-h-[90vh] w-auto max-w-[90vw] p-0">
             <DialogTitle className="sr-only">{data.label} 스크린샷</DialogTitle>
-            <img src={src} alt={data.label} className="w-full rounded-lg" />
+            <img
+              src={src}
+              alt={data.label}
+              className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+            />
           </DialogContent>
         </Dialog>
       )}
