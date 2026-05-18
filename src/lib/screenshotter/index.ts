@@ -63,7 +63,7 @@ export async function captureScreenshots({
         const url = `${baseUrl.replace(/\/$/, '')}${route}`;
         await page.goto(url, { waitUntil, timeout: timeoutMs });
 
-        const buffer = await page.screenshot({ type: 'png' });
+        const buffer = await page.screenshot({ type: 'png', fullPage: true });
         results.push({
           route,
           imageBase64: buffer.toString('base64'),

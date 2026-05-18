@@ -1,16 +1,18 @@
 import dagre from 'dagre';
 import type { Edge, Node } from '@xyflow/react';
 
-const NODE_WIDTH = 180;
-const NODE_HEIGHT = 60;
+export const NODE_WIDTH = 280;
+export const NODE_HEIGHT = 600; // 측정 전 초기 추정값
 
 export function applyDagreLayout(nodes: Node[], edges: Edge[]): Node[] {
   const graph = new dagre.graphlib.Graph();
   graph.setDefaultEdgeLabel(() => ({}));
-  graph.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 80 });
+  graph.setGraph({ rankdir: 'TB', nodesep: 80, ranksep: 100 });
 
   for (const node of nodes) {
-    graph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    const width = node.measured?.width ?? NODE_WIDTH;
+    const height = node.measured?.height ?? NODE_HEIGHT;
+    graph.setNode(node.id, { width, height });
   }
 
   for (const edge of edges) {
@@ -20,10 +22,12 @@ export function applyDagreLayout(nodes: Node[], edges: Edge[]): Node[] {
   dagre.layout(graph);
 
   return nodes.map((node) => {
+    const width = node.measured?.width ?? NODE_WIDTH;
+    const height = node.measured?.height ?? NODE_HEIGHT;
     const { x, y } = graph.node(node.id);
     return {
       ...node,
-      position: { x: x - NODE_WIDTH / 2, y: y - NODE_HEIGHT / 2 },
+      position: { x: x - width / 2, y: y - height / 2 },
     };
   });
 }

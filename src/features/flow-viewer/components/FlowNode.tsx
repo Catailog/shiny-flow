@@ -2,9 +2,7 @@
 
 import { useState } from 'react';
 
-import Image from 'next/image';
-
-import { Handle, Position } from '@xyflow/react';
+import { Handle, NodeToolbar, Position } from '@xyflow/react';
 
 import {
   ContextMenu,
@@ -30,45 +28,50 @@ export function FlowNode({ data }: Props) {
 
   return (
     <>
+      <NodeToolbar position={Position.Top} align="start" isVisible offset={6}>
+        <span className="cursor-default select-none text-sm font-medium text-brand-dark">{data.route}</span>
+      </NodeToolbar>
+
       <div
         className={cn(
-          'flex min-w-[180px] flex-col overflow-hidden rounded-lg border shadow-sm',
+          'flex w-[280px] flex-col overflow-hidden rounded-lg border shadow-sm',
           data.isDeadEnd
-            ? 'border-brand-accent/60 bg-brand-accent/10 text-brand-dark'
-            : 'border-brand-secondary bg-brand-light text-brand-dark',
+            ? 'border-brand-accent/60 bg-brand-accent/10'
+            : 'border-brand-secondary bg-brand-light',
         )}
+        onDoubleClick={() => { if (src) setOpen(true); }}
       >
         {src && (
           <ContextMenu>
             <ContextMenuTrigger>
-              <div className="relative h-[100px] w-full cursor-context-menu border-b border-inherit">
-                <Image src={src} alt={data.label} fill className="object-cover object-top" />
-              </div>
+              <img
+                src={src}
+                alt={data.label}
+                className="block w-full cursor-context-menu"
+              />
             </ContextMenuTrigger>
             <ContextMenuContent>
               <ContextMenuItem onClick={() => setOpen(true)}>크게 보기</ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
         )}
-        <div className="flex flex-col px-4 py-3">
-          <span className="text-sm font-semibold">{data.label}</span>
-          <span className="text-muted-foreground mt-0.5 text-xs">{data.route}</span>
-          {data.isDeadEnd && (
-            <span className="text-brand-accent mt-1 text-xs font-medium">dead-end</span>
-          )}
-        </div>
+        {!src && (
+          <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+            스크린샷 없음
+          </div>
+        )}
         <Handle type="target" position={Position.Top} className="opacity-0" />
         <Handle type="source" position={Position.Bottom} className="opacity-0" />
       </div>
 
       {src && (
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="max-h-[90vh] w-auto max-w-[90vw] p-0">
+          <DialogContent className="w-auto max-w-[90vw] sm:max-w-[90vw] max-h-[90vh] overflow-hidden p-0 gap-0">
             <DialogTitle className="sr-only">{data.label} 스크린샷</DialogTitle>
             <img
               src={src}
               alt={data.label}
-              className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+              className="block max-h-[90vh] max-w-[90vw] object-contain rounded-lg"
             />
           </DialogContent>
         </Dialog>

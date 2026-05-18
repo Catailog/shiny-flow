@@ -17,6 +17,7 @@ export function graphToFlow(graph: FlowGraph): { nodes: Node[]; edges: Edge[] } 
 
   const edges: Edge[] = graph.edges.map((e) => ({
     id: e.id,
+    type: 'flowEdge',
     source: e.source,
     target: e.target,
     label: e.label ?? e.trigger,
