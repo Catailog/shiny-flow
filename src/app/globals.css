@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -75,40 +75,40 @@
 @layer base {
   :root {
     /* ── 브랜드 팔레트 (단일 출처) ───────────── */
-    --brand-primary:   #708A70;
-    --brand-secondary: #A3B5A3;
-    --brand-accent:    #D4A373;
-    --brand-dark:      #2C3531;
-    --brand-light:     #F4F7F4;
+    --brand-primary: #708a70;
+    --brand-secondary: #a3b5a3;
+    --brand-accent: #d4a373;
+    --brand-dark: #2c3531;
+    --brand-light: #f4f7f4;
 
     /* ── 상태 색상 (관례 준수) ───────────────── */
-    --success:            #4A7C59; /* 브랜드 그린 계열 */
-    --success-foreground: #F4F7F4;
-    --warning:            #B45309; /* amber-700 */
-    --warning-foreground: #FFF7ED;
-    --info:               #1D4ED8; /* blue-700 */
-    --info-foreground:    #EFF6FF;
+    --success: #4a7c59; /* 브랜드 그린 계열 */
+    --success-foreground: #f4f7f4;
+    --warning: #b45309; /* amber-700 */
+    --warning-foreground: #fff7ed;
+    --info: #1d4ed8; /* blue-700 */
+    --info-foreground: #eff6ff;
 
     /* ── shadcn 시맨틱 토큰 (브랜드 참조) ────── */
-    --background:         var(--brand-light);
-    --foreground:         var(--brand-dark);
-    --card:               var(--brand-light);
-    --card-foreground:    var(--brand-dark);
-    --popover:            var(--brand-light);
+    --background: var(--brand-light);
+    --foreground: var(--brand-dark);
+    --card: var(--brand-light);
+    --card-foreground: var(--brand-dark);
+    --popover: var(--brand-light);
     --popover-foreground: var(--brand-dark);
-    --primary:            var(--brand-primary);
+    --primary: var(--brand-primary);
     --primary-foreground: var(--brand-light);
-    --secondary:          var(--brand-secondary);
+    --secondary: var(--brand-secondary);
     --secondary-foreground: var(--brand-dark);
-    --muted:              var(--brand-secondary);
-    --muted-foreground:   var(--brand-dark);
-    --accent:             var(--brand-accent);
-    --accent-foreground:  var(--brand-dark);
-    --destructive:        oklch(0.577 0.245 27.325);
-    --border:             var(--brand-secondary);
-    --input:              var(--brand-secondary);
-    --ring:               var(--brand-primary);
-    --radius:             0.625rem;
+    --muted: var(--brand-secondary);
+    --muted-foreground: var(--brand-dark);
+    --accent: var(--brand-accent);
+    --accent-foreground: var(--brand-dark);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: var(--brand-secondary);
+    --input: var(--brand-secondary);
+    --ring: var(--brand-primary);
+    --radius: 0.625rem;
 
     /* chart */
     --chart-1: var(--brand-primary);
@@ -118,43 +118,43 @@
     --chart-5: var(--warning);
 
     /* sidebar */
-    --sidebar:                    var(--brand-light);
-    --sidebar-foreground:         var(--brand-dark);
-    --sidebar-primary:            var(--brand-primary);
+    --sidebar: var(--brand-light);
+    --sidebar-foreground: var(--brand-dark);
+    --sidebar-primary: var(--brand-primary);
     --sidebar-primary-foreground: var(--brand-light);
-    --sidebar-accent:             var(--brand-accent);
-    --sidebar-accent-foreground:  var(--brand-dark);
-    --sidebar-border:             var(--brand-secondary);
-    --sidebar-ring:               var(--brand-primary);
+    --sidebar-accent: var(--brand-accent);
+    --sidebar-accent-foreground: var(--brand-dark);
+    --sidebar-border: var(--brand-secondary);
+    --sidebar-ring: var(--brand-primary);
   }
 
   .dark {
-    --background:         #1A2120;
-    --foreground:         var(--brand-light);
-    --card:               #243029;
-    --card-foreground:    var(--brand-light);
-    --popover:            #243029;
+    --background: #1a2120;
+    --foreground: var(--brand-light);
+    --card: #243029;
+    --card-foreground: var(--brand-light);
+    --popover: #243029;
     --popover-foreground: var(--brand-light);
-    --primary:            var(--brand-secondary);
+    --primary: var(--brand-secondary);
     --primary-foreground: var(--brand-dark);
-    --secondary:          #2E3D35;
+    --secondary: #2e3d35;
     --secondary-foreground: var(--brand-light);
-    --muted:              #2E3D35;
-    --muted-foreground:   var(--brand-secondary);
-    --accent:             var(--brand-accent);
-    --accent-foreground:  var(--brand-dark);
-    --destructive:        oklch(0.704 0.191 22.216);
-    --border:             oklch(1 0 0 / 10%);
-    --input:              oklch(1 0 0 / 15%);
-    --ring:               var(--brand-primary);
+    --muted: #2e3d35;
+    --muted-foreground: var(--brand-secondary);
+    --accent: var(--brand-accent);
+    --accent-foreground: var(--brand-dark);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: var(--brand-primary);
 
     /* status (dark) */
-    --success:            #5A9E6F;
-    --success-foreground: #1A2120;
-    --warning:            #D97706;
-    --warning-foreground: #1A2120;
-    --info:               #3B82F6;
-    --info-foreground:    #1A2120;
+    --success: #5a9e6f;
+    --success-foreground: #1a2120;
+    --warning: #d97706;
+    --warning-foreground: #1a2120;
+    --info: #3b82f6;
+    --info-foreground: #1a2120;
 
     /* chart */
     --chart-1: var(--brand-secondary);
@@ -164,14 +164,14 @@
     --chart-5: var(--warning);
 
     /* sidebar */
-    --sidebar:                    #1A2120;
-    --sidebar-foreground:         var(--brand-light);
-    --sidebar-primary:            var(--brand-primary);
+    --sidebar: #1a2120;
+    --sidebar-foreground: var(--brand-light);
+    --sidebar-primary: var(--brand-primary);
     --sidebar-primary-foreground: var(--brand-light);
-    --sidebar-accent:             var(--brand-accent);
-    --sidebar-accent-foreground:  var(--brand-dark);
-    --sidebar-border:             oklch(1 0 0 / 10%);
-    --sidebar-ring:               var(--brand-primary);
+    --sidebar-accent: var(--brand-accent);
+    --sidebar-accent-foreground: var(--brand-dark);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: var(--brand-primary);
   }
 
   * {
@@ -183,4 +183,13 @@
   html {
     @apply font-sans;
   }
+}
+
+/* ── TipTap placeholder (pseudo-element, Tailwind으로 표현 불가) ── */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  pointer-events: none;
+  float: left;
+  height: 0;
 }

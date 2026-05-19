@@ -2,11 +2,18 @@
 
 import {
   BaseEdge,
+  type Edge,
   EdgeLabelRenderer,
+  type EdgeProps,
   getBezierPath,
   useStore,
-  type EdgeProps,
 } from '@xyflow/react';
+
+export type FlowEdgeData = {
+  comment?: string;
+};
+
+type Props = EdgeProps<Edge<FlowEdgeData>>;
 
 export function FlowEdge({
   id,
@@ -17,11 +24,13 @@ export function FlowEdge({
   sourcePosition,
   targetPosition,
   label,
+  data,
   markerEnd,
   markerStart,
   style,
-}: EdgeProps) {
+}: Props) {
   const zoom = useStore((s) => s.transform[2]);
+
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
@@ -31,6 +40,8 @@ export function FlowEdge({
     targetPosition,
   });
 
+  const comment = data?.comment ?? (label ? String(label) : undefined);
+
   return (
     <>
       <BaseEdge
@@ -39,18 +50,21 @@ export function FlowEdge({
         markerEnd={markerEnd}
         markerStart={markerStart}
         style={{ ...style, strokeWidth: 1.5 / zoom }}
+        interactionWidth={20 / zoom}
       />
-      {label && (
+      {comment && (
         <EdgeLabelRenderer>
           <div
-            className="nodrag nopan rounded-full border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600 shadow-sm"
+            className="nodrag nopan pointer-events-none"
             style={{
               position: 'absolute',
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) scale(${1 / zoom})`,
-              pointerEvents: 'none',
+              zIndex: 10,
             }}
           >
-            {String(label)}
+            <div className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600 shadow-sm">
+              {comment}
+            </div>
           </div>
         </EdgeLabelRenderer>
       )}
