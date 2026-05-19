@@ -1,6 +1,6 @@
 'use client';
 
-import { type Node, type NodeProps, NodeToolbar, Position, useReactFlow } from '@xyflow/react';
+import { type Node, type NodeProps, NodeResizer, NodeToolbar, Position } from '@xyflow/react';
 
 import { cn } from '@/lib/utils';
 
@@ -13,9 +13,7 @@ export type GroupNodeData = {
 
 type Props = NodeProps<Node<GroupNodeData>>;
 
-export function FlowGroupNode({ id, data }: Props) {
-  const { getNode } = useReactFlow();
-  const nodeStyle = getNode(id)?.style;
+export function FlowGroupNode({ id, data, width, height, selected }: Props) {
   const colorStyle = GROUP_COLOR_STYLES[data.color] ?? GROUP_COLOR_STYLES.gray;
 
   return (
@@ -26,8 +24,10 @@ export function FlowGroupNode({ id, data }: Props) {
         </span>
       </NodeToolbar>
 
+      <NodeResizer isVisible={selected} minWidth={120} minHeight={80} />
+
       <div
-        style={{ width: nodeStyle?.width, height: nodeStyle?.height }}
+        style={{ width, height }}
         className={cn('rounded-2xl border-2 border-dashed', colorStyle.border, colorStyle.bg)}
       />
     </>

@@ -390,7 +390,7 @@ function GroupCreateDialog({
                   className={cn(
                     'h-6 w-6 rounded-full border-2 p-0 transition-transform',
                     s.bg.replace('/70', ''),
-                    color === colorValue ? `${s.border} scale-125` : 'border-transparent',
+                    color === colorValue ? `${s.border} scale-125` : 'border-gray-300',
                   )}
                 />
               );
@@ -546,6 +546,72 @@ export function FlowViewer({ graph }: Props) {
     [collapsedIds, toggleCollapse, hasChildren, hiddenCount],
   );
 
+  // --- Drag into group ---
+  const handleNodeDragStop = useCallback(
+    (_e: React.MouseEvent, draggedNode: Node) => {
+      if (draggedNode.type !== 'flowNode') return;
+
+      setNodes((prev) => {
+        const groups = prev.filter((n) => n.type === 'groupNode');
+        const nodeW = draggedNode.measured?.width ?? 280;
+        const nodeH = draggedNode.measured?.height ?? 100;
+
+        // absolute position of dragged node
+        const absX = draggedNode.parentId
+          ? (prev.find((n) => n.id === draggedNode.parentId)?.position.x ?? 0) +
+            draggedNode.position.x
+          : draggedNode.position.x;
+        const absY = draggedNode.parentId
+          ? (prev.find((n) => n.id === draggedNode.parentId)?.position.y ?? 0) +
+            draggedNode.position.y
+          : draggedNode.position.y;
+        const centerX = absX + nodeW / 2;
+        const centerY = absY + nodeH / 2;
+
+        const targetGroup = groups.find((g) => {
+          const gW = g.width ?? (g.style?.width as number | undefined) ?? 0;
+          const gH = g.height ?? (g.style?.height as number | undefined) ?? 0;
+          return (
+            centerX >= g.position.x &&
+            centerX <= g.position.x + gW &&
+            centerY >= g.position.y &&
+            centerY <= g.position.y + gH
+          );
+        });
+
+        return prev.map((n) => {
+          if (n.id !== draggedNode.id) return n;
+
+          if (targetGroup) {
+            if (n.parentId === targetGroup.id) return n;
+            return {
+              ...n,
+              parentId: targetGroup.id,
+              extent: 'parent' as const,
+              position: {
+                x: absX - targetGroup.position.x,
+                y: absY - targetGroup.position.y,
+              },
+            };
+          }
+
+          if (n.parentId) {
+            // dragged out of group
+            return {
+              ...n,
+              parentId: undefined,
+              extent: undefined,
+              position: { x: absX, y: absY },
+            };
+          }
+
+          return n;
+        });
+      });
+    },
+    [setNodes],
+  );
+
   // --- Context menu & dialogs ---
   const [contextMenuState, setContextMenuState] = useState<ContextMenuState>(null);
   const [dialogRequest, setDialogRequest] = useState<DialogRequest | null>(null);
@@ -608,6 +674,7 @@ export function FlowViewer({ graph }: Props) {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onNodeDragStop={handleNodeDragStop}
             onNodeContextMenu={handleNodeContextMenu}
             onEdgeContextMenu={handleEdgeContextMenu}
             onPaneContextMenu={handlePaneContextMenu}
