@@ -14,19 +14,7 @@ export function buildGraph(
     isDeadEnd: false,
   }));
 
-  // source를 파일 경로 → 라우트로 매핑 (경로 구분자 정규화 후 비교)
-  const fileToRoute = new Map(routes.map((r) => [normalizePath(r.filePath), r.route]));
-
-  const edges: FlowEdge[] = rawEdges
-    .map((edge) => ({
-      ...edge,
-      source: fileToRoute.get(normalizePath(edge.sourceFile)) ?? inferRouteFromPath(edge.sourceFile),
-    }))
-    .filter((edge) => {
-      // source와 target이 모두 알려진 라우트여야 함
-      // target이 없는 경우도 포함 (외부 링크 제외)
-      return edge.source && edge.target.startsWith('/');
-    });
+  const edges: FlowEdge[] = rawEdges.filter((edge) => edge.source && edge.target.startsWith('/'));
 
   // dead-end 탐지: 나가는 edge가 없는 노드
   const sourcesWithOutgoing = new Set(edges.map((e) => e.source));
@@ -34,7 +22,7 @@ export function buildGraph(
     node.isDeadEnd = !sourcesWithOutgoing.has(node.id);
   }
 
-  // 알려지지 않은 target이 있으면 노드로 추가 (동적 라우트 등)
+  // 알려지지 않은 target → 노드로 추가 (동적 라우트 등)
   const knownTargets = new Set(edges.map((e) => e.target));
   for (const target of knownTargets) {
     if (!routeSet.has(target)) {
@@ -55,10 +43,6 @@ export function buildGraph(
   };
 }
 
-function normalizePath(filePath: string): string {
-  return filePath.replace(/\\/g, '/');
-}
-
 function routeToLabel(route: string): string {
   if (route === '/') return 'Home';
   return route
@@ -66,11 +50,4 @@ function routeToLabel(route: string): string {
     .filter(Boolean)
     .map((seg) => seg.charAt(0).toUpperCase() + seg.slice(1))
     .join(' / ');
-}
-
-function inferRouteFromPath(filePath: string): string {
-  const match = filePath.match(/[/\\]app[/\\](.*)[/\\]page\./);
-  if (!match) return '/unknown';
-  const segments = match[1].split(/[/\\]/).filter((s) => !s.startsWith('(') && !s.startsWith('@'));
-  return '/' + segments.join('/');
 }

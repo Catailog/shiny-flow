@@ -7,6 +7,36 @@ export type RouteEntry = {
 };
 
 const PAGE_FILES = ['page.tsx', 'page.ts', 'page.jsx', 'page.js'];
+const LAYOUT_FILES = ['layout.tsx', 'layout.ts', 'layout.jsx', 'layout.js'];
+
+export function scanLayouts(projectPath: string): RouteEntry[] {
+  const appDir = path.join(projectPath, 'src', 'app');
+  const fallbackAppDir = path.join(projectPath, 'app');
+  const resolvedAppDir = fs.existsSync(appDir) ? appDir : fallbackAppDir;
+  if (!fs.existsSync(resolvedAppDir)) return [];
+  return collectLayouts(resolvedAppDir, resolvedAppDir);
+}
+
+function collectLayouts(appDir: string, currentDir: string): RouteEntry[] {
+  const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+  const results: RouteEntry[] = [];
+
+  const layoutFile = entries.find((e) => e.isFile() && LAYOUT_FILES.includes(e.name));
+  if (layoutFile) {
+    results.push({
+      route: dirToRoute(appDir, currentDir),
+      filePath: path.join(currentDir, layoutFile.name),
+    });
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name.startsWith('_')) continue;
+    results.push(...collectLayouts(appDir, path.join(currentDir, entry.name)));
+  }
+
+  return results;
+}
 
 export function scanRoutes(projectPath: string): RouteEntry[] {
   const appDir = path.join(projectPath, 'src', 'app');
@@ -23,9 +53,7 @@ function collectRoutes(appDir: string, currentDir: string): RouteEntry[] {
   const entries = fs.readdirSync(currentDir, { withFileTypes: true });
   const results: RouteEntry[] = [];
 
-  const pageFile = entries.find(
-    (e) => e.isFile() && PAGE_FILES.includes(e.name),
-  );
+  const pageFile = entries.find((e) => e.isFile() && PAGE_FILES.includes(e.name));
 
   if (pageFile) {
     const absoluteFilePath = path.join(currentDir, pageFile.name);
