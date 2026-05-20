@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
-type CookiesAuthInput = {
+export type CookiesAuthInput = {
   type: 'cookies';
   cookiesJson: string;
 };
 
-type FormAuthInput = {
+export type FormAuthInput = {
   type: 'form';
   loginUrl: string;
   usernameSelector: string;
@@ -21,7 +21,7 @@ type FormAuthInput = {
   password: string;
 };
 
-type AuthInput = CookiesAuthInput | FormAuthInput;
+export type AuthInput = CookiesAuthInput | FormAuthInput;
 type AuthType = 'none' | 'cookies' | 'form';
 
 export type AnalyzeOptions = {

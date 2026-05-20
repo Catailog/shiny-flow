@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import { FlowViewer } from '@/features/flow-viewer';
-import { type AnalyzeOptions, ProjectInput } from '@/features/project-input';
+import { type AnalyzeOptions, type AuthInput, ProjectInput } from '@/features/project-input';
 
 import type { FlowGraph } from '@/lib/analyzer';
 
@@ -15,9 +15,14 @@ type State =
 
 export default function Home() {
   const [state, setState] = useState<State>({ status: 'idle' });
+  const [screenshotOptions, setScreenshotOptions] = useState<{
+    baseUrl: string;
+    auth?: AuthInput;
+  } | null>(null);
 
   const handleAnalyze = async ({ path, screenshot, baseUrl, auth }: AnalyzeOptions) => {
     setState({ status: 'loading' });
+    setScreenshotOptions(screenshot && baseUrl ? { baseUrl, auth } : null);
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
@@ -50,7 +55,9 @@ export default function Home() {
         )}
         {state.status === 'loading' && <p className="text-sm text-muted-foreground">분석 중...</p>}
         {state.status === 'error' && <p className="text-sm text-destructive">{state.message}</p>}
-        {state.status === 'success' && <FlowViewer graph={state.graph} />}
+        {state.status === 'success' && (
+          <FlowViewer graph={state.graph} screenshotOptions={screenshotOptions} />
+        )}
       </main>
     </div>
   );

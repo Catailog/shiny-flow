@@ -1,24 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { analyzeProject } from '@/lib/analyzer';
-import { type AuthOptions, ServerUnavailableError, captureScreenshots } from '@/lib/screenshotter';
-
-type CookiesAuthBody = {
-  type: 'cookies';
-  cookiesJson: string;
-};
-
-type FormAuthBody = {
-  type: 'form';
-  loginUrl: string;
-  usernameSelector: string;
-  passwordSelector: string;
-  submitSelector: string;
-  username: string;
-  password: string;
-};
-
-type AuthBody = CookiesAuthBody | FormAuthBody;
+import {
+  type AuthBody,
+  ServerUnavailableError,
+  captureScreenshots,
+  parseAuth,
+} from '@/lib/screenshotter';
 
 type RequestBody = {
   path: string;
@@ -26,31 +14,6 @@ type RequestBody = {
   baseUrl?: string;
   auth?: AuthBody;
 };
-
-function parseAuth(auth: AuthBody): AuthOptions | undefined {
-  if (auth.type === 'cookies') {
-    try {
-      const cookies = JSON.parse(auth.cookiesJson);
-      if (!Array.isArray(cookies)) return undefined;
-      return { type: 'cookies', cookies };
-    } catch {
-      return undefined;
-    }
-  }
-  if (auth.type === 'form') {
-    const { loginUrl, usernameSelector, passwordSelector, submitSelector, username, password } =
-      auth;
-    return {
-      type: 'form',
-      loginUrl,
-      usernameSelector,
-      passwordSelector,
-      submitSelector,
-      username,
-      password,
-    } satisfies AuthOptions;
-  }
-}
 
 export async function POST(req: NextRequest) {
   let body: RequestBody;
@@ -84,11 +47,11 @@ export async function POST(req: NextRequest) {
       const parsedAuth = auth ? parseAuth(auth) : undefined;
       const screenshots = await captureScreenshots({ baseUrl, routes, auth: parsedAuth });
 
-      const screenshotMap = new Map(screenshots.map((s) => [s.route, s.imageBase64]));
-      graph.nodes = graph.nodes.map((node) => ({
-        ...node,
-        screenshot: screenshotMap.get(node.id),
-      }));
+      const screenshotMap = new Map(screenshots.map((s) => [s.route, s]));
+      graph.nodes = graph.nodes.map((node) => {
+        const s = screenshotMap.get(node.id);
+        return { ...node, screenshot: s?.imageBase64, redirected: s?.redirected };
+      });
     }
 
     return NextResponse.json(graph);

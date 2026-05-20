@@ -4,6 +4,8 @@ export type FlowNode = {
   filePath: string;
   isDeadEnd: boolean;
   screenshot?: string;
+  redirected?: boolean;
+  redirectedScreenshot?: string;
 };
 
 export type EdgeTrigger = 'link' | 'router.push' | 'redirect' | 'unknown';

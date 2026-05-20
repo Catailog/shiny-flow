@@ -22,6 +22,8 @@ import {
 import '@xyflow/react/dist/style.css';
 import { BoxSelectIcon, LockIcon, UnlockIcon } from 'lucide-react';
 
+import type { AuthInput } from '@/features/project-input';
+
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -44,6 +46,7 @@ import type { ContextMenuState } from '../lib/contextMenuTypes';
 import { applyDagreLayout } from '../lib/layout';
 import { GROUP_COLORS, GROUP_COLOR_STYLES } from '../lib/nodeColors';
 import { graphToFlow } from '../lib/transform';
+import { ScreenshotContext } from '../screenshotContext';
 import { ContextMenuController } from './ContextMenuController';
 import { FlowCommentNode } from './FlowCommentNode';
 import { FlowEdge } from './FlowEdge';
@@ -461,9 +464,12 @@ function NodeCreateDialog({
 
 // --- Main component ---
 
-type Props = { graph: FlowGraph };
+type Props = {
+  graph: FlowGraph;
+  screenshotOptions: { baseUrl: string; auth?: AuthInput } | null;
+};
 
-export function FlowViewer({ graph }: Props) {
+export function FlowViewer({ graph, screenshotOptions }: Props) {
   const { nodes: initialNodes, edges: initialEdges } = graphToFlow(graph);
   const layoutedNodes = applyDagreLayout(initialNodes, initialEdges);
 
@@ -657,131 +663,175 @@ export function FlowViewer({ graph }: Props) {
     });
   }, []);
 
+  const captureNode = useCallback(
+    async (nodeId: string, resolvedRoute: string, paramValues: Record<string, string>) => {
+      if (!screenshotOptions) return;
+      const res = await fetch('/api/screenshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          baseUrl: screenshotOptions.baseUrl,
+          route: resolvedRoute,
+          auth: screenshotOptions.auth,
+        }),
+      });
+      if (!res.ok) return;
+      const { imageBase64, redirected, redirectedImageBase64 } = await res.json();
+      setNodes((prev) =>
+        prev.map((n) => {
+          if (n.id !== nodeId) return n;
+          const oldData = n.data as FlowNodeData;
+          const redirectedScreenshot = !redirected
+            ? (redirectedImageBase64 ?? oldData.redirectedScreenshot ?? oldData.screenshot)
+            : oldData.redirectedScreenshot;
+          return {
+            ...n,
+            data: {
+              ...oldData,
+              screenshot: imageBase64,
+              redirected,
+              paramValues,
+              redirectedScreenshot,
+            },
+          };
+        }),
+      );
+    },
+    [screenshotOptions, setNodes],
+  );
+
+  const screenshotContextValue = useMemo(
+    () => ({ available: !!screenshotOptions, captureNode }),
+    [screenshotOptions, captureNode],
+  );
+
   const flowActionsValue = useMemo(() => ({ openDialog: setDialogRequest }), []);
   const nodesDraggable = !isLocked && !spacebarLocked;
 
   return (
     <FlowActionsProvider value={flowActionsValue}>
-      <CollapseContext.Provider value={collapseContext}>
-        <div
-          className="h-full w-full"
-          onContextMenu={(e) => {
-            if (!e.defaultPrevented) {
-              e.preventDefault();
-              setContextMenuState({
-                screenX: e.clientX,
-                screenY: e.clientY,
-                target: { type: 'pane' },
-              });
-            }
-          }}
-        >
-          <ReactFlow
-            nodes={displayNodes}
-            edges={displayEdges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeDrag={handleNodeDrag}
-            onNodeDragStop={handleNodeDragStop}
-            onNodeContextMenu={handleNodeContextMenu}
-            onEdgeContextMenu={handleEdgeContextMenu}
-            onPaneContextMenu={handlePaneContextMenu}
-            nodeTypes={nodeTypes}
-            edgeTypes={edgeTypes}
-            defaultEdgeOptions={defaultEdgeOptions}
-            fitView
-            minZoom={0.05}
-            maxZoom={2}
-            nodesDraggable={nodesDraggable}
-            zoomOnDoubleClick={false}
-            deleteKeyCode={['Backspace', 'Delete']}
+      <ScreenshotContext.Provider value={screenshotContextValue}>
+        <CollapseContext.Provider value={collapseContext}>
+          <div
+            className="h-full w-full"
+            onContextMenu={(e) => {
+              if (!e.defaultPrevented) {
+                e.preventDefault();
+                setContextMenuState({
+                  screenX: e.clientX,
+                  screenY: e.clientY,
+                  target: { type: 'pane' },
+                });
+              }
+            }}
           >
-            <AutoLayout edges={initialEdges} onLayout={setNodes} />
-            <Background />
-            <Controls style={{ bottom: 48 }} showInteractive={false}>
-              <ControlButton
-                onClick={() => {
-                  setIsLocked((v) => !v);
-                  setSpacebarLocked(false);
-                }}
-                title={nodesDraggable ? 'Lock (L)' : 'Unlock (L)'}
-              >
-                {nodesDraggable ? (
-                  <UnlockIcon size={12} style={{ fill: 'none' }} />
-                ) : (
-                  <LockIcon size={12} style={{ fill: 'none' }} />
-                )}
-              </ControlButton>
-              <GroupButton onOpenDialog={setDialogRequest} />
-            </Controls>
-            <MiniMap
-              nodeColor={(node) => (node.data?.isDeadEnd ? '#D4A373' : '#708A70')}
-              maskColor="rgba(244,247,244,0.7)"
-              className="rounded-lg border border-border shadow-sm"
-            />
-            <ContextMenuController
-              state={contextMenuState}
-              onClose={() => setContextMenuState(null)}
-              onOpenDialog={setDialogRequest}
-            />
-          </ReactFlow>
-        </div>
+            <ReactFlow
+              nodes={displayNodes}
+              edges={displayEdges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeDrag={handleNodeDrag}
+              onNodeDragStop={handleNodeDragStop}
+              onNodeContextMenu={handleNodeContextMenu}
+              onEdgeContextMenu={handleEdgeContextMenu}
+              onPaneContextMenu={handlePaneContextMenu}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              defaultEdgeOptions={defaultEdgeOptions}
+              fitView
+              minZoom={0.05}
+              maxZoom={2}
+              nodesDraggable={nodesDraggable}
+              zoomOnDoubleClick={false}
+              deleteKeyCode={['Backspace', 'Delete']}
+            >
+              <AutoLayout edges={initialEdges} onLayout={setNodes} />
+              <Background />
+              <Controls style={{ bottom: 48 }} showInteractive={false}>
+                <ControlButton
+                  onClick={() => {
+                    setIsLocked((v) => !v);
+                    setSpacebarLocked(false);
+                  }}
+                  title={nodesDraggable ? 'Lock (L)' : 'Unlock (L)'}
+                >
+                  {nodesDraggable ? (
+                    <UnlockIcon size={12} style={{ fill: 'none' }} />
+                  ) : (
+                    <LockIcon size={12} style={{ fill: 'none' }} />
+                  )}
+                </ControlButton>
+                <GroupButton onOpenDialog={setDialogRequest} />
+              </Controls>
+              <MiniMap
+                nodeColor={(node) => (node.data?.isDeadEnd ? '#D4A373' : '#708A70')}
+                maskColor="rgba(244,247,244,0.7)"
+                className="rounded-lg border border-border shadow-sm"
+              />
+              <ContextMenuController
+                state={contextMenuState}
+                onClose={() => setContextMenuState(null)}
+                onOpenDialog={setDialogRequest}
+              />
+            </ReactFlow>
+          </div>
 
-        {dialogRequest?.type === 'screenshot' && (
-          <ScreenshotDialog
-            src={dialogRequest.src}
-            label={dialogRequest.label}
-            onClose={() => setDialogRequest(null)}
-          />
-        )}
-        {dialogRequest?.type === 'memo' && (
-          <MemoDialog
-            nodeId={dialogRequest.nodeId}
-            nodes={nodes}
-            setNodes={setNodes}
-            onClose={() => setDialogRequest(null)}
-          />
-        )}
-        {dialogRequest?.type === 'comment' && (
-          <CommentNodeDialog
-            nodeId={dialogRequest.nodeId}
-            nodes={nodes}
-            setNodes={setNodes}
-            onClose={() => setDialogRequest(null)}
-          />
-        )}
-        {dialogRequest?.type === 'groupRename' && (
-          <GroupRenameDialog
-            nodeId={dialogRequest.nodeId}
-            nodes={nodes}
-            setNodes={setNodes}
-            onClose={() => setDialogRequest(null)}
-          />
-        )}
-        {dialogRequest?.type === 'edgeComment' && (
-          <EdgeCommentDialog
-            edgeId={dialogRequest.edgeId}
-            edges={edges}
-            setEdges={setEdges}
-            onClose={() => setDialogRequest(null)}
-          />
-        )}
-        {dialogRequest?.type === 'groupCreate' && (
-          <GroupCreateDialog
-            pendingNodes={dialogRequest.nodes}
-            setNodes={setNodes}
-            onClose={() => setDialogRequest(null)}
-          />
-        )}
-        {dialogRequest?.type === 'nodeCreate' && (
-          <NodeCreateDialog
-            pos={dialogRequest.pos}
-            setNodes={setNodes}
-            onClose={() => setDialogRequest(null)}
-          />
-        )}
-      </CollapseContext.Provider>
+          {dialogRequest?.type === 'screenshot' && (
+            <ScreenshotDialog
+              src={dialogRequest.src}
+              label={dialogRequest.label}
+              onClose={() => setDialogRequest(null)}
+            />
+          )}
+          {dialogRequest?.type === 'memo' && (
+            <MemoDialog
+              nodeId={dialogRequest.nodeId}
+              nodes={nodes}
+              setNodes={setNodes}
+              onClose={() => setDialogRequest(null)}
+            />
+          )}
+          {dialogRequest?.type === 'comment' && (
+            <CommentNodeDialog
+              nodeId={dialogRequest.nodeId}
+              nodes={nodes}
+              setNodes={setNodes}
+              onClose={() => setDialogRequest(null)}
+            />
+          )}
+          {dialogRequest?.type === 'groupRename' && (
+            <GroupRenameDialog
+              nodeId={dialogRequest.nodeId}
+              nodes={nodes}
+              setNodes={setNodes}
+              onClose={() => setDialogRequest(null)}
+            />
+          )}
+          {dialogRequest?.type === 'edgeComment' && (
+            <EdgeCommentDialog
+              edgeId={dialogRequest.edgeId}
+              edges={edges}
+              setEdges={setEdges}
+              onClose={() => setDialogRequest(null)}
+            />
+          )}
+          {dialogRequest?.type === 'groupCreate' && (
+            <GroupCreateDialog
+              pendingNodes={dialogRequest.nodes}
+              setNodes={setNodes}
+              onClose={() => setDialogRequest(null)}
+            />
+          )}
+          {dialogRequest?.type === 'nodeCreate' && (
+            <NodeCreateDialog
+              pos={dialogRequest.pos}
+              setNodes={setNodes}
+              onClose={() => setDialogRequest(null)}
+            />
+          )}
+        </CollapseContext.Provider>
+      </ScreenshotContext.Provider>
     </FlowActionsProvider>
   );
 }

@@ -1,39 +1,84 @@
 'use client';
 
+import { useState } from 'react';
+
 import { Handle, type Node, type NodeProps, NodeToolbar, Position } from '@xyflow/react';
-import { ChevronRightIcon } from 'lucide-react';
+import { CameraIcon, ChevronRightIcon, LoaderIcon, LogInIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
 import { useFlowActions } from '../actionsContext';
 import { useCollapseContext } from '../collapseContext';
 import { NODE_COLOR_STYLES } from '../lib/nodeColors';
+import { useScreenshotContext } from '../screenshotContext';
 
 export type FlowNodeData = {
   label: string;
   route: string;
   isDeadEnd: boolean;
   screenshot?: string;
+  redirected?: boolean;
+  redirectedScreenshot?: string;
+  paramValues?: Record<string, string>;
   color?: string;
   memo?: string;
 };
 
 type Props = NodeProps<Node<FlowNodeData>>;
 
+function extractParams(route: string): string[] {
+  return [...route.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]);
+}
+
 export function FlowNode({ id, data }: Props) {
   const { openDialog } = useFlowActions();
   const { collapsedIds, hasChildren, hiddenCount } = useCollapseContext();
+  const { available, captureNode } = useScreenshotContext();
   const isCollapsed = collapsedIds.has(id);
   const canCollapse = hasChildren(id);
   const hiddenChildCount = hiddenCount(id);
 
   const src = data.screenshot ? `data:image/png;base64,${data.screenshot}` : null;
+  const redirectedSrc = data.redirectedScreenshot
+    ? `data:image/png;base64,${data.redirectedScreenshot}`
+    : null;
   const colorStyle = data.color ? NODE_COLOR_STYLES[data.color] : null;
+
+  const dynamicParams = extractParams(data.route);
+  const [paramValues, setParamValues] = useState<Record<string, string>>(
+    () => data.paramValues ?? Object.fromEntries(dynamicParams.map((p) => [p, ''])),
+  );
+  const [isCapturing, setIsCapturing] = useState(false);
+
+  const handleCapture = async () => {
+    const resolvedRoute = data.route.replace(/\[([^\]]+)\]/g, (_, p) => paramValues[p] ?? p);
+    setIsCapturing(true);
+    try {
+      await captureNode(id, resolvedRoute, paramValues);
+    } finally {
+      setIsCapturing(false);
+    }
+  };
 
   return (
     <>
       <NodeToolbar position={Position.Top} align="start" isVisible offset={6}>
-        <span className="cursor-default text-sm font-medium text-brand-dark select-none">
+        <span className="flex cursor-default items-center gap-1 text-sm font-medium text-brand-dark select-none">
+          {(data.redirected || redirectedSrc) && (
+            <button
+              type="button"
+              disabled={!redirectedSrc}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (redirectedSrc)
+                  openDialog({ type: 'screenshot', src: redirectedSrc, label: data.label });
+              }}
+              className="flex cursor-pointer items-center disabled:cursor-default disabled:opacity-40"
+              title="인증 없이 접근 시 화면 보기"
+            >
+              <LogInIcon size={13} className="shrink-0 text-amber-500" />
+            </button>
+          )}
           {data.route}
         </span>
       </NodeToolbar>
@@ -46,6 +91,36 @@ export function FlowNode({ id, data }: Props) {
             : `border ${data.isDeadEnd ? 'border-brand-accent/60 bg-brand-accent/10' : 'border-brand-secondary bg-brand-light'}`,
         )}
       >
+        {available && dynamicParams.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-inherit px-3 py-2">
+            {dynamicParams.map((param) => (
+              <label key={param} className="flex items-center gap-1 text-xs text-muted-foreground">
+                <span className="shrink-0 font-mono">{param}</span>
+                <input
+                  type="text"
+                  value={paramValues[param] ?? ''}
+                  onChange={(e) => setParamValues((prev) => ({ ...prev, [param]: e.target.value }))}
+                  placeholder="값 입력"
+                  className="nodrag h-5 w-20 rounded border border-input bg-background px-1.5 text-xs focus:ring-1 focus:ring-ring focus:outline-none"
+                />
+              </label>
+            ))}
+            <button
+              type="button"
+              onClick={handleCapture}
+              disabled={isCapturing || dynamicParams.some((p) => !paramValues[p]?.trim())}
+              className="nodrag ml-auto flex h-5 items-center gap-1 rounded bg-brand-primary px-2 text-xs text-white disabled:opacity-40"
+            >
+              {isCapturing ? (
+                <LoaderIcon size={10} className="animate-spin" />
+              ) : (
+                <CameraIcon size={10} />
+              )}
+              재캡처
+            </button>
+          </div>
+        )}
+
         {src && (
           <img
             src={src}

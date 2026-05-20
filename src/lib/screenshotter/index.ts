@@ -3,6 +3,7 @@ import { chromium } from 'playwright';
 export type ScreenshotResult = {
   route: string;
   imageBase64: string;
+  redirected: boolean;
 };
 
 export type PlaywrightCookie = {
@@ -28,6 +29,44 @@ export type AuthOptions =
       username: string;
       password: string;
     };
+
+// Wire format sent from client / API body (cookiesJson is raw JSON string)
+export type AuthBody =
+  | { type: 'cookies'; cookiesJson: string }
+  | {
+      type: 'form';
+      loginUrl: string;
+      usernameSelector: string;
+      passwordSelector: string;
+      submitSelector: string;
+      username: string;
+      password: string;
+    };
+
+export function parseAuth(auth: AuthBody): AuthOptions | undefined {
+  if (auth.type === 'cookies') {
+    try {
+      const cookies = JSON.parse(auth.cookiesJson);
+      if (!Array.isArray(cookies)) return undefined;
+      return { type: 'cookies', cookies };
+    } catch {
+      return undefined;
+    }
+  }
+  if (auth.type === 'form') {
+    const { loginUrl, usernameSelector, passwordSelector, submitSelector, username, password } =
+      auth;
+    return {
+      type: 'form',
+      loginUrl,
+      usernameSelector,
+      passwordSelector,
+      submitSelector,
+      username,
+      password,
+    } satisfies AuthOptions;
+  }
+}
 
 export type ScreenshotOptions = {
   baseUrl: string;
@@ -98,8 +137,14 @@ export async function captureScreenshots({
       await page.goto(loginFullUrl, { waitUntil, timeout: timeoutMs });
       await page.fill(auth.usernameSelector, auth.username);
       await page.fill(auth.passwordSelector, auth.password);
-      await page.click(auth.submitSelector);
-      await page.waitForLoadState('networkidle', { timeout: timeoutMs }).catch(() => {});
+      const loginPageUrl = page.url();
+      await Promise.all([
+        page.waitForURL((url) => url.href !== loginPageUrl, {
+          waitUntil: 'networkidle',
+          timeout: timeoutMs,
+        }),
+        page.click(auth.submitSelector),
+      ]).catch(() => {});
     }
 
     for (const route of routes) {
@@ -107,10 +152,12 @@ export async function captureScreenshots({
         const url = `${baseUrl.replace(/\/$/, '')}${route}`;
         await page.goto(url, { waitUntil, timeout: timeoutMs });
 
+        const redirected = new URL(page.url()).pathname !== new URL(url).pathname;
         const buffer = await page.screenshot({ type: 'png', fullPage: true });
         results.push({
           route,
           imageBase64: buffer.toString('base64'),
+          redirected,
         });
       } catch {
         // 캡처 실패 시 해당 라우트는 건너뜀
