@@ -4,6 +4,7 @@ import { type Node, type NodeProps, NodeResizer, NodeToolbar, Position } from '@
 
 import { cn } from '@/lib/utils';
 
+import { useCollapseContext } from '../collapseContext';
 import { GROUP_COLOR_STYLES } from '../lib/nodeColors';
 
 export type GroupNodeData = {
@@ -15,6 +16,8 @@ type Props = NodeProps<Node<GroupNodeData>>;
 
 export function FlowGroupNode({ id, data, width, height, selected }: Props) {
   const colorStyle = GROUP_COLOR_STYLES[data.color] ?? GROUP_COLOR_STYLES.gray;
+  const { dragOverGroupId } = useCollapseContext();
+  const isDragOver = dragOverGroupId === id;
 
   return (
     <>
@@ -28,7 +31,12 @@ export function FlowGroupNode({ id, data, width, height, selected }: Props) {
 
       <div
         style={{ width, height }}
-        className={cn('rounded-2xl border-2 border-dashed', colorStyle.border, colorStyle.bg)}
+        className={cn(
+          'rounded-2xl border-2 border-dashed transition-shadow',
+          colorStyle.border,
+          colorStyle.bg,
+          isDragOver && 'ring-2 ring-blue-400 ring-offset-2',
+        )}
       />
     </>
   );

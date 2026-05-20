@@ -39,7 +39,7 @@ export function FlowCommentNode({ id, data }: Props) {
         </div>
 
         {hovered && (
-          <div className="absolute top-0 left-14 z-10 max-w-52 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-lg">
+          <div className="absolute top-0 left-14 z-10 w-max max-w-52 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-lg">
             {hasContent ? (
               <p className="whitespace-pre-wrap text-gray-700">{data.content}</p>
             ) : (

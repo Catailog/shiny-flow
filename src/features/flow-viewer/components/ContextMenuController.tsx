@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useReactFlow, useStore } from '@xyflow/react';
@@ -33,6 +33,19 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
     s.nodes.filter((n) => n.selected && n.type === 'flowNode'),
   );
   const [colorSubOpen, setColorSubOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!state) return;
+    const handleMouseDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setColorSubOpen(false);
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleMouseDown, true);
+    return () => document.removeEventListener('mousedown', handleMouseDown, true);
+  }, [state, onClose]);
 
   if (!state) return null;
 
@@ -337,16 +350,14 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
   }
 
   return createPortal(
-    <>
-      <div className="fixed inset-0 z-40" onClick={close} />
-      <div
-        className="fixed z-50 min-w-[8rem] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
-        style={{ left: screenX, top: screenY }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {items}
-      </div>
-    </>,
+    <div
+      ref={menuRef}
+      className="fixed z-50 min-w-[8rem] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+      style={{ left: screenX, top: screenY }}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {items}
+    </div>,
     document.body,
   );
 }

@@ -5,6 +5,7 @@ type CollapseContextValue = {
   toggleCollapse: (id: string) => void;
   hasChildren: (id: string) => boolean;
   hiddenCount: (id: string) => number;
+  dragOverGroupId: string | null;
 };
 
 export const CollapseContext = createContext<CollapseContextValue>({
@@ -12,6 +13,7 @@ export const CollapseContext = createContext<CollapseContextValue>({
   toggleCollapse: () => {},
   hasChildren: () => false,
   hiddenCount: () => 0,
+  dragOverGroupId: null,
 });
 
 export const useCollapseContext = () => useContext(CollapseContext);

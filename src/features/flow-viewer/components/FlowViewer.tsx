@@ -352,7 +352,7 @@ function GroupCreateDialog({
         return {
           ...n,
           parentId: groupId,
-          extent: 'parent' as const,
+          extent: undefined,
           position: { x: n.position.x - x, y: n.position.y - y },
         };
       });
@@ -541,43 +541,57 @@ export function FlowViewer({ graph }: Props) {
       })),
     [edges, hiddenIds],
   );
+  // --- Drag into group ---
+  const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null);
+
   const collapseContext = useMemo(
-    () => ({ collapsedIds, toggleCollapse, hasChildren, hiddenCount }),
-    [collapsedIds, toggleCollapse, hasChildren, hiddenCount],
+    () => ({ collapsedIds, toggleCollapse, hasChildren, hiddenCount, dragOverGroupId }),
+    [collapsedIds, toggleCollapse, hasChildren, hiddenCount, dragOverGroupId],
   );
 
-  // --- Drag into group ---
+  const findTargetGroup = useCallback((draggedNode: Node, allNodes: Node[]) => {
+    const groups = allNodes.filter((n) => n.type === 'groupNode');
+    const nodeW = draggedNode.measured?.width ?? 280;
+    const nodeH = draggedNode.measured?.height ?? 100;
+    const parent = draggedNode.parentId
+      ? allNodes.find((n) => n.id === draggedNode.parentId)
+      : null;
+    const absX = parent ? parent.position.x + draggedNode.position.x : draggedNode.position.x;
+    const absY = parent ? parent.position.y + draggedNode.position.y : draggedNode.position.y;
+    const centerX = absX + nodeW / 2;
+    const centerY = absY + nodeH / 2;
+    return {
+      group: groups.find((g) => {
+        const gW = g.width ?? (g.style?.width as number | undefined) ?? 0;
+        const gH = g.height ?? (g.style?.height as number | undefined) ?? 0;
+        return (
+          centerX >= g.position.x &&
+          centerX <= g.position.x + gW &&
+          centerY >= g.position.y &&
+          centerY <= g.position.y + gH
+        );
+      }),
+      absX,
+      absY,
+    };
+  }, []);
+
+  const handleNodeDrag = useCallback(
+    (_e: React.MouseEvent, draggedNode: Node) => {
+      if (draggedNode.type !== 'flowNode') return;
+      const { group } = findTargetGroup(draggedNode, nodes);
+      setDragOverGroupId(group?.id ?? null);
+    },
+    [nodes, findTargetGroup],
+  );
+
   const handleNodeDragStop = useCallback(
     (_e: React.MouseEvent, draggedNode: Node) => {
+      setDragOverGroupId(null);
       if (draggedNode.type !== 'flowNode') return;
 
       setNodes((prev) => {
-        const groups = prev.filter((n) => n.type === 'groupNode');
-        const nodeW = draggedNode.measured?.width ?? 280;
-        const nodeH = draggedNode.measured?.height ?? 100;
-
-        // absolute position of dragged node
-        const absX = draggedNode.parentId
-          ? (prev.find((n) => n.id === draggedNode.parentId)?.position.x ?? 0) +
-            draggedNode.position.x
-          : draggedNode.position.x;
-        const absY = draggedNode.parentId
-          ? (prev.find((n) => n.id === draggedNode.parentId)?.position.y ?? 0) +
-            draggedNode.position.y
-          : draggedNode.position.y;
-        const centerX = absX + nodeW / 2;
-        const centerY = absY + nodeH / 2;
-
-        const targetGroup = groups.find((g) => {
-          const gW = g.width ?? (g.style?.width as number | undefined) ?? 0;
-          const gH = g.height ?? (g.style?.height as number | undefined) ?? 0;
-          return (
-            centerX >= g.position.x &&
-            centerX <= g.position.x + gW &&
-            centerY >= g.position.y &&
-            centerY <= g.position.y + gH
-          );
-        });
+        const { group: targetGroup, absX, absY } = findTargetGroup(draggedNode, prev);
 
         return prev.map((n) => {
           if (n.id !== draggedNode.id) return n;
@@ -587,7 +601,7 @@ export function FlowViewer({ graph }: Props) {
             return {
               ...n,
               parentId: targetGroup.id,
-              extent: 'parent' as const,
+              extent: undefined,
               position: {
                 x: absX - targetGroup.position.x,
                 y: absY - targetGroup.position.y,
@@ -596,20 +610,14 @@ export function FlowViewer({ graph }: Props) {
           }
 
           if (n.parentId) {
-            // dragged out of group
-            return {
-              ...n,
-              parentId: undefined,
-              extent: undefined,
-              position: { x: absX, y: absY },
-            };
+            return { ...n, parentId: undefined, extent: undefined, position: { x: absX, y: absY } };
           }
 
           return n;
         });
       });
     },
-    [setNodes],
+    [setNodes, findTargetGroup],
   );
 
   // --- Context menu & dialogs ---
@@ -674,6 +682,7 @@ export function FlowViewer({ graph }: Props) {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onNodeDrag={handleNodeDrag}
             onNodeDragStop={handleNodeDragStop}
             onNodeContextMenu={handleNodeContextMenu}
             onEdgeContextMenu={handleEdgeContextMenu}
