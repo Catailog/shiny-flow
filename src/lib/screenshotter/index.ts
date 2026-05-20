@@ -5,9 +5,34 @@ export type ScreenshotResult = {
   imageBase64: string;
 };
 
+export type PlaywrightCookie = {
+  name: string;
+  value: string;
+  domain?: string;
+  path?: string;
+  url?: string;
+  expires?: number;
+  httpOnly?: boolean;
+  secure?: boolean;
+  sameSite?: 'Strict' | 'Lax' | 'None';
+};
+
+export type AuthOptions =
+  | { type: 'cookies'; cookies: PlaywrightCookie[] }
+  | {
+      type: 'form';
+      loginUrl: string;
+      usernameSelector: string;
+      passwordSelector: string;
+      submitSelector: string;
+      username: string;
+      password: string;
+    };
+
 export type ScreenshotOptions = {
   baseUrl: string;
   routes: string[];
+  auth?: AuthOptions;
   viewportWidth?: number;
   viewportHeight?: number;
   deviceScaleFactor?: number;
@@ -42,6 +67,7 @@ async function checkServerAvailable(baseUrl: string, timeoutMs: number): Promise
 export async function captureScreenshots({
   baseUrl,
   routes,
+  auth,
   viewportWidth = 1280,
   viewportHeight = 800,
   deviceScaleFactor = 2,
@@ -55,8 +81,26 @@ export async function captureScreenshots({
 
   try {
     const context = await browser.newContext({ deviceScaleFactor });
+
+    if (auth?.type === 'cookies') {
+      await context.addCookies(auth.cookies);
+    }
+
     const page = await context.newPage();
     await page.setViewportSize({ width: viewportWidth, height: viewportHeight });
+
+    if (auth?.type === 'form') {
+      const base = baseUrl.replace(/\/$/, '');
+      const loginFullUrl = auth.loginUrl.startsWith('http')
+        ? auth.loginUrl
+        : `${base}${auth.loginUrl.startsWith('/') ? auth.loginUrl : '/' + auth.loginUrl}`;
+
+      await page.goto(loginFullUrl, { waitUntil, timeout: timeoutMs });
+      await page.fill(auth.usernameSelector, auth.username);
+      await page.fill(auth.passwordSelector, auth.password);
+      await page.click(auth.submitSelector);
+      await page.waitForLoadState('networkidle', { timeout: timeoutMs }).catch(() => {});
+    }
 
     for (const route of routes) {
       try {
@@ -69,7 +113,7 @@ export async function captureScreenshots({
           imageBase64: buffer.toString('base64'),
         });
       } catch {
-        // 캡처 실패 시 해당 라우트는 건너뜀 (인증 필요 페이지 등)
+        // 캡처 실패 시 해당 라우트는 건너뜀
       }
     }
   } finally {
