@@ -30,7 +30,7 @@ function extractParams(route: string): string[] {
   return [...route.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]);
 }
 
-export function FlowNode({ id, data }: Props) {
+export function FlowNode({ id, data, selected }: Props) {
   const { openDialog } = useFlowActions();
   const { collapsedIds, hasChildren, hiddenCount } = useCollapseContext();
   const { available, captureNode } = useScreenshotContext();
@@ -85,10 +85,11 @@ export function FlowNode({ id, data }: Props) {
 
       <div
         className={cn(
-          'group flex w-[280px] flex-col overflow-hidden rounded-lg shadow-sm',
+          'group flex w-[280px] cursor-pointer flex-col overflow-hidden rounded-lg shadow-sm',
           colorStyle
             ? `border-2 ${colorStyle.border} ${colorStyle.bg}`
             : `border ${data.isDeadEnd ? 'border-brand-accent/60 bg-brand-accent/10' : 'border-brand-secondary bg-brand-light'}`,
+          selected && 'ring-2 ring-brand-primary ring-offset-1',
         )}
       >
         {available && dynamicParams.length > 0 && (
@@ -125,7 +126,7 @@ export function FlowNode({ id, data }: Props) {
           <img
             src={src}
             alt={data.label}
-            className="block w-full cursor-zoom-in border-b border-inherit"
+            className="block w-full cursor-pointer border-b border-inherit"
             onDoubleClick={(e) => {
               e.stopPropagation();
               openDialog({ type: 'screenshot', src, label: data.label });
