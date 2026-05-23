@@ -682,13 +682,13 @@ export function FlowViewer({ graph, screenshotOptions }: Props) {
           if (n.id !== nodeId) return n;
           const oldData = n.data as FlowNodeData;
           const redirectedScreenshot = !redirected
-            ? (redirectedImageBase64 ?? oldData.redirectedScreenshot ?? oldData.screenshot)
+            ? (redirectedImageBase64 ?? oldData.redirectedScreenshot)
             : oldData.redirectedScreenshot;
           return {
             ...n,
             data: {
               ...oldData,
-              screenshot: imageBase64,
+              screenshot: redirected ? oldData.screenshot : imageBase64,
               redirected,
               paramValues,
               redirectedScreenshot,
