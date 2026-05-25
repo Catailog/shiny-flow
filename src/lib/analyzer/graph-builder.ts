@@ -1,9 +1,11 @@
 import type { FlowEdge, FlowGraph, FlowNode } from './types';
+import { routeToLabel } from './utils';
 
 export function buildGraph(
   routes: { route: string; filePath: string }[],
   rawEdges: FlowEdge[],
   projectPath: string,
+  layoutGroupMap: Map<string, { id: string; label: string }> = new Map(),
 ): FlowGraph {
   const routeSet = new Set(routes.map((r) => r.route));
 
@@ -12,6 +14,8 @@ export function buildGraph(
     label: routeToLabel(route),
     filePath,
     isDeadEnd: false,
+    layoutGroupId: layoutGroupMap.get(route)?.id,
+    layoutGroupLabel: layoutGroupMap.get(route)?.label,
   }));
 
   const edges: FlowEdge[] = rawEdges.filter((edge) => edge.source && edge.target.startsWith('/'));
@@ -41,13 +45,4 @@ export function buildGraph(
     analyzedAt: new Date().toISOString(),
     projectPath,
   };
-}
-
-function routeToLabel(route: string): string {
-  if (route === '/') return 'Home';
-  return route
-    .split('/')
-    .filter(Boolean)
-    .map((seg) => seg.charAt(0).toUpperCase() + seg.slice(1))
-    .join(' / ');
 }

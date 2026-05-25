@@ -9,20 +9,11 @@ import { cn } from '@/lib/utils';
 
 import { useFlowActions } from '../actionsContext';
 import { useCollapseContext } from '../collapseContext';
-import { NODE_COLOR_STYLES } from '../lib/nodeColors';
+import { getNodeColorStyle } from '../lib/nodeColors';
 import { useScreenshotContext } from '../screenshotContext';
+import type { FlowNodeData } from '../types';
 
-export type FlowNodeData = {
-  label: string;
-  route: string;
-  isDeadEnd: boolean;
-  screenshot?: string;
-  redirected?: boolean;
-  redirectedScreenshot?: string;
-  paramValues?: Record<string, string>;
-  color?: string;
-  memo?: string;
-};
+export type { FlowNodeData };
 
 type Props = NodeProps<Node<FlowNodeData>>;
 
@@ -42,7 +33,7 @@ export function FlowNode({ id, data, selected }: Props) {
   const redirectedSrc = data.redirectedScreenshot
     ? `data:image/png;base64,${data.redirectedScreenshot}`
     : null;
-  const colorStyle = data.color ? NODE_COLOR_STYLES[data.color] : null;
+  const colorStyle = getNodeColorStyle(data.color);
 
   const dynamicParams = extractParams(data.route);
   const [paramValues, setParamValues] = useState<Record<string, string>>(
@@ -74,7 +65,7 @@ export function FlowNode({ id, data, selected }: Props) {
                   openDialog({ type: 'screenshot', src: redirectedSrc, label: data.label });
               }}
               className="flex cursor-pointer items-center disabled:cursor-default disabled:opacity-40"
-              title="인증 없이 접근 시 화면 보기"
+              title="리다이렉트 되기 전 화면 보기"
             >
               <LogInIcon size={13} className="shrink-0 text-amber-500" />
             </button>
@@ -134,7 +125,7 @@ export function FlowNode({ id, data, selected }: Props) {
           />
         )}
         {!src && (
-          <div className="px-4 py-6 text-center text-sm text-muted-foreground">스크린샷 없음</div>
+          <div className="px-4 py-6 text-center text-sm text-muted-foreground">{data.route}</div>
         )}
 
         {data.memo && (

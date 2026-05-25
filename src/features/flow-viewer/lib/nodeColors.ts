@@ -30,3 +30,11 @@ export const GROUP_COLOR_STYLES: Record<string, { border: string; bg: string; te
   red: { border: 'border-red-300', bg: 'bg-red-50/70', text: 'text-red-600' },
   purple: { border: 'border-purple-300', bg: 'bg-purple-50/70', text: 'text-purple-600' },
 };
+
+export function getNodeColorStyle(color?: string) {
+  return color ? (NODE_COLOR_STYLES[color] ?? null) : null;
+}
+
+export function getGroupColorStyle(color: string) {
+  return GROUP_COLOR_STYLES[color] ?? GROUP_COLOR_STYLES.gray;
+}

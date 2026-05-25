@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 
 import { useCollapseContext } from '../collapseContext';
 import type { ContextMenuState, DialogRequest } from '../lib/contextMenuTypes';
-import { NODE_COLOR_STYLES, STATUS_COLORS } from '../lib/nodeColors';
+import { STATUS_COLORS, getNodeColorStyle } from '../lib/nodeColors';
 import type { FlowEdgeData } from './FlowEdge';
 import type { FlowNodeData } from './FlowNode';
 
@@ -202,7 +202,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
                     <span
                       className={cn(
                         'inline-block size-2.5 rounded-full border',
-                        value ? NODE_COLOR_STYLES[value].dot : 'border-gray-300 bg-transparent',
+                        getNodeColorStyle(value)?.dot ?? 'border-gray-300 bg-transparent',
                       )}
                     />
                     {label}

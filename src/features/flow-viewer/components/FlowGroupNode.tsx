@@ -5,17 +5,15 @@ import { type Node, type NodeProps, NodeResizer, NodeToolbar, Position } from '@
 import { cn } from '@/lib/utils';
 
 import { useCollapseContext } from '../collapseContext';
-import { GROUP_COLOR_STYLES } from '../lib/nodeColors';
+import { getGroupColorStyle } from '../lib/nodeColors';
+import type { GroupNodeData } from '../types';
 
-export type GroupNodeData = {
-  label: string;
-  color: string;
-};
+export type { GroupNodeData };
 
 type Props = NodeProps<Node<GroupNodeData>>;
 
 export function FlowGroupNode({ id, data, width, height, selected }: Props) {
-  const colorStyle = GROUP_COLOR_STYLES[data.color] ?? GROUP_COLOR_STYLES.gray;
+  const colorStyle = getGroupColorStyle(data.color);
   const { dragOverGroupId } = useCollapseContext();
   const isDragOver = dragOverGroupId === id;
 

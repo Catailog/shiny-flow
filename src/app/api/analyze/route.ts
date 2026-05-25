@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { analyzeProject } from '@/lib/analyzer';
+import { type FlowEdge, analyzeProject } from '@/lib/analyzer';
 import {
   type AuthBody,
   ServerUnavailableError,
   captureScreenshots,
   parseAuth,
 } from '@/lib/screenshotter';
+import { normalizePath } from '@/lib/utils';
 
 type RequestBody = {
   path: string;
@@ -29,8 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'path 필드가 필요합니다.' }, { status: 400 });
   }
 
-  // 백슬래시를 슬래시로 정규화 (Windows 경로 URL 입력 대응)
-  const normalizedPath = projectPath.replace(/\\/g, '/');
+  const normalizedPath = normalizePath(projectPath);
 
   if (screenshot && !baseUrl) {
     return NextResponse.json(
@@ -52,6 +52,27 @@ export async function POST(req: NextRequest) {
         const s = screenshotMap.get(node.id);
         return { ...node, screenshot: s?.imageBase64, redirected: s?.redirected };
       });
+
+      const nodeIds = new Set(graph.nodes.map((n) => n.id));
+      const existingPairs = new Set(graph.edges.map((e) => `${e.source}→${e.target}`));
+      const redirectEdges: FlowEdge[] = [];
+      for (const s of screenshots) {
+        if (!s.redirectedTo) continue;
+        const target = s.redirectedTo;
+        if (!nodeIds.has(target)) continue;
+        const pair = `${s.route}→${target}`;
+        if (existingPairs.has(pair)) continue;
+        redirectEdges.push({
+          id: `redirect:${s.route}→${target}`,
+          source: s.route,
+          target,
+          trigger: 'redirect',
+          sourceFile: '',
+          sourceLine: 0,
+        });
+        existingPairs.add(pair);
+      }
+      graph.edges = [...graph.edges, ...redirectEdges];
     }
 
     return NextResponse.json(graph);
