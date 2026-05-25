@@ -4,6 +4,7 @@ export type ScreenshotResult = {
   route: string;
   imageBase64: string;
   redirected: boolean;
+  redirectedTo?: string;
 };
 
 export type PlaywrightCookie = {
@@ -152,12 +153,14 @@ export async function captureScreenshots({
         const url = `${baseUrl.replace(/\/$/, '')}${route}`;
         await page.goto(url, { waitUntil, timeout: timeoutMs });
 
-        const redirected = new URL(page.url()).pathname !== new URL(url).pathname;
+        const finalUrl = new URL(page.url());
+        const redirected = finalUrl.pathname !== new URL(url).pathname;
         const buffer = await page.screenshot({ type: 'png', fullPage: true });
         results.push({
           route,
           imageBase64: buffer.toString('base64'),
           redirected,
+          redirectedTo: redirected ? finalUrl.pathname : undefined,
         });
       } catch {
         // 캡처 실패 시 해당 라우트는 건너뜀

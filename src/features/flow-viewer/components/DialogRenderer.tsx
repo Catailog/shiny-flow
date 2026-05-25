@@ -17,11 +17,9 @@ import { Textarea } from '@/components/ui/textarea';
 
 import { cn } from '@/lib/utils';
 
-import type { DialogRequest } from '../lib/contextMenuTypes';
 import { GROUP_Z_INDEX, NODE_WIDTH } from '../lib/layout';
 import { GROUP_COLORS, GROUP_COLOR_STYLES } from '../lib/nodeColors';
-import type { GroupNodeData } from './FlowGroupNode';
-import type { FlowNodeData } from './FlowNode';
+import type { DialogRequest, FlowNodeData, GroupNodeData } from '../types';
 import { MemoEditor } from './MemoEditor';
 
 // --- helpers ---

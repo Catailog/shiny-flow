@@ -11,6 +11,8 @@ export function graphToFlow(graph: FlowGraph): { nodes: Node[]; edges: Edge[] } 
       label: n.label,
       route: n.id,
       isDeadEnd: n.isDeadEnd,
+      layoutGroupId: n.layoutGroupId,
+      layoutGroupLabel: n.layoutGroupLabel,
       screenshot: n.redirected ? undefined : n.screenshot,
       redirected: n.redirected,
       redirectedScreenshot: n.redirected ? n.screenshot : undefined,

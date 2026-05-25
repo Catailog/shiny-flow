@@ -80,6 +80,10 @@ function collectEdges(
   if (!fs.existsSync(filePath)) return [];
 
   const content = fs.readFileSync(filePath, 'utf-8');
+
+  // 'use server' 파일은 CRUD 액션이므로 엣지 탐색 대상에서 제외
+  if (/^\s*['"]use server['"]/.test(content)) return [];
+
   const edges: RawEdge[] = parseFileForEdges(content, filePath, sourceRoute);
 
   for (const imported of resolveLocalImports(content, filePath, projectRoot, aliases)) {
@@ -93,6 +97,15 @@ function parseFileForEdges(content: string, filePath: string, sourceRoute: strin
   const project = new Project({ skipAddingFilesFromTsConfig: true });
   const sourceFile = project.createSourceFile('__tmp__.tsx', content, { overwrite: true });
   const edges: RawEdge[] = [];
+
+  // href 배열 패턴 사전 수집: const links = [{href: '/path'}, ...]
+  const arrayHrefs: string[] = [];
+  sourceFile.forEachDescendant((node) => {
+    if (node.getKind() !== SyntaxKind.PropertyAssignment) return;
+    if (node.getFirstChild()?.getText() !== 'href') return;
+    const val = extractStringValue(node.getLastChild());
+    if (val?.startsWith('/')) arrayHrefs.push(val);
+  });
 
   sourceFile.forEachDescendant((node) => {
     const kind = node.getKind();
@@ -110,16 +123,27 @@ function parseFileForEdges(content: string, filePath: string, sourceRoute: strin
       if (!hrefAttr) return;
 
       const href = extractStringValue(hrefAttr.getLastChild());
-      if (!href || !href.startsWith('/')) return;
-
-      edges.push({
-        source: sourceRoute,
-        target: href,
-        trigger: 'link',
-        sourceFile: filePath,
-        sourceLine: node.getStartLineNumber(),
-        label: extractLinkText(node),
-      });
+      if (href?.startsWith('/')) {
+        edges.push({
+          source: sourceRoute,
+          target: href,
+          trigger: 'link',
+          sourceFile: filePath,
+          sourceLine: node.getStartLineNumber(),
+          label: extractLinkText(node),
+        });
+      } else if (!href && arrayHrefs.length > 0) {
+        // 변수 참조 href (ex. link.href) — 사전 수집한 href 배열로 대체
+        for (const h of arrayHrefs) {
+          edges.push({
+            source: sourceRoute,
+            target: h,
+            trigger: 'link',
+            sourceFile: filePath,
+            sourceLine: node.getStartLineNumber(),
+          });
+        }
+      }
       return;
     }
 

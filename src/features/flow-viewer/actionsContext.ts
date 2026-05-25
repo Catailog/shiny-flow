@@ -2,7 +2,7 @@
 
 import { createContext, useContext } from 'react';
 
-import type { DialogRequest } from './lib/contextMenuTypes';
+import type { DialogRequest } from './types';
 
 export type FlowActionsContextValue = {
   openDialog: (req: DialogRequest) => void;

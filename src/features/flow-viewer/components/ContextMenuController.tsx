@@ -9,8 +9,8 @@ import { ChevronRightIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 import { useCollapseContext } from '../collapseContext';
-import type { ContextMenuState, DialogRequest } from '../lib/contextMenuTypes';
 import { STATUS_COLORS, getNodeColorStyle } from '../lib/nodeColors';
+import type { ContextMenuState, DialogRequest } from '../types';
 import type { FlowEdgeData } from './FlowEdge';
 import type { FlowNodeData } from './FlowNode';
 

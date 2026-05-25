@@ -3,6 +3,8 @@ export type FlowNode = {
   label: string;
   filePath: string;
   isDeadEnd: boolean;
+  layoutGroupId?: string;
+  layoutGroupLabel?: string;
   screenshot?: string;
   redirected?: boolean;
   redirectedScreenshot?: string;
