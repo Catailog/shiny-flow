@@ -35,7 +35,6 @@ import { ScreenshotContext } from '../screenshotContext';
 import type { ContextMenuState, DialogRequest } from '../types';
 import { ContextMenuController } from './ContextMenuController';
 import { DialogRenderer } from './DialogRenderer';
-import { FlowCommentNode } from './FlowCommentNode';
 import { FlowEdge } from './FlowEdge';
 import { FlowGroupNode } from './FlowGroupNode';
 import { FlowNode, type FlowNodeData } from './FlowNode';
@@ -43,7 +42,6 @@ import { FlowNode, type FlowNodeData } from './FlowNode';
 const nodeTypes = {
   flowNode: FlowNode,
   groupNode: FlowGroupNode,
-  commentNode: FlowCommentNode,
 };
 const edgeTypes = { flowEdge: FlowEdge };
 const defaultEdgeOptions = {
@@ -252,12 +250,7 @@ export function FlowViewer({ graph, screenshotOptions }: Props) {
 
   const handleNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
     e.preventDefault();
-    const type =
-      node.type === 'groupNode'
-        ? 'groupNode'
-        : node.type === 'commentNode'
-          ? 'commentNode'
-          : 'flowNode';
+    const type = node.type === 'groupNode' ? 'groupNode' : 'flowNode';
     setContextMenuState({
       screenX: e.clientX,
       screenY: e.clientY,

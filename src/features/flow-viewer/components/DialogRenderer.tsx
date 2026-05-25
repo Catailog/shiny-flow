@@ -13,7 +13,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 
 import { cn } from '@/lib/utils';
 
@@ -93,53 +92,6 @@ function MemoDialog({
           <DialogTitle>메모</DialogTitle>
         </DialogHeader>
         <MemoEditor value={value} onChange={setValue} />
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            취소
-          </Button>
-          <Button onClick={save}>저장</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function CommentNodeDialog({
-  nodeId,
-  nodes,
-  setNodes,
-  onClose,
-}: {
-  nodeId: string;
-  nodes: Node[];
-  setNodes: (fn: (prev: Node[]) => Node[]) => void;
-  onClose: () => void;
-}) {
-  const node = nodes.find((n) => n.id === nodeId);
-  const [value, setValue] = useState(
-    (node?.data as { content?: string } | undefined)?.content ?? '',
-  );
-
-  const save = () => {
-    setNodes((prev) =>
-      prev.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, content: value } } : n)),
-    );
-    onClose();
-  };
-
-  return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>댓글</DialogTitle>
-        </DialogHeader>
-        <Textarea
-          autoFocus
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="댓글을 입력하세요..."
-          className="min-h-24 resize-none"
-        />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             취소
@@ -419,15 +371,6 @@ export function DialogRenderer({
     case 'memo':
       return (
         <MemoDialog
-          nodeId={dialogRequest.nodeId}
-          nodes={nodes}
-          setNodes={setNodes}
-          onClose={onClose}
-        />
-      );
-    case 'comment':
-      return (
-        <CommentNodeDialog
           nodeId={dialogRequest.nodeId}
           nodes={nodes}
           setNodes={setNodes}
