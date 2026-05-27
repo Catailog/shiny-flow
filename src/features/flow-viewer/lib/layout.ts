@@ -231,7 +231,8 @@ function applyGroupLayout(nodes: Node[]): Node[] {
   }
 
   const groupNodes: Node<GroupNodeData>[] = [];
-  const result = nodes.map((n) => ({ ...n }));
+  // 이전 레이아웃 호출에서 생성된 그룹 노드가 input에 포함되어 있을 수 있으므로 필터링
+  const result = nodes.filter((n) => !groupMap.has(n.id)).map((n) => ({ ...n }));
 
   for (const { id: gid, label, nodes: members } of groupMap.values()) {
     if (members.length < 2) continue;
