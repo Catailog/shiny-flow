@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { type Browser, type Page, chromium } from 'playwright';
 
 export type ScreenshotResult = {
   route: string;
@@ -69,15 +69,21 @@ export function parseAuth(auth: AuthBody): AuthOptions | undefined {
   }
 }
 
-export type ScreenshotOptions = {
+export type SessionOptions = {
   baseUrl: string;
-  routes: string[];
   auth?: AuthOptions;
   viewportWidth?: number;
   viewportHeight?: number;
   deviceScaleFactor?: number;
   waitUntil?: 'load' | 'networkidle' | 'domcontentloaded';
   timeoutMs?: number;
+};
+
+export type ScreenshotOptions = SessionOptions & { routes: string[] };
+
+export type BrowserSession = {
+  browser: Browser;
+  page: Page;
 };
 
 export class ServerUnavailableError extends Error {
@@ -104,21 +110,50 @@ async function checkServerAvailable(baseUrl: string, timeoutMs: number): Promise
   }
 }
 
-export async function captureScreenshots({
+function toFriendlyAuthError(
+  e: unknown,
+  auth: {
+    loginUrl: string;
+    usernameSelector: string;
+    passwordSelector: string;
+    submitSelector: string;
+  },
+): Error {
+  if (!(e instanceof Error)) return new Error('로그인 처리 중 알 수 없는 오류가 발생했습니다.');
+
+  const locatorMatch = e.message.match(/waiting for locator\('([^']+)'\)/);
+  if (locatorMatch) {
+    const sel = locatorMatch[1];
+    if (sel === auth.usernameSelector)
+      return new Error(`아이디 셀렉터를 찾을 수 없습니다: "${sel}"`);
+    if (sel === auth.passwordSelector)
+      return new Error(`비밀번호 셀렉터를 찾을 수 없습니다: "${sel}"`);
+    if (sel === auth.submitSelector)
+      return new Error(`제출 버튼 셀렉터를 찾을 수 없습니다: "${sel}"`);
+    return new Error(`셀렉터를 찾을 수 없습니다: "${sel}"`);
+  }
+
+  if (e.message.includes('Timeout') && e.message.includes('exceeded')) {
+    return new Error(`로그인 페이지 응답 시간이 초과되었습니다 (${auth.loginUrl})`);
+  }
+
+  return new Error(`로그인 처리 중 오류: ${e.message.split('\n')[0]}`);
+}
+
+// Launches browser, applies auth, and returns the authenticated session.
+// Caller is responsible for closing browser.close() when done.
+export async function setupBrowserSession({
   baseUrl,
-  routes,
   auth,
   viewportWidth = 1280,
   viewportHeight = 800,
   deviceScaleFactor = 2,
   waitUntil = 'networkidle',
-  timeoutMs = 10000,
-}: ScreenshotOptions): Promise<ScreenshotResult[]> {
+  timeoutMs = 30000,
+}: SessionOptions): Promise<BrowserSession> {
   await checkServerAvailable(baseUrl, 5000);
 
   const browser = await chromium.launch();
-  const results: ScreenshotResult[] = [];
-
   try {
     const context = await browser.newContext({ deviceScaleFactor });
 
@@ -135,40 +170,86 @@ export async function captureScreenshots({
         ? auth.loginUrl
         : `${base}${auth.loginUrl.startsWith('/') ? auth.loginUrl : '/' + auth.loginUrl}`;
 
-      await page.goto(loginFullUrl, { waitUntil, timeout: timeoutMs });
-      await page.fill(auth.usernameSelector, auth.username);
-      await page.fill(auth.passwordSelector, auth.password);
-      const loginPageUrl = page.url();
-      await Promise.all([
-        page.waitForURL((url) => url.href !== loginPageUrl, {
-          waitUntil: 'networkidle',
-          timeout: timeoutMs,
-        }),
-        page.click(auth.submitSelector),
-      ]).catch(() => {});
-    }
-
-    for (const route of routes) {
       try {
-        const url = `${baseUrl.replace(/\/$/, '')}${route}`;
-        await page.goto(url, { waitUntil, timeout: timeoutMs });
+        await page.goto(loginFullUrl, { waitUntil, timeout: timeoutMs });
 
-        const finalUrl = new URL(page.url());
-        const redirected = finalUrl.pathname !== new URL(url).pathname;
-        const buffer = await page.screenshot({ type: 'png', fullPage: true });
-        results.push({
-          route,
-          imageBase64: buffer.toString('base64'),
-          redirected,
-          redirectedTo: redirected ? finalUrl.pathname : undefined,
-        });
-      } catch {
-        // 캡처 실패 시 해당 라우트는 건너뜀
+        const usernameCount = await page.locator(auth.usernameSelector).count();
+        if (usernameCount === 0)
+          throw new Error(`아이디 셀렉터를 찾을 수 없습니다: "${auth.usernameSelector}"`);
+        const passwordCount = await page.locator(auth.passwordSelector).count();
+        if (passwordCount === 0)
+          throw new Error(`비밀번호 셀렉터를 찾을 수 없습니다: "${auth.passwordSelector}"`);
+        const submitCount = await page.locator(auth.submitSelector).count();
+        if (submitCount === 0)
+          throw new Error(`제출 버튼 셀렉터를 찾을 수 없습니다: "${auth.submitSelector}"`);
+
+        await page.fill(auth.usernameSelector, auth.username, { timeout: timeoutMs });
+        await page.fill(auth.passwordSelector, auth.password, { timeout: timeoutMs });
+        const loginPageUrl = page.url();
+        await Promise.all([
+          page.waitForURL((url) => url.href !== loginPageUrl, {
+            waitUntil: 'networkidle',
+            timeout: timeoutMs,
+          }),
+          page.click(auth.submitSelector, { timeout: timeoutMs }),
+        ]).catch(() => {});
+      } catch (e) {
+        if (
+          e instanceof Error &&
+          (e.message.startsWith('아이디 셀렉터를') ||
+            e.message.startsWith('비밀번호 셀렉터를') ||
+            e.message.startsWith('제출 버튼 셀렉터를'))
+        )
+          throw e;
+        throw toFriendlyAuthError(e, auth);
       }
     }
-  } finally {
+
+    return { browser, page };
+  } catch (e) {
     await browser.close();
+    throw e;
+  }
+}
+
+export async function captureRoutesOnPage(
+  page: Page,
+  routes: string[],
+  baseUrl: string,
+  { waitUntil = 'networkidle' }: Pick<SessionOptions, 'waitUntil'> = {},
+): Promise<ScreenshotResult[]> {
+  const results: ScreenshotResult[] = [];
+
+  for (const route of routes) {
+    try {
+      const url = `${baseUrl.replace(/\/$/, '')}${route}`;
+      await page.goto(url, { waitUntil, timeout: 0 });
+
+      const finalUrl = new URL(page.url());
+      const redirected = finalUrl.pathname !== new URL(url).pathname;
+      const buffer = await page.screenshot({ type: 'png', fullPage: true });
+      results.push({
+        route,
+        imageBase64: buffer.toString('base64'),
+        redirected,
+        redirectedTo: redirected ? finalUrl.pathname : undefined,
+      });
+    } catch {
+      // 캡처 실패 시 해당 라우트는 건너뜀
+    }
   }
 
   return results;
+}
+
+export async function captureScreenshots({
+  routes,
+  ...sessionOptions
+}: ScreenshotOptions): Promise<ScreenshotResult[]> {
+  const { browser, page } = await setupBrowserSession(sessionOptions);
+  try {
+    return await captureRoutesOnPage(page, routes, sessionOptions.baseUrl, sessionOptions);
+  } finally {
+    await browser.close();
+  }
 }

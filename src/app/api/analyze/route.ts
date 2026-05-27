@@ -4,8 +4,9 @@ import { type FlowEdge, analyzeProject } from '@/lib/analyzer';
 import {
   type AuthBody,
   ServerUnavailableError,
-  captureScreenshots,
+  captureRoutesOnPage,
   parseAuth,
+  setupBrowserSession,
 } from '@/lib/screenshotter';
 import { normalizePath } from '@/lib/utils';
 
@@ -40,39 +41,50 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const graph = await analyzeProject(normalizedPath);
+    const parsedAuth = auth ? parseAuth(auth) : undefined;
 
-    if (screenshot && baseUrl) {
-      const routes = graph.nodes.map((n) => n.id);
-      const parsedAuth = auth ? parseAuth(auth) : undefined;
-      const screenshots = await captureScreenshots({ baseUrl, routes, auth: parsedAuth });
+    // analyzeProject와 브라우저 세션 셋업(서버 확인 + 실행 + 인증)을 병렬로 실행
+    const [graph, session] = await Promise.all([
+      analyzeProject(normalizedPath),
+      screenshot && baseUrl
+        ? setupBrowserSession({ baseUrl, auth: parsedAuth })
+        : Promise.resolve(null),
+    ]);
 
-      const screenshotMap = new Map(screenshots.map((s) => [s.route, s]));
-      graph.nodes = graph.nodes.map((node) => {
-        const s = screenshotMap.get(node.id);
-        return { ...node, screenshot: s?.imageBase64, redirected: s?.redirected };
-      });
+    if (screenshot && baseUrl && session) {
+      try {
+        const routes = graph.nodes.map((n) => n.id);
+        const screenshots = await captureRoutesOnPage(session.page, routes, baseUrl);
 
-      const nodeIds = new Set(graph.nodes.map((n) => n.id));
-      const existingPairs = new Set(graph.edges.map((e) => `${e.source}→${e.target}`));
-      const redirectEdges: FlowEdge[] = [];
-      for (const s of screenshots) {
-        if (!s.redirectedTo) continue;
-        const target = s.redirectedTo;
-        if (!nodeIds.has(target)) continue;
-        const pair = `${s.route}→${target}`;
-        if (existingPairs.has(pair)) continue;
-        redirectEdges.push({
-          id: `redirect:${s.route}→${target}`,
-          source: s.route,
-          target,
-          trigger: 'redirect',
-          sourceFile: '',
-          sourceLine: 0,
+        const screenshotMap = new Map(screenshots.map((s) => [s.route, s]));
+        graph.nodes = graph.nodes.map((node) => {
+          const s = screenshotMap.get(node.id);
+          return { ...node, screenshot: s?.imageBase64, redirected: s?.redirected };
         });
-        existingPairs.add(pair);
+
+        const nodeIds = new Set(graph.nodes.map((n) => n.id));
+        const existingPairs = new Set(graph.edges.map((e) => `${e.source}→${e.target}`));
+        const redirectEdges: FlowEdge[] = [];
+        for (const s of screenshots) {
+          if (!s.redirectedTo) continue;
+          const target = s.redirectedTo;
+          if (!nodeIds.has(target)) continue;
+          const pair = `${s.route}→${target}`;
+          if (existingPairs.has(pair)) continue;
+          redirectEdges.push({
+            id: `redirect:${s.route}→${target}`,
+            source: s.route,
+            target,
+            trigger: 'redirect',
+            sourceFile: '',
+            sourceLine: 0,
+          });
+          existingPairs.add(pair);
+        }
+        graph.edges = [...graph.edges, ...redirectEdges];
+      } finally {
+        await session.browser.close();
       }
-      graph.edges = [...graph.edges, ...redirectEdges];
     }
 
     return NextResponse.json(graph);

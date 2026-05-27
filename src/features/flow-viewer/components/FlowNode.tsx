@@ -5,6 +5,9 @@ import { useState } from 'react';
 import { Handle, type Node, type NodeProps, NodeToolbar, Position } from '@xyflow/react';
 import { CameraIcon, ChevronRightIcon, LoaderIcon, LogInIcon } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
 import { cn } from '@/lib/utils';
 
 import { useFlowActions } from '../actionsContext';
@@ -56,19 +59,20 @@ export function FlowNode({ id, data, selected }: Props) {
       <NodeToolbar position={Position.Top} align="start" isVisible offset={6}>
         <span className="flex cursor-default items-center gap-1 text-sm font-medium text-brand-dark select-none">
           {(data.redirected || redirectedSrc) && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
               disabled={!redirectedSrc}
               onClick={(e) => {
                 e.stopPropagation();
                 if (redirectedSrc)
                   openDialog({ type: 'screenshot', src: redirectedSrc, label: data.label });
               }}
-              className="flex cursor-pointer items-center disabled:cursor-default disabled:opacity-40"
+              className="h-auto p-0"
               title="리다이렉트 되기 전 화면 보기"
             >
-              <LogInIcon size={13} className="shrink-0 text-amber-500" />
-            </button>
+              <LogInIcon size={13} className="shrink-0 text-warning" />
+            </Button>
           )}
           {data.route}
         </span>
@@ -88,20 +92,21 @@ export function FlowNode({ id, data, selected }: Props) {
             {dynamicParams.map((param) => (
               <label key={param} className="flex items-center gap-1 text-xs text-muted-foreground">
                 <span className="shrink-0 font-mono">{param}</span>
-                <input
-                  type="text"
+                <Input
                   value={paramValues[param] ?? ''}
                   onChange={(e) => setParamValues((prev) => ({ ...prev, [param]: e.target.value }))}
                   placeholder="값 입력"
-                  className="nodrag h-5 w-20 rounded border border-input bg-background px-1.5 text-xs focus:ring-1 focus:ring-ring focus:outline-none"
+                  className="nodrag h-5 w-20 px-1.5 text-xs"
                 />
               </label>
             ))}
-            <button
+            <Button
               type="button"
+              variant="default"
+              size="xs"
               onClick={handleCapture}
               disabled={isCapturing || dynamicParams.some((p) => !paramValues[p]?.trim())}
-              className="nodrag ml-auto flex h-5 items-center gap-1 rounded bg-brand-primary px-2 text-xs text-white disabled:opacity-40"
+              className="nodrag ml-auto"
             >
               {isCapturing ? (
                 <LoaderIcon size={10} className="animate-spin" />
@@ -109,7 +114,7 @@ export function FlowNode({ id, data, selected }: Props) {
                 <CameraIcon size={10} />
               )}
               재캡처
-            </button>
+            </Button>
           </div>
         )}
 

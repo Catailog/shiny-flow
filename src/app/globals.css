@@ -25,6 +25,9 @@
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
 
+  /* placeholder */
+  --color-placeholder-foreground: var(--placeholder-foreground);
+
   /* shadcn semantic */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -89,6 +92,8 @@
     --info: #1d4ed8; /* blue-700 */
     --info-foreground: #eff6ff;
 
+    --placeholder-foreground: var(--brand-secondary);
+
     /* ── shadcn 시맨틱 토큰 (브랜드 참조) ────── */
     --background: var(--brand-light);
     --foreground: var(--brand-dark);
@@ -148,6 +153,8 @@
     --input: oklch(1 0 0 / 15%);
     --ring: var(--brand-primary);
 
+    --placeholder-foreground: color-mix(in srgb, var(--brand-secondary) 60%, transparent);
+
     /* status (dark) */
     --success: #5a9e6f;
     --success-foreground: #1a2120;
@@ -183,6 +190,13 @@
   html {
     @apply font-sans;
   }
+}
+
+/* ── Input placeholder — Tailwind의 placeholder:text-muted-foreground 재정의 ── */
+[data-slot='input']::placeholder,
+[data-slot='input-group-control']::placeholder {
+  color: var(--placeholder-foreground);
+  opacity: 1;
 }
 
 /* ── TipTap placeholder (pseudo-element, Tailwind으로 표현 불가) ── */

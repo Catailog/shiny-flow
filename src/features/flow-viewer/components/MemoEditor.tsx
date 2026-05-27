@@ -226,9 +226,10 @@ export function MemoEditor({ value, onChange }: Props) {
                 ? !storedColor
                 : storedColor === color || storedColor === hexToRgb(color);
             return (
-              <button
+              <Button
                 key={label}
                 type="button"
+                variant="ghost"
                 title={label}
                 onClick={() =>
                   color === 'inherit'
@@ -236,11 +237,11 @@ export function MemoEditor({ value, onChange }: Props) {
                     : editor.chain().focus().setColor(color).run()
                 }
                 className={cn(
-                  'size-4 rounded-full border transition-transform hover:scale-110',
+                  'size-4 min-h-0 min-w-0 rounded-full border p-0 transition-transform hover:scale-110 hover:bg-transparent',
                   isActive
                     ? 'scale-110 ring-2 ring-foreground ring-offset-1 ring-offset-background'
                     : 'border-transparent',
-                  color === 'inherit' && 'border-gray-300',
+                  color === 'inherit' && 'border-border',
                 )}
                 style={
                   color === 'inherit'
