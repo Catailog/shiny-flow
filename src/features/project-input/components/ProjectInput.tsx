@@ -1,8 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 
-import { DownloadIcon, Loader2Icon, UploadIcon } from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  ChevronDownIcon,
+  DownloadIcon,
+  Loader2Icon,
+  PinIcon,
+  PinOffIcon,
+  UploadIcon,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -14,6 +23,11 @@ import {
   InputGroupInput,
 } from '@/components/ui/input-group';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
+import { cn } from '@/lib/utils';
+
+import { type AnalyzeFormValues, analyzeSchema } from '../schema/analyze.schema';
 
 export type CookiesAuthInput = {
   type: 'cookies';
@@ -31,7 +45,6 @@ export type FormAuthInput = {
 };
 
 export type AuthInput = CookiesAuthInput | FormAuthInput;
-type AuthType = 'none' | 'cookies' | 'form';
 
 export type AnalyzeOptions = {
   path: string;
@@ -48,274 +61,403 @@ type Props = {
   canExport?: boolean;
 };
 
+// 비활성 조건이 충족될 때 tooltip을 보여주고 클릭을 막는 버튼 래퍼
+function ActionButton({
+  tooltip,
+  onClick,
+  children,
+  className,
+  ...props
+}: React.ComponentProps<typeof Button> & { tooltip?: string }) {
+  if (!tooltip) {
+    return (
+      <Button className={className} onClick={onClick} {...props}>
+        {children}
+      </Button>
+    );
+  }
+  // base-ui Tooltip은 asChild 대신 render prop으로 트리거 엘리먼트를 교체한다
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button className={className} {...props}>
+            {children}
+          </Button>
+        }
+      />
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="text-xs text-destructive">{message}</p>;
+}
+
+function ExampleFill({
+  label,
+  onClick,
+  tooltip,
+}: {
+  label: string;
+  onClick: () => void;
+  tooltip?: string;
+}) {
+  return (
+    <InputGroupAddon align="inline-end">
+      <ActionButton type="button" variant="ghost" size="xs" onClick={onClick} tooltip={tooltip}>
+        (예: <span className="underline">{label}</span>)
+      </ActionButton>
+    </InputGroupAddon>
+  );
+}
+
 export function ProjectInput({ onAnalyze, isLoading, onImport, onExport, canExport }: Props) {
-  const [path, setPath] = useState('');
-  const [screenshot, setScreenshot] = useState(false);
-  const [baseUrl, setBaseUrl] = useState('');
-  const [authType, setAuthType] = useState<AuthType>('none');
+  const {
+    register: _register,
+    handleSubmit,
+    control,
+    watch,
+    setValue,
+    clearErrors,
+    formState: { errors },
+  } = useForm<AnalyzeFormValues>({
+    resolver: zodResolver(analyzeSchema),
+    reValidateMode: 'onSubmit',
+    defaultValues: {
+      path: '',
+      screenshot: false,
+      baseUrl: '',
+      authType: 'none',
+      cookiesJson: '',
+      loginUrl: '',
+      usernameSelector: '',
+      username: '',
+      passwordSelector: '',
+      password: '',
+      submitSelector: '',
+    },
+  });
 
-  const [cookiesJson, setCookiesJson] = useState('');
-
-  const [loginUrl, setLoginUrl] = useState('');
-  const [usernameSelector, setUsernameSelector] = useState('');
-  const [passwordSelector, setPasswordSelector] = useState('');
-  const [submitSelector, setSubmitSelector] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-
-  const buildAuth = (): AuthInput | undefined => {
-    if (authType === 'cookies') return { type: 'cookies', cookiesJson };
-    if (authType === 'form')
-      return {
-        type: 'form',
-        loginUrl,
-        usernameSelector,
-        passwordSelector,
-        submitSelector,
-        username,
-        password,
-      };
+  const register = (name: Parameters<typeof _register>[0]) => {
+    const { onChange, ...rest } = _register(name);
+    return {
+      ...rest,
+      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        clearErrors(name);
+        return onChange(e);
+      },
+    };
   };
 
-  const authValid =
-    authType === 'none' ||
-    (authType === 'cookies' && cookiesJson.trim() !== '') ||
-    (authType === 'form' &&
-      loginUrl &&
-      usernameSelector &&
-      passwordSelector &&
-      submitSelector &&
-      username &&
-      password);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const expanded = pinned || hovered || focused;
 
-  const canSubmit = path.trim() && (!screenshot || baseUrl.trim()) && authValid;
+  const screenshot = watch('screenshot');
+  const authType = watch('authType');
+  const baseUrl = watch('baseUrl');
+  const loginUrl = watch('loginUrl');
+  const usernameSelector = watch('usernameSelector');
+  const passwordSelector = watch('passwordSelector');
+  const submitSelector = watch('submitSelector');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canSubmit) return;
+  const submitHandler = handleSubmit((values) => {
+    if (isLoading) return;
+    let auth: AuthInput | undefined;
+    if (values.screenshot) {
+      if (values.authType === 'cookies')
+        auth = { type: 'cookies', cookiesJson: values.cookiesJson };
+      else if (values.authType === 'form')
+        auth = {
+          type: 'form',
+          loginUrl: values.loginUrl,
+          usernameSelector: values.usernameSelector,
+          passwordSelector: values.passwordSelector,
+          submitSelector: values.submitSelector,
+          username: values.username,
+          password: values.password,
+        };
+    }
     onAnalyze({
-      path: path.trim(),
-      screenshot,
-      baseUrl: baseUrl.trim(),
-      auth: screenshot ? buildAuth() : undefined,
+      path: values.path.trim(),
+      screenshot: values.screenshot,
+      baseUrl: values.baseUrl.trim(),
+      auth,
     });
-  };
+  });
+
+  const loadingTip = isLoading ? '분석 중입니다.' : undefined;
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-2">
-      <div className="flex gap-2">
-        <Input
-          value={path}
-          onChange={(e) => setPath(e.target.value)}
-          placeholder="Next.js 프로젝트 절대 경로 (예: C:/Users/me/my-project)"
-          disabled={isLoading}
-          className="flex-1"
-        />
+    <form
+      onSubmit={submitHandler}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocusCapture={() => setFocused(true)}
+      onBlurCapture={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);
+      }}
+      className="flex flex-1 flex-col gap-2"
+    >
+      <div className="flex items-end gap-2">
+        <div className="flex flex-1 flex-col gap-1">
+          <span className="text-xs text-muted-foreground">프로젝트 경로</span>
+          <Input
+            {...register('path')}
+            placeholder="Next.js 프로젝트 절대 경로 (예: C:/Users/me/my-project)"
+            aria-invalid={!!errors.path}
+            className="flex-1"
+          />
+          <FieldError message={errors.path?.message} />
+        </div>
         {onImport && (
-          <Button
+          <ActionButton
             type="button"
             variant="outline"
             size="icon"
             onClick={onImport}
-            disabled={isLoading}
+            tooltip={loadingTip}
             title="JSON 불러오기"
           >
             <UploadIcon size={16} />
-          </Button>
+          </ActionButton>
         )}
         {onExport !== undefined && (
-          <Button
+          <ActionButton
             type="button"
             variant="outline"
             size="icon"
             onClick={onExport}
-            disabled={!canExport}
+            tooltip={!canExport ? '분석된 그래프가 없습니다.' : undefined}
             title="JSON 내보내기"
           >
             <DownloadIcon size={16} />
-          </Button>
+          </ActionButton>
         )}
-        <Button type="submit" disabled={isLoading || !canSubmit}>
+        <ActionButton type="submit" tooltip={loadingTip}>
           {isLoading && <Loader2Icon className="animate-spin" />}
           {isLoading ? '분석 중...' : '분석'}
-        </Button>
+        </ActionButton>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="flex cursor-pointer items-center gap-1.5 text-sm">
-          <Checkbox
-            checked={screenshot}
-            onCheckedChange={(checked) => setScreenshot(checked === true)}
-            disabled={isLoading}
-          />
-          <span className="text-muted-foreground">스크린샷 캡처</span>
-        </label>
-        {screenshot && (
-          <InputGroup className="w-72">
-            <InputGroupInput
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder="대상 서버 URL"
-              disabled={isLoading}
-              className="text-sm"
-            />
-            {!baseUrl && (
-              <InputGroupAddon align="inline-end">
-                <InputGroupButton
-                  onClick={() => setBaseUrl('http://localhost:3000')}
-                  disabled={isLoading}
-                  className="text-xs"
-                >
-                  (예: <span className="underline">http://localhost:3000</span>)
-                </InputGroupButton>
-              </InputGroupAddon>
-            )}
-          </InputGroup>
+      <div
+        className={cn(
+          'grid transition-[grid-template-rows] duration-200 ease-in-out',
+          expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
         )}
-      </div>
-
-      {screenshot && (
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">인증:</span>
-            {(['none', 'cookies', 'form'] as AuthType[]).map((t) => (
-              <Button
-                key={t}
-                type="button"
-                variant={authType === t ? 'default' : 'outline'}
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={() => setAuthType(t)}
-                disabled={isLoading}
-              >
-                {t === 'none' ? '없음' : t === 'cookies' ? '쿠키 주입' : 'Form 로그인'}
-              </Button>
-            ))}
+      >
+        <div className="flex flex-col gap-2 overflow-hidden">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex cursor-pointer items-center gap-1.5 text-sm">
+              <Controller
+                control={control}
+                name="screenshot"
+                render={({ field }) => (
+                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                )}
+              />
+              <span className="text-muted-foreground">스크린샷 캡처</span>
+            </label>
+            {screenshot && (
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">서버 URL</span>
+                <InputGroup className="w-72">
+                  <InputGroupInput
+                    {...register('baseUrl')}
+                    placeholder="대상 서버 URL"
+                    aria-invalid={!!errors.baseUrl}
+                    className="text-sm"
+                  />
+                  {!baseUrl && (
+                    <ExampleFill
+                      label="http://localhost:3000"
+                      onClick={() =>
+                        setValue('baseUrl', 'http://localhost:3000', { shouldValidate: true })
+                      }
+                      tooltip={loadingTip}
+                    />
+                  )}
+                </InputGroup>
+                <FieldError message={errors.baseUrl?.message} />
+              </div>
+            )}
           </div>
 
-          {authType === 'cookies' && (
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">
-                DevTools → Application → Cookies에서 복사한 JSON 배열 붙여넣기
-              </span>
-              <Textarea
-                value={cookiesJson}
-                onChange={(e) => setCookiesJson(e.target.value)}
-                placeholder='[{"name":"session","value":"abc123","domain":"localhost"}]'
-                disabled={isLoading}
-                className="h-24 font-mono text-xs"
-              />
-            </div>
-          )}
-
-          {authType === 'form' && (
-            <div className="flex flex-col gap-1.5">
-              <InputGroup>
-                <InputGroupInput
-                  value={loginUrl}
-                  onChange={(e) => setLoginUrl(e.target.value)}
-                  placeholder="로그인 URL"
-                  disabled={isLoading}
-                  className="text-sm"
-                />
-                {!loginUrl && (
-                  <InputGroupAddon align="inline-end">
-                    <InputGroupButton
-                      onClick={() => setLoginUrl('/login')}
-                      disabled={isLoading}
-                      className="text-xs"
-                    >
-                      (예: <span className="underline">/login</span>)
-                    </InputGroupButton>
-                  </InputGroupAddon>
-                )}
-              </InputGroup>
-
-              <div className="flex gap-1.5">
-                <InputGroup className="flex-1">
-                  <InputGroupInput
-                    value={usernameSelector}
-                    onChange={(e) => setUsernameSelector(e.target.value)}
-                    placeholder="아이디 셀렉터"
-                    disabled={isLoading}
-                    className="text-sm"
-                  />
-                  {!usernameSelector && (
-                    <InputGroupAddon align="inline-end">
-                      <InputGroupButton
-                        onClick={() => setUsernameSelector('#email')}
-                        disabled={isLoading}
-                        className="text-xs"
-                      >
-                        (예: <span className="underline">#email</span>)
-                      </InputGroupButton>
-                    </InputGroupAddon>
-                  )}
-                </InputGroup>
-                <Input
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="아이디 / 이메일"
-                  disabled={isLoading}
-                  className="flex-1 text-sm"
-                />
+          {screenshot && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">인증:</span>
+                {(['none', 'cookies', 'form'] as const).map((t) => (
+                  <ActionButton
+                    key={t}
+                    type="button"
+                    variant={authType === t ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setValue('authType', t)}
+                    tooltip={loadingTip}
+                  >
+                    {t === 'none' ? '없음' : t === 'cookies' ? '쿠키 주입' : 'Form 로그인'}
+                  </ActionButton>
+                ))}
               </div>
 
-              <div className="flex gap-1.5">
-                <InputGroup className="flex-1">
-                  <InputGroupInput
-                    value={passwordSelector}
-                    onChange={(e) => setPasswordSelector(e.target.value)}
-                    placeholder="비밀번호 셀렉터"
-                    disabled={isLoading}
-                    className="text-sm"
+              {authType === 'cookies' && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">
+                    쿠키 JSON{' '}
+                    <span className="opacity-60">(DevTools › Application › Cookies에서 복사)</span>
+                  </span>
+                  <Textarea
+                    {...register('cookiesJson')}
+                    placeholder='[{"name":"session","value":"abc123","domain":"localhost"}]'
+                    aria-invalid={!!errors.cookiesJson}
+                    className="h-24 font-mono text-xs"
                   />
-                  {!passwordSelector && (
-                    <InputGroupAddon align="inline-end">
-                      <InputGroupButton
-                        onClick={() => setPasswordSelector('#password')}
-                        disabled={isLoading}
-                        className="text-xs"
-                      >
-                        (예: <span className="underline">#password</span>)
-                      </InputGroupButton>
-                    </InputGroupAddon>
-                  )}
-                </InputGroup>
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="비밀번호"
-                  disabled={isLoading}
-                  className="flex-1 text-sm"
-                />
-              </div>
+                  <FieldError message={errors.cookiesJson?.message} />
+                </div>
+              )}
 
-              <InputGroup>
-                <InputGroupInput
-                  value={submitSelector}
-                  onChange={(e) => setSubmitSelector(e.target.value)}
-                  placeholder="제출 버튼 셀렉터"
-                  disabled={isLoading}
-                  className="text-sm"
-                />
-                {!submitSelector && (
-                  <InputGroupAddon align="inline-end">
-                    <InputGroupButton
-                      onClick={() => setSubmitSelector('button[type=submit]')}
-                      disabled={isLoading}
-                      className="text-xs"
-                    >
-                      (예: <span className="underline">button[type=submit]</span>)
-                    </InputGroupButton>
-                  </InputGroupAddon>
-                )}
-              </InputGroup>
+              {authType === 'form' && (
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex gap-1.5">
+                    <div className="flex flex-1 flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">로그인 URL</span>
+                      <InputGroup>
+                        <InputGroupInput
+                          {...register('loginUrl')}
+                          placeholder="로그인 URL"
+                          aria-invalid={!!errors.loginUrl}
+                          className="text-sm"
+                        />
+                        {!loginUrl && (
+                          <ExampleFill
+                            label="/login"
+                            onClick={() => setValue('loginUrl', '/login', { shouldValidate: true })}
+                            tooltip={loadingTip}
+                          />
+                        )}
+                      </InputGroup>
+                      <FieldError message={errors.loginUrl?.message} />
+                    </div>
+                    <div className="flex flex-1 flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">제출 버튼 셀렉터</span>
+                      <InputGroup>
+                        <InputGroupInput
+                          {...register('submitSelector')}
+                          placeholder="제출 버튼 셀렉터"
+                          aria-invalid={!!errors.submitSelector}
+                          className="text-sm"
+                        />
+                        {!submitSelector && (
+                          <ExampleFill
+                            label="button[type=submit]"
+                            onClick={() =>
+                              setValue('submitSelector', 'button[type=submit]', {
+                                shouldValidate: true,
+                              })
+                            }
+                            tooltip={loadingTip}
+                          />
+                        )}
+                      </InputGroup>
+                      <FieldError message={errors.submitSelector?.message} />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-1.5">
+                    <div className="flex flex-1 flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">아이디 셀렉터</span>
+                      <InputGroup>
+                        <InputGroupInput
+                          {...register('usernameSelector')}
+                          placeholder="아이디 셀렉터"
+                          aria-invalid={!!errors.usernameSelector}
+                          className="text-sm"
+                        />
+                        {!usernameSelector && (
+                          <ExampleFill
+                            label="#email"
+                            onClick={() =>
+                              setValue('usernameSelector', '#email', { shouldValidate: true })
+                            }
+                            tooltip={loadingTip}
+                          />
+                        )}
+                      </InputGroup>
+                      <FieldError message={errors.usernameSelector?.message} />
+                    </div>
+                    <div className="flex flex-1 flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">비밀번호 셀렉터</span>
+                      <InputGroup>
+                        <InputGroupInput
+                          {...register('passwordSelector')}
+                          placeholder="비밀번호 셀렉터"
+                          aria-invalid={!!errors.passwordSelector}
+                          className="text-sm"
+                        />
+                        {!passwordSelector && (
+                          <ExampleFill
+                            label="#password"
+                            onClick={() =>
+                              setValue('passwordSelector', '#password', { shouldValidate: true })
+                            }
+                            tooltip={loadingTip}
+                          />
+                        )}
+                      </InputGroup>
+                      <FieldError message={errors.passwordSelector?.message} />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-1.5">
+                    <div className="flex flex-1 flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">아이디</span>
+                      <Input
+                        {...register('username')}
+                        placeholder="아이디 / 이메일"
+                        aria-invalid={!!errors.username}
+                        className="text-sm"
+                      />
+                      <FieldError message={errors.username?.message} />
+                    </div>
+                    <div className="flex flex-1 flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">비밀번호</span>
+                      <Input
+                        {...register('password')}
+                        type="password"
+                        placeholder="비밀번호"
+                        aria-invalid={!!errors.password}
+                        className="text-sm"
+                      />
+                      <FieldError message={errors.password?.message} />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
+      </div>
+
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={() => setPinned((p) => !p)}
+        className="mx-auto flex h-5 w-5 items-center justify-center p-0 text-muted-foreground/40 hover:text-muted-foreground"
+      >
+        {pinned ? (
+          <PinOffIcon size={13} />
+        ) : expanded ? (
+          <PinIcon size={13} />
+        ) : (
+          <ChevronDownIcon size={13} />
+        )}
+      </Button>
     </form>
   );
 }

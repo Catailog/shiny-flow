@@ -181,7 +181,6 @@ export default function Home() {
   return (
     <div className="flex h-screen flex-col bg-background">
       <header className="flex items-center gap-4 border-b border-border px-6 py-4">
-        <h1 className="shrink-0 text-lg font-semibold text-brand-dark">shiny-flow</h1>
         <input
           ref={fileInputRef}
           type="file"

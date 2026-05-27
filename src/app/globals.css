@@ -93,6 +93,7 @@
     --info-foreground: #eff6ff;
 
     --placeholder-foreground: var(--brand-secondary);
+    --input-background: #ffffff;
 
     /* ── shadcn 시맨틱 토큰 (브랜드 참조) ────── */
     --background: var(--brand-light);
@@ -190,6 +191,12 @@
   html {
     @apply font-sans;
   }
+}
+
+/* ── Input background — bg-transparent 오버라이드, 페이지 배경과 구분 ── */
+input[data-slot='input'],
+div[data-slot='input-group'] {
+  background-color: var(--input-background);
 }
 
 /* ── Input placeholder — Tailwind의 placeholder:text-muted-foreground 재정의 ── */
