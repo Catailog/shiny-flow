@@ -104,6 +104,17 @@ function MemoDialog({
   );
 }
 
+function formatExact(isoString: string): string {
+  return new Date(isoString).toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
 function CommentNodeDialog({
   nodeId,
   nodes,
@@ -116,13 +127,28 @@ function CommentNodeDialog({
   onClose: () => void;
 }) {
   const node = nodes.find((n) => n.id === nodeId);
-  const [value, setValue] = useState(
-    (node?.data as { content?: string } | undefined)?.content ?? '',
-  );
+  const existing = node?.data as
+    | { content?: string; author?: string; createdAt?: string; updatedAt?: string }
+    | undefined;
+  const [value, setValue] = useState(existing?.content ?? '');
+
+  const timeRef = existing?.updatedAt ?? existing?.createdAt;
 
   const save = () => {
+    const now = new Date().toISOString();
+    const wasNonEmpty = !!existing?.content?.trim();
     setNodes((prev) =>
-      prev.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, content: value } } : n)),
+      prev.map((n) => {
+        if (n.id !== nodeId) return n;
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            content: value,
+            updatedAt: wasNonEmpty ? now : undefined,
+          },
+        };
+      }),
     );
     onClose();
   };
@@ -132,6 +158,14 @@ function CommentNodeDialog({
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>댓글</DialogTitle>
+          {(existing?.author || timeRef) && (
+            <p className="text-xs text-muted-foreground">
+              {existing?.author}
+              {existing?.author && timeRef && ' · '}
+              {timeRef && formatExact(timeRef)}
+              {existing?.updatedAt && ' (수정됨)'}
+            </p>
+          )}
         </DialogHeader>
         <Textarea
           autoFocus

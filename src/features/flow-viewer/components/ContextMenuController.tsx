@@ -74,40 +74,19 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
       );
     } else {
       items = (
-        <>
-          <div
-            role="menuitem"
-            className={ITEM}
-            onClick={() => {
-              onOpenDialog({
-                type: 'nodeCreate',
-                pos: screenToFlowPosition({ x: screenX, y: screenY }),
-              });
-              close();
-            }}
-          >
-            노드 생성
-          </div>
-          <div
-            role="menuitem"
-            className={ITEM}
-            onClick={() => {
-              const pos = screenToFlowPosition({ x: screenX, y: screenY });
-              setNodes((prev) => [
-                ...prev,
-                {
-                  id: `comment-${Date.now()}`,
-                  type: 'commentNode',
-                  position: pos,
-                  data: { content: '' },
-                },
-              ]);
-              close();
-            }}
-          >
-            댓글 생성
-          </div>
-        </>
+        <div
+          role="menuitem"
+          className={ITEM}
+          onClick={() => {
+            onOpenDialog({
+              type: 'nodeCreate',
+              pos: screenToFlowPosition({ x: screenX, y: screenY }),
+            });
+            close();
+          }}
+        >
+          노드 생성
+        </div>
       );
     }
   } else if (target.type === 'commentNode') {
@@ -349,6 +328,31 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
     );
   }
 
+  const addCommentItem = (
+    <>
+      <div className={SEPARATOR} />
+      <div
+        role="menuitem"
+        className={ITEM}
+        onClick={() => {
+          const pos = screenToFlowPosition({ x: screenX, y: screenY });
+          setNodes((prev) => [
+            ...prev,
+            {
+              id: `comment-${Date.now()}`,
+              type: 'commentNode',
+              position: pos,
+              data: { content: '', author: 'localhost', createdAt: new Date().toISOString() },
+            },
+          ]);
+          close();
+        }}
+      >
+        댓글 생성
+      </div>
+    </>
+  );
+
   return createPortal(
     <div
       ref={menuRef}
@@ -357,6 +361,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
       onContextMenu={(e) => e.preventDefault()}
     >
       {items}
+      {addCommentItem}
     </div>,
     document.body,
   );
