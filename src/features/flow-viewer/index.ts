@@ -1,1 +1,1 @@
-export { FlowViewer } from './components/FlowViewer';
+export { FlowViewer, type FlowViewerHandle } from './components/FlowViewer';

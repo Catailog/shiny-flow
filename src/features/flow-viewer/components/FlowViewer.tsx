@@ -1,6 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   Background,
@@ -35,6 +43,7 @@ import { ScreenshotContext } from '../screenshotContext';
 import type { ContextMenuState, DialogRequest } from '../types';
 import { ContextMenuController } from './ContextMenuController';
 import { DialogRenderer } from './DialogRenderer';
+import { FlowCommentNode } from './FlowCommentNode';
 import { FlowEdge } from './FlowEdge';
 import { FlowGroupNode } from './FlowGroupNode';
 import { FlowNode, type FlowNodeData } from './FlowNode';
@@ -42,6 +51,7 @@ import { FlowNode, type FlowNodeData } from './FlowNode';
 const nodeTypes = {
   flowNode: FlowNode,
   groupNode: FlowGroupNode,
+  commentNode: FlowCommentNode,
 };
 const edgeTypes = { flowEdge: FlowEdge };
 const defaultEdgeOptions = {
@@ -49,18 +59,28 @@ const defaultEdgeOptions = {
   zIndex: 1,
 };
 
-function AutoLayout({ edges, onLayout }: { edges: Edge[]; onLayout: (nodes: Node[]) => void }) {
+function AutoLayout({
+  edges,
+  onLayout,
+  skipLayout,
+}: {
+  edges: Edge[];
+  onLayout: (nodes: Node[]) => void;
+  skipLayout?: boolean;
+}) {
   const nodesInitialized = useNodesInitialized();
   const { getNodes, fitView } = useReactFlow();
   const [done, setDone] = useState(false);
 
   useEffect(() => {
     if (!nodesInitialized || done) return;
-    const relayouted = applyDagreLayout(getNodes(), edges);
-    onLayout(relayouted);
+    if (!skipLayout) {
+      const relayouted = applyDagreLayout(getNodes(), edges);
+      onLayout(relayouted);
+    }
     setDone(true);
     requestAnimationFrame(() => fitView());
-  }, [nodesInitialized, done, edges, onLayout, getNodes, fitView]);
+  }, [nodesInitialized, done, edges, onLayout, getNodes, fitView, skipLayout]);
 
   return null;
 }
@@ -82,17 +102,32 @@ function GroupButton({ onOpenDialog }: { onOpenDialog: (req: DialogRequest) => v
 
 // --- Main component ---
 
+export type FlowViewerHandle = {
+  getNodes: () => Node[];
+  getEdges: () => Edge[];
+};
+
 type Props = {
   graph: FlowGraph;
   screenshotOptions: { baseUrl: string; auth?: AuthInput } | null;
+  savedRfNodes?: Node[];
+  savedRfEdges?: Edge[];
 };
 
-export function FlowViewer({ graph, screenshotOptions }: Props) {
+export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewer(
+  { graph, screenshotOptions, savedRfNodes, savedRfEdges },
+  ref,
+) {
   const { nodes: initialNodes, edges: initialEdges } = graphToFlow(graph);
   const layoutedNodes = applyDagreLayout(initialNodes, initialEdges);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(savedRfNodes ?? layoutedNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(savedRfEdges ?? initialEdges);
+
+  useImperativeHandle(ref, () => ({ getNodes: () => nodes, getEdges: () => edges }), [
+    nodes,
+    edges,
+  ]);
 
   const [isLocked, setIsLocked] = useState(false);
   const [spacebarLocked, setSpacebarLocked] = useState(false);
@@ -250,7 +285,12 @@ export function FlowViewer({ graph, screenshotOptions }: Props) {
 
   const handleNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
     e.preventDefault();
-    const type = node.type === 'groupNode' ? 'groupNode' : 'flowNode';
+    const type =
+      node.type === 'groupNode'
+        ? 'groupNode'
+        : node.type === 'commentNode'
+          ? 'commentNode'
+          : 'flowNode';
     setContextMenuState({
       screenX: e.clientX,
       screenY: e.clientY,
@@ -359,7 +399,7 @@ export function FlowViewer({ graph, screenshotOptions }: Props) {
               zoomOnDoubleClick={false}
               deleteKeyCode={['Backspace', 'Delete']}
             >
-              <AutoLayout edges={initialEdges} onLayout={setNodes} />
+              <AutoLayout edges={initialEdges} onLayout={setNodes} skipLayout={!!savedRfNodes} />
               <Background />
               <Controls style={{ bottom: 48 }} showInteractive={false}>
                 <ControlButton
@@ -378,8 +418,10 @@ export function FlowViewer({ graph, screenshotOptions }: Props) {
                 <GroupButton onOpenDialog={setDialogRequest} />
               </Controls>
               <MiniMap
-                nodeColor={(node) => (node.data?.isDeadEnd ? '#D4A373' : '#708A70')}
-                maskColor="rgba(244,247,244,0.7)"
+                nodeColor={(node) =>
+                  node.data?.isDeadEnd ? 'var(--color-brand-accent)' : 'var(--color-brand-primary)'
+                }
+                maskColor="color-mix(in srgb, var(--background) 70%, transparent)"
                 className="rounded-lg border border-border shadow-sm"
               />
               <ContextMenuController
@@ -402,4 +444,4 @@ export function FlowViewer({ graph, screenshotOptions }: Props) {
       </ScreenshotContext.Provider>
     </FlowActionsProvider>
   );
-}
+});

@@ -2,8 +2,17 @@
 
 import { useState } from 'react';
 
+import { DownloadIcon, Loader2Icon, UploadIcon } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '@/components/ui/input-group';
 import { Textarea } from '@/components/ui/textarea';
 
 export type CookiesAuthInput = {
@@ -34,9 +43,12 @@ export type AnalyzeOptions = {
 type Props = {
   onAnalyze: (options: AnalyzeOptions) => void;
   isLoading: boolean;
+  onImport?: () => void;
+  onExport?: () => void;
+  canExport?: boolean;
 };
 
-export function ProjectInput({ onAnalyze, isLoading }: Props) {
+export function ProjectInput({ onAnalyze, isLoading, onImport, onExport, canExport }: Props) {
   const [path, setPath] = useState('');
   const [screenshot, setScreenshot] = useState(false);
   const [baseUrl, setBaseUrl] = useState('');
@@ -99,30 +111,66 @@ export function ProjectInput({ onAnalyze, isLoading }: Props) {
           disabled={isLoading}
           className="flex-1"
         />
+        {onImport && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={onImport}
+            disabled={isLoading}
+            title="JSON 불러오기"
+          >
+            <UploadIcon size={16} />
+          </Button>
+        )}
+        {onExport !== undefined && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={onExport}
+            disabled={!canExport}
+            title="JSON 내보내기"
+          >
+            <DownloadIcon size={16} />
+          </Button>
+        )}
         <Button type="submit" disabled={isLoading || !canSubmit}>
+          {isLoading && <Loader2Icon className="animate-spin" />}
           {isLoading ? '분석 중...' : '분석'}
         </Button>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex cursor-pointer items-center gap-1.5 text-sm">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={screenshot}
-            onChange={(e) => setScreenshot(e.target.checked)}
+            onCheckedChange={(checked) => setScreenshot(checked === true)}
             disabled={isLoading}
-            className="accent-brand-primary"
           />
           <span className="text-muted-foreground">스크린샷 캡처</span>
         </label>
         {screenshot && (
-          <Input
-            value={baseUrl}
-            onChange={(e) => setBaseUrl(e.target.value)}
-            placeholder="대상 서버 URL (예: http://localhost:3001)"
-            disabled={isLoading}
-            className="w-72 text-sm"
-          />
+          <InputGroup className="w-72">
+            <InputGroupInput
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder="대상 서버 URL"
+              disabled={isLoading}
+              className="text-sm"
+            />
+            {!baseUrl && (
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  onClick={() => setBaseUrl('http://localhost:3000')}
+                  disabled={isLoading}
+                  className="text-xs"
+                >
+                  (예: <span className="underline">http://localhost:3000</span>)
+                </InputGroupButton>
+              </InputGroupAddon>
+            )}
+          </InputGroup>
         )}
       </div>
 
@@ -161,50 +209,109 @@ export function ProjectInput({ onAnalyze, isLoading }: Props) {
           )}
 
           {authType === 'form' && (
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                value={loginUrl}
-                onChange={(e) => setLoginUrl(e.target.value)}
-                placeholder="로그인 URL (예: /login)"
-                disabled={isLoading}
-                className="col-span-2 text-xs"
-              />
-              <Input
-                value={usernameSelector}
-                onChange={(e) => setUsernameSelector(e.target.value)}
-                placeholder="아이디 셀렉터 (예: #email)"
-                disabled={isLoading}
-                className="text-xs"
-              />
-              <Input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="아이디 / 이메일"
-                disabled={isLoading}
-                className="text-xs"
-              />
-              <Input
-                value={passwordSelector}
-                onChange={(e) => setPasswordSelector(e.target.value)}
-                placeholder="비밀번호 셀렉터 (예: #password)"
-                disabled={isLoading}
-                className="text-xs"
-              />
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="비밀번호"
-                disabled={isLoading}
-                className="text-xs"
-              />
-              <Input
-                value={submitSelector}
-                onChange={(e) => setSubmitSelector(e.target.value)}
-                placeholder="제출 버튼 셀렉터 (예: button[type=submit])"
-                disabled={isLoading}
-                className="col-span-2 text-xs"
-              />
+            <div className="flex flex-col gap-1.5">
+              <InputGroup>
+                <InputGroupInput
+                  value={loginUrl}
+                  onChange={(e) => setLoginUrl(e.target.value)}
+                  placeholder="로그인 URL"
+                  disabled={isLoading}
+                  className="text-sm"
+                />
+                {!loginUrl && (
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupButton
+                      onClick={() => setLoginUrl('/login')}
+                      disabled={isLoading}
+                      className="text-xs"
+                    >
+                      (예: <span className="underline">/login</span>)
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                )}
+              </InputGroup>
+
+              <div className="flex gap-1.5">
+                <InputGroup className="flex-1">
+                  <InputGroupInput
+                    value={usernameSelector}
+                    onChange={(e) => setUsernameSelector(e.target.value)}
+                    placeholder="아이디 셀렉터"
+                    disabled={isLoading}
+                    className="text-sm"
+                  />
+                  {!usernameSelector && (
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupButton
+                        onClick={() => setUsernameSelector('#email')}
+                        disabled={isLoading}
+                        className="text-xs"
+                      >
+                        (예: <span className="underline">#email</span>)
+                      </InputGroupButton>
+                    </InputGroupAddon>
+                  )}
+                </InputGroup>
+                <Input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="아이디 / 이메일"
+                  disabled={isLoading}
+                  className="flex-1 text-sm"
+                />
+              </div>
+
+              <div className="flex gap-1.5">
+                <InputGroup className="flex-1">
+                  <InputGroupInput
+                    value={passwordSelector}
+                    onChange={(e) => setPasswordSelector(e.target.value)}
+                    placeholder="비밀번호 셀렉터"
+                    disabled={isLoading}
+                    className="text-sm"
+                  />
+                  {!passwordSelector && (
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupButton
+                        onClick={() => setPasswordSelector('#password')}
+                        disabled={isLoading}
+                        className="text-xs"
+                      >
+                        (예: <span className="underline">#password</span>)
+                      </InputGroupButton>
+                    </InputGroupAddon>
+                  )}
+                </InputGroup>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="비밀번호"
+                  disabled={isLoading}
+                  className="flex-1 text-sm"
+                />
+              </div>
+
+              <InputGroup>
+                <InputGroupInput
+                  value={submitSelector}
+                  onChange={(e) => setSubmitSelector(e.target.value)}
+                  placeholder="제출 버튼 셀렉터"
+                  disabled={isLoading}
+                  className="text-sm"
+                />
+                {!submitSelector && (
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupButton
+                      onClick={() => setSubmitSelector('button[type=submit]')}
+                      disabled={isLoading}
+                      className="text-xs"
+                    >
+                      (예: <span className="underline">button[type=submit]</span>)
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                )}
+              </InputGroup>
             </div>
           )}
         </div>

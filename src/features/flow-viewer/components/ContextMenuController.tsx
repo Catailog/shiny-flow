@@ -88,9 +88,53 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           >
             노드 생성
           </div>
+          <div
+            role="menuitem"
+            className={ITEM}
+            onClick={() => {
+              const pos = screenToFlowPosition({ x: screenX, y: screenY });
+              setNodes((prev) => [
+                ...prev,
+                {
+                  id: `comment-${Date.now()}`,
+                  type: 'commentNode',
+                  position: pos,
+                  data: { content: '' },
+                },
+              ]);
+              close();
+            }}
+          >
+            댓글 생성
+          </div>
         </>
       );
     }
+  } else if (target.type === 'commentNode') {
+    items = (
+      <>
+        <div
+          role="menuitem"
+          className={ITEM}
+          onClick={() => {
+            onOpenDialog({ type: 'comment', nodeId: target.nodeId });
+            close();
+          }}
+        >
+          수정
+        </div>
+        <div
+          role="menuitem"
+          className={ITEM_DESTRUCTIVE}
+          onClick={() => {
+            deleteElements({ nodes: [{ id: target.nodeId }] });
+            close();
+          }}
+        >
+          삭제
+        </div>
+      </>
+    );
   } else if (target.type === 'flowNode') {
     if (selectedFlowNodes.length >= 2) {
       items = (
