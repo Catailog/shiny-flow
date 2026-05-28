@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 
 import { useCollapseContext } from '../collapseContext';
 import { STATUS_COLORS, getNodeColorStyle } from '../lib/nodeColors';
+import { getAbsolutePosition, recomputeGroupZIndexes } from '../lib/nodeUtils';
 import type { ContextMenuState, DialogRequest } from '../types';
 import type { FlowEdgeData } from './FlowEdge';
 import type { FlowNodeData } from './FlowNode';
@@ -43,9 +44,11 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
   const { setNodes, setEdges, deleteElements, getNode, getEdge, screenToFlowPosition } =
     useReactFlow();
   const { collapsedIds, toggleCollapse, hasChildren } = useCollapseContext();
-  const selectedFlowNodes = useStore((s) =>
-    s.nodes.filter((n) => n.selected && n.type === 'flowNode'),
+  const selectedNodes = useStore((s) =>
+    s.nodes.filter((n) => n.selected && (n.type === 'flowNode' || n.type === 'groupNode')),
   );
+  const parentIdSet = new Set(selectedNodes.map((n) => n.parentId ?? null));
+  const canGroupSelected = selectedNodes.length >= 2 && parentIdSet.size === 1;
   const [colorSubOpen, setColorSubOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -73,13 +76,13 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
   let items: React.ReactNode;
 
   if (target.type === 'pane') {
-    if (selectedFlowNodes.length >= 2) {
+    if (canGroupSelected) {
       items = (
         <div
           role="menuitem"
           className={ITEM}
           onClick={() => {
-            onOpenDialog({ type: 'groupCreate', nodes: selectedFlowNodes });
+            onOpenDialog({ type: 'groupCreate', nodes: selectedNodes });
             close();
           }}
         >
@@ -133,13 +136,13 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
       </>
     );
   } else if (target.type === 'flowNode') {
-    if (selectedFlowNodes.length >= 2) {
+    if (canGroupSelected) {
       items = (
         <div
           role="menuitem"
           className={ITEM}
           onClick={() => {
-            onOpenDialog({ type: 'groupCreate', nodes: selectedFlowNodes });
+            onOpenDialog({ type: 'groupCreate', nodes: selectedNodes });
             close();
           }}
         >
@@ -267,47 +270,49 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
       );
     } // end else (single selection)
   } else if (target.type === 'groupNode') {
+    const group = getNode(target.nodeId);
+    const otherNodesSelected = selectedNodes.some((n) => n.id !== target.nodeId);
+
     items = (
       <>
         <div
           role="menuitem"
           className={ITEM}
           onClick={() => {
-            onOpenDialog({ type: 'groupRename', nodeId: target.nodeId });
+            onOpenDialog({ type: 'groupEdit', nodeId: target.nodeId });
             close();
           }}
         >
           <PencilIcon className={ICON} />
-          이름 변경
+          그룹 수정
         </div>
-        <div
-          role="menuitem"
-          className={ITEM_DESTRUCTIVE}
-          onClick={() => {
-            const group = getNode(target.nodeId);
-            setNodes((prev) => {
-              if (!group) return prev.filter((n) => n.id !== target.nodeId);
-              return prev
-                .filter((n) => n.id !== target.nodeId)
-                .map((n) => {
-                  if (n.parentId !== target.nodeId) return n;
-                  return {
-                    ...n,
-                    parentId: undefined,
-                    extent: undefined,
-                    position: {
-                      x: n.position.x + group.position.x,
-                      y: n.position.y + group.position.y,
-                    },
-                  };
+        {!otherNodesSelected && (
+          <div
+            role="menuitem"
+            className={ITEM_DESTRUCTIVE}
+            onClick={() => {
+              if (group?.parentId) {
+                onOpenDialog({ type: 'groupUngroup', nodeId: target.nodeId });
+                close();
+              } else {
+                setNodes((prev) => {
+                  const result = prev
+                    .filter((n) => n.id !== target.nodeId)
+                    .map((n) => {
+                      if (n.parentId !== target.nodeId) return n;
+                      const absPos = getAbsolutePosition(n, prev);
+                      return { ...n, parentId: undefined, extent: undefined, position: absPos };
+                    });
+                  return recomputeGroupZIndexes(result);
                 });
-            });
-            close();
-          }}
-        >
-          <UngroupIcon className={ICON} />
-          그룹 해제
-        </div>
+                close();
+              }
+            }}
+          >
+            <UngroupIcon className={ICON} />
+            그룹 해제
+          </div>
+        )}
       </>
     );
   } else if (target.type === 'edge') {

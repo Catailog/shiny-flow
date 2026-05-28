@@ -202,7 +202,7 @@ function CommentNodeDialog({
   );
 }
 
-function GroupRenameDialog({
+function GroupEditDialog({
   nodeId,
   nodes,
   setNodes,
@@ -214,13 +214,15 @@ function GroupRenameDialog({
   onClose: () => void;
 }) {
   const node = nodes.find((n) => n.id === nodeId);
-  const [value, setValue] = useState((node?.data as GroupNodeData | undefined)?.label ?? '');
+  const data = node?.data as GroupNodeData | undefined;
+  const [label, setLabel] = useState(data?.label ?? '');
+  const [color, setColor] = useState(data?.color ?? 'gray');
 
   const save = () => {
-    const trimmed = value.trim();
+    const trimmed = label.trim();
     if (!trimmed) return;
     setNodes((prev) =>
-      prev.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, label: trimmed } } : n)),
+      prev.map((n) => (n.id === nodeId ? { ...n, data: { label: trimmed, color } } : n)),
     );
     onClose();
   };
@@ -229,21 +231,103 @@ function GroupRenameDialog({
     <BaseDialog onClose={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>그룹 이름 변경</DialogTitle>
+          <DialogTitle>그룹 수정</DialogTitle>
         </DialogHeader>
-        <Input
-          autoFocus
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') save();
-          }}
-        />
+        <div className="space-y-4">
+          <Input
+            autoFocus
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') save();
+            }}
+          />
+          <div className="flex gap-2">
+            {GROUP_COLORS.map(({ label: colorLabel, value: colorValue }) => {
+              const s = GROUP_COLOR_STYLES[colorValue];
+              return (
+                <Button
+                  key={colorValue}
+                  variant="ghost"
+                  size="icon"
+                  title={colorLabel}
+                  onClick={() => setColor(colorValue)}
+                  className={cn(
+                    'h-6 w-6 rounded-full border-2 p-0 transition-transform',
+                    s.button,
+                    color === colorValue ? 'scale-125 border-white' : 'border-transparent',
+                  )}
+                />
+              );
+            })}
+          </div>
+        </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             취소
           </Button>
           <Button onClick={save}>저장</Button>
+        </DialogFooter>
+      </DialogContent>
+    </BaseDialog>
+  );
+}
+
+function GroupUngroupDialog({
+  nodeId,
+  nodes,
+  setNodes,
+  onClose,
+}: {
+  nodeId: string;
+  nodes: Node[];
+  setNodes: (fn: (prev: Node[]) => Node[]) => void;
+  onClose: () => void;
+}) {
+  const group = nodes.find((n) => n.id === nodeId);
+  const parentGroupId = group?.parentId ?? null;
+
+  const ungroup = (keepInParent: boolean) => {
+    setNodes((prev) => {
+      const result = prev
+        .filter((n) => n.id !== nodeId)
+        .map((n) => {
+          if (n.parentId !== nodeId) return n;
+          const absPos = getAbsolutePosition(n, prev);
+          if (keepInParent && parentGroupId) {
+            const parentGroup = prev.find((p) => p.id === parentGroupId);
+            const parentAbs = parentGroup ? getAbsolutePosition(parentGroup, prev) : { x: 0, y: 0 };
+            return {
+              ...n,
+              parentId: parentGroupId,
+              extent: undefined,
+              position: { x: absPos.x - parentAbs.x, y: absPos.y - parentAbs.y },
+            };
+          }
+          return { ...n, parentId: undefined, extent: undefined, position: absPos };
+        });
+      return recomputeGroupZIndexes(result);
+    });
+    onClose();
+  };
+
+  return (
+    <BaseDialog onClose={onClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>그룹 해제</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          해제된 그룹의 자식 노드들을 어떻게 처리할까요?
+        </p>
+        <DialogFooter className="flex-col gap-2 sm:flex-col">
+          <Button onClick={() => ungroup(true)}>부모 그룹에 남기기</Button>
+          <Button variant="outline" onClick={() => ungroup(false)}>
+            그룹 바깥으로 이동
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            취소
+          </Button>
         </DialogFooter>
       </DialogContent>
     </BaseDialog>
@@ -514,9 +598,18 @@ export function DialogRenderer({
           onClose={onClose}
         />
       );
-    case 'groupRename':
+    case 'groupEdit':
       return (
-        <GroupRenameDialog
+        <GroupEditDialog
+          nodeId={dialogRequest.nodeId}
+          nodes={nodes}
+          setNodes={setNodes}
+          onClose={onClose}
+        />
+      );
+    case 'groupUngroup':
+      return (
+        <GroupUngroupDialog
           nodeId={dialogRequest.nodeId}
           nodes={nodes}
           setNodes={setNodes}

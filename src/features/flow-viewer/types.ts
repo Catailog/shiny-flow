@@ -36,7 +36,8 @@ export type DialogRequest =
   | { type: 'screenshot'; src: string; label: string }
   | { type: 'memo'; nodeId: string }
   | { type: 'comment'; nodeId: string }
-  | { type: 'groupRename'; nodeId: string }
+  | { type: 'groupEdit'; nodeId: string }
+  | { type: 'groupUngroup'; nodeId: string }
   | { type: 'edgeComment'; edgeId: string }
   | { type: 'groupCreate'; nodes: Node[] }
   | { type: 'nodeCreate'; pos: { x: number; y: number } };
