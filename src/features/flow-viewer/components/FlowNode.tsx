@@ -87,7 +87,7 @@ export function FlowNode({ id, data, selected }: Props) {
           selected && 'ring-2 ring-brand-primary ring-offset-1',
         )}
       >
-        {available && dynamicParams.length > 0 && (
+        {dynamicParams.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 border-b border-inherit px-3 py-2">
             {dynamicParams.map((param) => (
               <label key={param} className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -96,7 +96,7 @@ export function FlowNode({ id, data, selected }: Props) {
                   value={paramValues[param] ?? ''}
                   onChange={(e) => setParamValues((prev) => ({ ...prev, [param]: e.target.value }))}
                   placeholder="값 입력"
-                  className="nodrag h-5 w-20 px-1.5 text-xs"
+                  className="nodrag h-5 w-20 rounded-sm px-1.5 text-xs"
                 />
               </label>
             ))}
