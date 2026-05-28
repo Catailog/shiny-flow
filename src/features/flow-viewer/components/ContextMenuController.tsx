@@ -4,7 +4,20 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useReactFlow, useStore } from '@xyflow/react';
-import { ChevronRightIcon } from 'lucide-react';
+import {
+  BoxSelectIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  MaximizeIcon,
+  MessageSquareIcon,
+  MessageSquarePlusIcon,
+  PaletteIcon,
+  PencilIcon,
+  PlusIcon,
+  StickyNoteIcon,
+  Trash2Icon,
+  UngroupIcon,
+} from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -15,7 +28,8 @@ import type { FlowEdgeData } from './FlowEdge';
 import type { FlowNodeData } from './FlowNode';
 
 const ITEM =
-  'relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground';
+  'relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground';
+const ICON = 'size-3.5 shrink-0';
 const ITEM_DESTRUCTIVE = cn(ITEM, 'text-destructive hover:text-destructive focus:text-destructive');
 const SEPARATOR = '-mx-1 my-1 h-px bg-border';
 
@@ -69,6 +83,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             close();
           }}
         >
+          <BoxSelectIcon className={ICON} />
           그룹 생성
         </div>
       );
@@ -85,6 +100,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             close();
           }}
         >
+          <PlusIcon className={ICON} />
           노드 생성
         </div>
       );
@@ -100,6 +116,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             close();
           }}
         >
+          <PencilIcon className={ICON} />
           수정
         </div>
         <div
@@ -110,6 +127,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             close();
           }}
         >
+          <Trash2Icon className={ICON} />
           삭제
         </div>
       </>
@@ -125,6 +143,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             close();
           }}
         >
+          <BoxSelectIcon className={ICON} />
           그룹 생성
         </div>
       );
@@ -148,6 +167,11 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
                   close();
                 }}
               >
+                {isCollapsed ? (
+                  <ChevronDownIcon className={ICON} />
+                ) : (
+                  <ChevronRightIcon className={ICON} />
+                )}
                 {isCollapsed ? '펼치기' : '접기'}
               </div>
               <div className={SEPARATOR} />
@@ -161,6 +185,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
               close();
             }}
           >
+            <StickyNoteIcon className={ICON} />
             {hasMemo ? '메모 수정' : '메모 추가'}
           </div>
           {hasMemo && (
@@ -176,6 +201,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
                 close();
               }}
             >
+              <Trash2Icon className={ICON} />
               메모 삭제
             </div>
           )}
@@ -185,6 +211,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             onMouseEnter={() => setColorSubOpen(true)}
             onMouseLeave={() => setColorSubOpen(false)}
           >
+            <PaletteIcon className={ICON} />
             색상 태그
             <ChevronRightIcon size={14} className="ml-auto" />
             {colorSubOpen && (
@@ -193,7 +220,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
                   <div
                     key={label}
                     role="menuitem"
-                    className={cn(ITEM, 'gap-2')}
+                    className={ITEM}
                     onClick={() => {
                       setNodes((prev) =>
                         prev.map((n) =>
@@ -231,6 +258,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
                   close();
                 }}
               >
+                <MaximizeIcon className={ICON} />
                 크게 보기
               </div>
             </>
@@ -249,6 +277,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             close();
           }}
         >
+          <PencilIcon className={ICON} />
           이름 변경
         </div>
         <div
@@ -276,6 +305,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             close();
           }}
         >
+          <UngroupIcon className={ICON} />
           그룹 해제
         </div>
       </>
@@ -295,6 +325,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             close();
           }}
         >
+          <MessageSquareIcon className={ICON} />
           코멘트 편집
         </div>
         {hasComment && (
@@ -310,10 +341,10 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
               close();
             }}
           >
+            <Trash2Icon className={ICON} />
             코멘트 삭제
           </div>
         )}
-        <div className={SEPARATOR} />
         <div
           role="menuitem"
           className={ITEM_DESTRUCTIVE}
@@ -322,6 +353,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             close();
           }}
         >
+          <Trash2Icon className={ICON} />
           엣지 삭제
         </div>
       </>
@@ -348,6 +380,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           close();
         }}
       >
+        <MessageSquarePlusIcon className={ICON} />
         댓글 생성
       </div>
     </>
