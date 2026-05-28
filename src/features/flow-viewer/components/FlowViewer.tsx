@@ -398,6 +398,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
               nodesDraggable={nodesDraggable}
               zoomOnDoubleClick={false}
               deleteKeyCode={['Backspace', 'Delete']}
+              multiSelectionKeyCode="Shift"
             >
               <AutoLayout edges={initialEdges} onLayout={setNodes} skipLayout={!!savedRfNodes} />
               <Background />
