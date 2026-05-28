@@ -36,6 +36,14 @@ function computeGroupBounds(selected: Node[], padding = 48) {
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 
+function BaseDialog({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      {children}
+    </Dialog>
+  );
+}
+
 // --- dialog sub-components ---
 
 function ScreenshotDialog({
@@ -48,7 +56,7 @@ function ScreenshotDialog({
   onClose: () => void;
 }) {
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <BaseDialog onClose={onClose}>
       <DialogContent
         className="max-h-[90vh] w-auto max-w-[90vw] gap-0 overflow-hidden p-0 sm:max-w-[90vw]"
         showCloseButton={false}
@@ -64,7 +72,7 @@ function ScreenshotDialog({
           unoptimized
         />
       </DialogContent>
-    </Dialog>
+    </BaseDialog>
   );
 }
 
@@ -93,7 +101,7 @@ function MemoDialog({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <BaseDialog onClose={onClose}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>메모</DialogTitle>
@@ -106,7 +114,7 @@ function MemoDialog({
           <Button onClick={save}>저장</Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+    </BaseDialog>
   );
 }
 
@@ -160,7 +168,7 @@ function CommentNodeDialog({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <BaseDialog onClose={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>댓글</DialogTitle>
@@ -187,7 +195,7 @@ function CommentNodeDialog({
           <Button onClick={save}>저장</Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+    </BaseDialog>
   );
 }
 
@@ -215,7 +223,7 @@ function GroupRenameDialog({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <BaseDialog onClose={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>그룹 이름 변경</DialogTitle>
@@ -235,7 +243,7 @@ function GroupRenameDialog({
           <Button onClick={save}>저장</Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+    </BaseDialog>
   );
 }
 
@@ -264,7 +272,7 @@ function EdgeCommentDialog({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <BaseDialog onClose={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>엣지 코멘트</DialogTitle>
@@ -285,7 +293,7 @@ function EdgeCommentDialog({
           <Button onClick={save}>저장</Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+    </BaseDialog>
   );
 }
 
@@ -333,7 +341,7 @@ function GroupCreateDialog({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <BaseDialog onClose={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>그룹 만들기</DialogTitle>
@@ -375,7 +383,7 @@ function GroupCreateDialog({
           <Button onClick={confirm}>만들기</Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+    </BaseDialog>
   );
 }
 
@@ -405,7 +413,7 @@ function NodeCreateDialog({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <BaseDialog onClose={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>노드 생성</DialogTitle>
@@ -426,7 +434,7 @@ function NodeCreateDialog({
           <Button onClick={confirm}>만들기</Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+    </BaseDialog>
   );
 }
 
