@@ -6,7 +6,12 @@ import type { Edge, Node } from '@xyflow/react';
 import { Loader2Icon } from 'lucide-react';
 
 import { FlowViewer, type FlowViewerHandle } from '@/features/flow-viewer';
-import { type AnalyzeOptions, type AuthInput, ProjectInput } from '@/features/project-input';
+import {
+  type AnalyzeOptions,
+  type AuthInput,
+  ProjectInput,
+  type ProjectInputHandle,
+} from '@/features/project-input';
 
 import { Button } from '@/components/ui/button';
 
@@ -34,6 +39,7 @@ export default function Home() {
 
   const abortRef = useRef<AbortController | null>(null);
   const viewerRef = useRef<FlowViewerHandle>(null);
+  const projectInputRef = useRef<ProjectInputHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // ref로 현재 slowWarning 값 추적 — async catch 클로저에서 stale state 방지
@@ -189,6 +195,7 @@ export default function Home() {
           onChange={handleImportFile}
         />
         <ProjectInput
+          ref={projectInputRef}
           onAnalyze={handleAnalyze}
           isLoading={isLoading}
           onImport={() => fileInputRef.current?.click()}
@@ -258,6 +265,9 @@ export default function Home() {
             screenshotOptions={screenshotOptions}
             savedRfNodes={state.snapshot?.rfNodes}
             savedRfEdges={state.snapshot?.rfEdges}
+            onValidateForCapture={() =>
+              projectInputRef.current?.validateForCapture() ?? Promise.resolve()
+            }
           />
         )}
       </main>

@@ -27,7 +27,7 @@ function extractParams(route: string): string[] {
 export function FlowNode({ id, data, selected }: Props) {
   const { openDialog } = useFlowActions();
   const { collapsedIds, hasChildren, hiddenCount } = useCollapseContext();
-  const { available, captureNode } = useScreenshotContext();
+  const { available, captureNode, validateForCapture } = useScreenshotContext();
   const isCollapsed = collapsedIds.has(id);
   const canCollapse = hasChildren(id);
   const hiddenChildCount = hiddenCount(id);
@@ -104,8 +104,10 @@ export function FlowNode({ id, data, selected }: Props) {
               type="button"
               variant="default"
               size="xs"
-              onClick={handleCapture}
-              disabled={isCapturing || dynamicParams.some((p) => !paramValues[p]?.trim())}
+              onClick={available ? handleCapture : validateForCapture}
+              disabled={
+                available && (isCapturing || dynamicParams.some((p) => !paramValues[p]?.trim()))
+              }
               className="nodrag ml-auto"
             >
               {isCapturing ? (

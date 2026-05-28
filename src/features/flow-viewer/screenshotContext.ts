@@ -7,11 +7,13 @@ export type ScreenshotContextValue = {
     resolvedRoute: string,
     paramValues: Record<string, string>,
   ) => Promise<void>;
+  validateForCapture: () => Promise<void>;
 };
 
 export const ScreenshotContext = createContext<ScreenshotContextValue>({
   available: false,
   captureNode: async () => {},
+  validateForCapture: async () => {},
 });
 
 export const useScreenshotContext = () => useContext(ScreenshotContext);

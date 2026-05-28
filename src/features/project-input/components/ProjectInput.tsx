@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { forwardRef, useImperativeHandle, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -61,6 +61,10 @@ type Props = {
   canExport?: boolean;
 };
 
+export type ProjectInputHandle = {
+  validateForCapture: () => Promise<void>;
+};
+
 // 비활성 조건이 충족될 때 tooltip을 보여주고 클릭을 막는 버튼 래퍼
 function ActionButton({
   tooltip,
@@ -114,13 +118,17 @@ function ExampleFill({
   );
 }
 
-export function ProjectInput({ onAnalyze, isLoading, onImport, onExport, canExport }: Props) {
+export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function ProjectInput(
+  { onAnalyze, isLoading, onImport, onExport, canExport },
+  ref,
+) {
   const {
     register: _register,
     handleSubmit,
     control,
     watch,
     setValue,
+    trigger,
     clearErrors,
     formState: { errors },
   } = useForm<AnalyzeFormValues>({
@@ -156,6 +164,14 @@ export function ProjectInput({ onAnalyze, isLoading, onImport, onExport, canExpo
   const [focused, setFocused] = useState(false);
   const [pinned, setPinned] = useState(false);
   const expanded = pinned || hovered || focused;
+
+  useImperativeHandle(ref, () => ({
+    validateForCapture: async () => {
+      setPinned(true);
+      setValue('screenshot', true);
+      await trigger();
+    },
+  }));
 
   const screenshot = watch('screenshot');
   const authType = watch('authType');
@@ -466,4 +482,4 @@ export function ProjectInput({ onAnalyze, isLoading, onImport, onExport, canExpo
       </Button>
     </form>
   );
-}
+});

@@ -112,10 +112,11 @@ type Props = {
   screenshotOptions: { baseUrl: string; auth?: AuthInput } | null;
   savedRfNodes?: Node[];
   savedRfEdges?: Edge[];
+  onValidateForCapture?: () => Promise<void>;
 };
 
 export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewer(
-  { graph, screenshotOptions, savedRfNodes, savedRfEdges },
+  { graph, screenshotOptions, savedRfNodes, savedRfEdges, onValidateForCapture },
   ref,
 ) {
   const { nodes: initialNodes, edges: initialEdges } = graphToFlow(graph);
@@ -353,9 +354,14 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     [screenshotOptions, setNodes],
   );
 
+  const validateForCapture = useMemo(
+    () => onValidateForCapture ?? (async () => {}),
+    [onValidateForCapture],
+  );
+
   const screenshotContextValue = useMemo(
-    () => ({ available: !!screenshotOptions, captureNode }),
-    [screenshotOptions, captureNode],
+    () => ({ available: !!screenshotOptions, captureNode, validateForCapture }),
+    [screenshotOptions, captureNode, validateForCapture],
   );
 
   const flowActionsValue = useMemo(() => ({ openDialog: setDialogRequest }), []);
