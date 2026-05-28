@@ -65,12 +65,15 @@ export type ProjectInputHandle = {
 // 비활성 조건이 충족될 때 tooltip을 보여주고 클릭을 막는 버튼 래퍼
 function ActionButton({
   tooltip,
+  label,
   onClick,
   children,
   className,
   ...props
-}: React.ComponentProps<typeof Button> & { tooltip?: string }) {
-  if (!tooltip) {
+}: React.ComponentProps<typeof Button> & { tooltip?: string; label?: string }) {
+  const shownTooltip = tooltip ?? label;
+
+  if (!shownTooltip) {
     return (
       <Button className={className} onClick={onClick} {...props}>
         {children}
@@ -78,15 +81,18 @@ function ActionButton({
     );
   }
 
-  // submit 버튼은 비활성화 없이 툴팁만 표시 (유효성 조건이 복잡하므로)
-  if (props.type === 'submit') {
+  // submit이 아니고 disabled 이유(tooltip)가 있으면 disabled 처리
+  // disabled:pointer-events-none 으로 span이 hover 이벤트를 받아 툴팁이 동작한다
+  if (tooltip && props.type !== 'submit') {
     return (
       <Tooltip>
         <TooltipTrigger
           render={
-            <Button className={className} onClick={onClick} {...props} title={undefined}>
-              {children}
-            </Button>
+            <span className="inline-flex cursor-not-allowed">
+              <Button disabled className={className} {...props} title={undefined}>
+                {children}
+              </Button>
+            </span>
           }
         />
         <TooltipContent>{tooltip}</TooltipContent>
@@ -94,20 +100,17 @@ function ActionButton({
     );
   }
 
-  // 일반 버튼: disabled + 툴팁
-  // disabled:pointer-events-none 으로 span이 hover 이벤트를 받아 툴팁이 동작한다
+  // 활성 상태 + shadcn 툴팁 (label이거나 submit의 tooltip)
   return (
     <Tooltip>
       <TooltipTrigger
         render={
-          <span className="inline-flex cursor-not-allowed">
-            <Button disabled className={className} {...props} title={undefined}>
-              {children}
-            </Button>
-          </span>
+          <Button className={className} onClick={onClick} {...props} title={undefined}>
+            {children}
+          </Button>
         }
       />
-      <TooltipContent>{tooltip}</TooltipContent>
+      <TooltipContent>{shownTooltip}</TooltipContent>
     </Tooltip>
   );
 }
@@ -273,7 +276,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
             size="icon"
             onClick={onImport}
             tooltip={loadingTip}
-            title="JSON 불러오기"
+            label="JSON 불러오기"
           >
             <UploadIcon size={16} />
           </ActionButton>
@@ -285,7 +288,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
             size="icon"
             onClick={onExport}
             tooltip={!canExport ? '분석된 그래프가 없습니다.' : undefined}
-            title="JSON 내보내기"
+            label="JSON 내보내기"
           >
             <DownloadIcon size={16} />
           </ActionButton>
