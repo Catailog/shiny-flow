@@ -81,9 +81,9 @@ function ActionButton({
     );
   }
 
-  // submit이 아니고 disabled 이유(tooltip)가 있으면 disabled 처리
+  // disabled 이유(tooltip)가 있으면 disabled 처리
   // disabled:pointer-events-none 으로 span이 hover 이벤트를 받아 툴팁이 동작한다
-  if (tooltip && props.type !== 'submit') {
+  if (tooltip) {
     return (
       <Tooltip>
         <TooltipTrigger
@@ -197,7 +197,6 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
     getConfig: () => getValues(),
     restoreConfig: (values: AnalyzeFormValues) => {
       reset(values);
-      setPinned(true);
     },
   }));
 

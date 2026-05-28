@@ -23,12 +23,12 @@ export const GROUP_COLORS = [
 ] as const;
 
 export const GROUP_COLOR_STYLES: Record<string, { border: string; bg: string; text: string }> = {
-  gray: { border: 'border-gray-300', bg: 'bg-gray-100/70', text: 'text-gray-500' },
-  green: { border: 'border-green-300', bg: 'bg-green-50/70', text: 'text-green-600' },
-  blue: { border: 'border-blue-300', bg: 'bg-blue-50/70', text: 'text-blue-600' },
-  yellow: { border: 'border-yellow-300', bg: 'bg-yellow-50/70', text: 'text-yellow-600' },
-  red: { border: 'border-red-300', bg: 'bg-red-50/70', text: 'text-red-600' },
-  purple: { border: 'border-purple-300', bg: 'bg-purple-50/70', text: 'text-purple-600' },
+  gray: { border: 'border-gray-400', bg: 'bg-gray-200/70', text: 'text-gray-600' },
+  green: { border: 'border-green-500', bg: 'bg-green-100/70', text: 'text-green-700' },
+  blue: { border: 'border-blue-500', bg: 'bg-blue-100/70', text: 'text-blue-700' },
+  yellow: { border: 'border-yellow-500', bg: 'bg-yellow-100/70', text: 'text-yellow-700' },
+  red: { border: 'border-red-500', bg: 'bg-red-100/70', text: 'text-red-700' },
+  purple: { border: 'border-purple-500', bg: 'bg-purple-100/70', text: 'text-purple-700' },
 };
 
 export function getNodeColorStyle(color?: string) {
