@@ -105,9 +105,11 @@ function ActionButton({
     <Tooltip>
       <TooltipTrigger
         render={
-          <Button className={className} onClick={onClick} {...props} title={undefined}>
-            {children}
-          </Button>
+          <span className="inline-flex">
+            <Button className={className} onClick={onClick} {...props} title={undefined}>
+              {children}
+            </Button>
+          </span>
         }
       />
       <TooltipContent>{shownTooltip}</TooltipContent>
@@ -287,7 +289,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
             variant="outline"
             size="icon"
             onClick={onExport}
-            tooltip={!canExport ? '분석된 그래프가 없습니다.' : undefined}
+            tooltip={!canExport ? '분석된 그래프가 없어 JSON 내보내기가 불가능합니다.' : undefined}
             label="JSON 내보내기"
           >
             <DownloadIcon size={16} />
