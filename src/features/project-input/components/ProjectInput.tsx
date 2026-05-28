@@ -250,197 +250,203 @@ export function ProjectInput({ onAnalyze, isLoading, onImport, onExport, canExpo
           expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
         )}
       >
-        <div className="flex flex-col gap-2 overflow-hidden">
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="flex cursor-pointer items-center gap-1.5 text-sm">
-              <Controller
-                control={control}
-                name="screenshot"
-                render={({ field }) => (
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                )}
-              />
-              <span className="text-muted-foreground">스크린샷 캡처</span>
-            </label>
-            {screenshot && (
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">서버 URL</span>
-                <InputGroup className="w-72">
-                  <InputGroupInput
-                    {...register('baseUrl')}
-                    placeholder="대상 서버 URL"
-                    aria-invalid={!!errors.baseUrl}
-                    className="text-sm"
-                  />
-                  {!baseUrl && (
-                    <ExampleFill
-                      label="http://localhost:3000"
-                      onClick={() =>
-                        setValue('baseUrl', 'http://localhost:3000', { shouldValidate: true })
-                      }
-                      tooltip={loadingTip}
-                    />
+        <div className="overflow-hidden">
+          <div className="flex flex-col gap-2 p-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-1.5 text-sm">
+                <Controller
+                  control={control}
+                  name="screenshot"
+                  render={({ field }) => (
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                   )}
-                </InputGroup>
-                <FieldError message={errors.baseUrl?.message} />
-              </div>
-            )}
-          </div>
-
-          {screenshot && (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">인증:</span>
-                {(['none', 'cookies', 'form'] as const).map((t) => (
-                  <ActionButton
-                    key={t}
-                    type="button"
-                    variant={authType === t ? 'default' : 'outline'}
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => setValue('authType', t)}
-                    tooltip={loadingTip}
-                  >
-                    {t === 'none' ? '없음' : t === 'cookies' ? '쿠키 주입' : 'Form 로그인'}
-                  </ActionButton>
-                ))}
-              </div>
-
-              {authType === 'cookies' && (
+                />
+                <span className="text-muted-foreground">스크린샷 캡처</span>
+              </label>
+              {screenshot && (
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">
-                    쿠키 JSON{' '}
-                    <span className="opacity-60">(DevTools › Application › Cookies에서 복사)</span>
-                  </span>
-                  <Textarea
-                    {...register('cookiesJson')}
-                    placeholder='[{"name":"session","value":"abc123","domain":"localhost"}]'
-                    aria-invalid={!!errors.cookiesJson}
-                    className="h-24 font-mono text-xs"
-                  />
-                  <FieldError message={errors.cookiesJson?.message} />
-                </div>
-              )}
-
-              {authType === 'form' && (
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex gap-1.5">
-                    <div className="flex flex-1 flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">로그인 URL</span>
-                      <InputGroup>
-                        <InputGroupInput
-                          {...register('loginUrl')}
-                          placeholder="로그인 URL"
-                          aria-invalid={!!errors.loginUrl}
-                          className="text-sm"
-                        />
-                        {!loginUrl && (
-                          <ExampleFill
-                            label="/login"
-                            onClick={() => setValue('loginUrl', '/login', { shouldValidate: true })}
-                            tooltip={loadingTip}
-                          />
-                        )}
-                      </InputGroup>
-                      <FieldError message={errors.loginUrl?.message} />
-                    </div>
-                    <div className="flex flex-1 flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">제출 버튼 셀렉터</span>
-                      <InputGroup>
-                        <InputGroupInput
-                          {...register('submitSelector')}
-                          placeholder="제출 버튼 셀렉터"
-                          aria-invalid={!!errors.submitSelector}
-                          className="text-sm"
-                        />
-                        {!submitSelector && (
-                          <ExampleFill
-                            label="button[type=submit]"
-                            onClick={() =>
-                              setValue('submitSelector', 'button[type=submit]', {
-                                shouldValidate: true,
-                              })
-                            }
-                            tooltip={loadingTip}
-                          />
-                        )}
-                      </InputGroup>
-                      <FieldError message={errors.submitSelector?.message} />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-1.5">
-                    <div className="flex flex-1 flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">아이디 셀렉터</span>
-                      <InputGroup>
-                        <InputGroupInput
-                          {...register('usernameSelector')}
-                          placeholder="아이디 셀렉터"
-                          aria-invalid={!!errors.usernameSelector}
-                          className="text-sm"
-                        />
-                        {!usernameSelector && (
-                          <ExampleFill
-                            label="#email"
-                            onClick={() =>
-                              setValue('usernameSelector', '#email', { shouldValidate: true })
-                            }
-                            tooltip={loadingTip}
-                          />
-                        )}
-                      </InputGroup>
-                      <FieldError message={errors.usernameSelector?.message} />
-                    </div>
-                    <div className="flex flex-1 flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">비밀번호 셀렉터</span>
-                      <InputGroup>
-                        <InputGroupInput
-                          {...register('passwordSelector')}
-                          placeholder="비밀번호 셀렉터"
-                          aria-invalid={!!errors.passwordSelector}
-                          className="text-sm"
-                        />
-                        {!passwordSelector && (
-                          <ExampleFill
-                            label="#password"
-                            onClick={() =>
-                              setValue('passwordSelector', '#password', { shouldValidate: true })
-                            }
-                            tooltip={loadingTip}
-                          />
-                        )}
-                      </InputGroup>
-                      <FieldError message={errors.passwordSelector?.message} />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-1.5">
-                    <div className="flex flex-1 flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">아이디</span>
-                      <Input
-                        {...register('username')}
-                        placeholder="아이디 / 이메일"
-                        aria-invalid={!!errors.username}
-                        className="text-sm"
+                  <span className="text-xs text-muted-foreground">서버 URL</span>
+                  <InputGroup className="w-72">
+                    <InputGroupInput
+                      {...register('baseUrl')}
+                      placeholder="대상 서버 URL"
+                      aria-invalid={!!errors.baseUrl}
+                      className="text-sm"
+                    />
+                    {!baseUrl && (
+                      <ExampleFill
+                        label="http://localhost:3000"
+                        onClick={() =>
+                          setValue('baseUrl', 'http://localhost:3000', { shouldValidate: true })
+                        }
+                        tooltip={loadingTip}
                       />
-                      <FieldError message={errors.username?.message} />
-                    </div>
-                    <div className="flex flex-1 flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">비밀번호</span>
-                      <Input
-                        {...register('password')}
-                        type="password"
-                        placeholder="비밀번호"
-                        aria-invalid={!!errors.password}
-                        className="text-sm"
-                      />
-                      <FieldError message={errors.password?.message} />
-                    </div>
-                  </div>
+                    )}
+                  </InputGroup>
+                  <FieldError message={errors.baseUrl?.message} />
                 </div>
               )}
             </div>
-          )}
+
+            {screenshot && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">인증:</span>
+                  {(['none', 'cookies', 'form'] as const).map((t) => (
+                    <ActionButton
+                      key={t}
+                      type="button"
+                      variant={authType === t ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => setValue('authType', t)}
+                      tooltip={loadingTip}
+                    >
+                      {t === 'none' ? '없음' : t === 'cookies' ? '쿠키 주입' : 'Form 로그인'}
+                    </ActionButton>
+                  ))}
+                </div>
+
+                {authType === 'cookies' && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">
+                      쿠키 JSON{' '}
+                      <span className="opacity-60">
+                        (DevTools › Application › Cookies에서 복사)
+                      </span>
+                    </span>
+                    <Textarea
+                      {...register('cookiesJson')}
+                      placeholder='[{"name":"session","value":"abc123","domain":"localhost"}]'
+                      aria-invalid={!!errors.cookiesJson}
+                      className="h-24 font-mono text-xs"
+                    />
+                    <FieldError message={errors.cookiesJson?.message} />
+                  </div>
+                )}
+
+                {authType === 'form' && (
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex gap-1.5">
+                      <div className="flex flex-1 flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">로그인 URL</span>
+                        <InputGroup>
+                          <InputGroupInput
+                            {...register('loginUrl')}
+                            placeholder="로그인 URL"
+                            aria-invalid={!!errors.loginUrl}
+                            className="text-sm"
+                          />
+                          {!loginUrl && (
+                            <ExampleFill
+                              label="/login"
+                              onClick={() =>
+                                setValue('loginUrl', '/login', { shouldValidate: true })
+                              }
+                              tooltip={loadingTip}
+                            />
+                          )}
+                        </InputGroup>
+                        <FieldError message={errors.loginUrl?.message} />
+                      </div>
+                      <div className="flex flex-1 flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">제출 버튼 셀렉터</span>
+                        <InputGroup>
+                          <InputGroupInput
+                            {...register('submitSelector')}
+                            placeholder="제출 버튼 셀렉터"
+                            aria-invalid={!!errors.submitSelector}
+                            className="text-sm"
+                          />
+                          {!submitSelector && (
+                            <ExampleFill
+                              label="button[type=submit]"
+                              onClick={() =>
+                                setValue('submitSelector', 'button[type=submit]', {
+                                  shouldValidate: true,
+                                })
+                              }
+                              tooltip={loadingTip}
+                            />
+                          )}
+                        </InputGroup>
+                        <FieldError message={errors.submitSelector?.message} />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1.5">
+                      <div className="flex flex-1 flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">아이디 셀렉터</span>
+                        <InputGroup>
+                          <InputGroupInput
+                            {...register('usernameSelector')}
+                            placeholder="아이디 셀렉터"
+                            aria-invalid={!!errors.usernameSelector}
+                            className="text-sm"
+                          />
+                          {!usernameSelector && (
+                            <ExampleFill
+                              label="#email"
+                              onClick={() =>
+                                setValue('usernameSelector', '#email', { shouldValidate: true })
+                              }
+                              tooltip={loadingTip}
+                            />
+                          )}
+                        </InputGroup>
+                        <FieldError message={errors.usernameSelector?.message} />
+                      </div>
+                      <div className="flex flex-1 flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">비밀번호 셀렉터</span>
+                        <InputGroup>
+                          <InputGroupInput
+                            {...register('passwordSelector')}
+                            placeholder="비밀번호 셀렉터"
+                            aria-invalid={!!errors.passwordSelector}
+                            className="text-sm"
+                          />
+                          {!passwordSelector && (
+                            <ExampleFill
+                              label="#password"
+                              onClick={() =>
+                                setValue('passwordSelector', '#password', { shouldValidate: true })
+                              }
+                              tooltip={loadingTip}
+                            />
+                          )}
+                        </InputGroup>
+                        <FieldError message={errors.passwordSelector?.message} />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1.5">
+                      <div className="flex flex-1 flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">아이디</span>
+                        <Input
+                          {...register('username')}
+                          placeholder="아이디 / 이메일"
+                          aria-invalid={!!errors.username}
+                          className="text-sm"
+                        />
+                        <FieldError message={errors.username?.message} />
+                      </div>
+                      <div className="flex flex-1 flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">비밀번호</span>
+                        <Input
+                          {...register('password')}
+                          type="password"
+                          placeholder="비밀번호"
+                          aria-invalid={!!errors.password}
+                          className="text-sm"
+                        />
+                        <FieldError message={errors.password?.message} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
