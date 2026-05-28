@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useReactFlow, useStore } from '@xyflow/react';
@@ -33,6 +33,23 @@ const ITEM =
 const ICON = 'size-3.5 shrink-0';
 const ITEM_DESTRUCTIVE = cn(ITEM, 'text-destructive hover:text-destructive focus:text-destructive');
 const SEPARATOR = '-mx-1 my-1 h-px bg-border';
+
+// 메뉴 그룹 시스템: 비어 있지 않은 그룹 사이에만 구분선을 삽입한다.
+type MenuSection = (React.ReactNode | null | false)[];
+
+function MenuGroups({ sections }: { sections: MenuSection[] }) {
+  const nonEmpty = sections.filter((s) => s.some((x) => !!x));
+  return (
+    <>
+      {nonEmpty.map((section, i) => (
+        <Fragment key={i}>
+          {i > 0 && <div className={SEPARATOR} />}
+          {section}
+        </Fragment>
+      ))}
+    </>
+  );
+}
 
 type Props = {
   state: ContextMenuState;
@@ -73,12 +90,38 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
     onClose();
   };
 
-  let items: React.ReactNode;
+  const addCommentItem = (
+    <div
+      key="addComment"
+      role="menuitem"
+      className={ITEM}
+      onClick={() => {
+        const pos = screenToFlowPosition({ x: screenX, y: screenY });
+        setNodes((prev) => [
+          ...prev,
+          {
+            id: `comment-${Date.now()}`,
+            type: 'commentNode',
+            position: pos,
+            data: { content: '', author: 'localhost', createdAt: new Date().toISOString() },
+          },
+        ]);
+        close();
+      }}
+    >
+      <MessageSquarePlusIcon className={ICON} />
+      댓글 생성
+    </div>
+  );
 
-  if (target.type === 'pane') {
-    if (canGroupSelected) {
-      items = (
+  let sections: MenuSection[];
+
+  // 다중 선택 그룹 생성 조건이 충족되면 우클릭 대상과 무관하게 그룹 생성 메뉴를 보여 준다.
+  if (canGroupSelected) {
+    sections = [
+      [
         <div
+          key="groupCreate"
           role="menuitem"
           className={ITEM}
           onClick={() => {
@@ -88,11 +131,15 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
         >
           <BoxSelectIcon className={ICON} />
           그룹 생성
-        </div>
-      );
-    } else {
-      items = (
+        </div>,
+      ],
+      [addCommentItem],
+    ];
+  } else if (target.type === 'pane') {
+    sections = [
+      [
         <div
+          key="nodeCreate"
           role="menuitem"
           className={ITEM}
           onClick={() => {
@@ -105,13 +152,15 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
         >
           <PlusIcon className={ICON} />
           노드 생성
-        </div>
-      );
-    }
+        </div>,
+      ],
+      [addCommentItem],
+    ];
   } else if (target.type === 'commentNode') {
-    items = (
-      <>
+    sections = [
+      [
         <div
+          key="edit"
           role="menuitem"
           className={ITEM}
           onClick={() => {
@@ -121,8 +170,9 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
         >
           <PencilIcon className={ICON} />
           수정
-        </div>
+        </div>,
         <div
+          key="delete"
           role="menuitem"
           className={ITEM_DESTRUCTIVE}
           onClick={() => {
@@ -132,151 +182,143 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
         >
           <Trash2Icon className={ICON} />
           삭제
-        </div>
-      </>
-    );
+        </div>,
+      ],
+      [addCommentItem],
+    ];
   } else if (target.type === 'flowNode') {
-    if (canGroupSelected) {
-      items = (
-        <div
-          role="menuitem"
-          className={ITEM}
-          onClick={() => {
-            onOpenDialog({ type: 'groupCreate', nodes: selectedNodes });
-            close();
-          }}
-        >
-          <BoxSelectIcon className={ICON} />
-          그룹 생성
-        </div>
-      );
-    } else {
-      const node = getNode(target.nodeId);
-      const nodeData = node?.data as FlowNodeData | undefined;
-      const isCollapsed = collapsedIds.has(target.nodeId);
-      const canCollapse = hasChildren(target.nodeId);
-      const hasMemo = !!nodeData?.memo;
-      const hasSrc = !!nodeData?.screenshot;
+    const node = getNode(target.nodeId);
+    const nodeData = node?.data as FlowNodeData | undefined;
+    const isCollapsed = collapsedIds.has(target.nodeId);
+    const canCollapse = hasChildren(target.nodeId);
+    const hasMemo = !!nodeData?.memo;
+    const hasSrc = !!nodeData?.screenshot;
 
-      items = (
-        <>
-          {canCollapse && (
-            <>
-              <div
-                role="menuitem"
-                className={ITEM}
-                onClick={() => {
-                  toggleCollapse(target.nodeId);
-                  close();
-                }}
-              >
-                {isCollapsed ? (
-                  <ChevronDownIcon className={ICON} />
-                ) : (
-                  <ChevronRightIcon className={ICON} />
-                )}
-                {isCollapsed ? '펼치기' : '접기'}
-              </div>
-              <div className={SEPARATOR} />
-            </>
-          )}
+    sections = [
+      // 그룹 1: 탐색 (접기/펼치기) — 조건부, 없으면 구분선 사라짐
+      [
+        canCollapse ? (
           <div
+            key="collapse"
             role="menuitem"
             className={ITEM}
             onClick={() => {
-              onOpenDialog({ type: 'memo', nodeId: target.nodeId });
+              toggleCollapse(target.nodeId);
               close();
             }}
           >
-            <StickyNoteIcon className={ICON} />
-            {hasMemo ? '메모 수정' : '메모 추가'}
+            {isCollapsed ? (
+              <ChevronDownIcon className={ICON} />
+            ) : (
+              <ChevronRightIcon className={ICON} />
+            )}
+            {isCollapsed ? '펼치기' : '접기'}
           </div>
-          {hasMemo && (
-            <div
-              role="menuitem"
-              className={ITEM_DESTRUCTIVE}
-              onClick={() => {
-                setNodes((prev) =>
-                  prev.map((n) =>
-                    n.id === target.nodeId ? { ...n, data: { ...n.data, memo: undefined } } : n,
-                  ),
-                );
-                close();
-              }}
-            >
-              <Trash2Icon className={ICON} />
-              메모 삭제
+        ) : null,
+      ],
+      // 그룹 2: 노드 속성 (메모, 색상 태그, 스크린샷)
+      [
+        <div
+          key="memo"
+          role="menuitem"
+          className={ITEM}
+          onClick={() => {
+            onOpenDialog({ type: 'memo', nodeId: target.nodeId });
+            close();
+          }}
+        >
+          <StickyNoteIcon className={ICON} />
+          {hasMemo ? '메모 수정' : '메모 추가'}
+        </div>,
+        hasMemo ? (
+          <div
+            key="memoDelete"
+            role="menuitem"
+            className={ITEM_DESTRUCTIVE}
+            onClick={() => {
+              setNodes((prev) =>
+                prev.map((n) =>
+                  n.id === target.nodeId ? { ...n, data: { ...n.data, memo: undefined } } : n,
+                ),
+              );
+              close();
+            }}
+          >
+            <Trash2Icon className={ICON} />
+            메모 삭제
+          </div>
+        ) : null,
+        <div
+          key="colorTag"
+          role="menuitem"
+          className={cn(ITEM, 'relative')}
+          onMouseEnter={() => setColorSubOpen(true)}
+          onMouseLeave={() => setColorSubOpen(false)}
+        >
+          <PaletteIcon className={ICON} />
+          색상 태그
+          <ChevronRightIcon size={14} className="ml-auto" />
+          {colorSubOpen && (
+            <div className="absolute top-0 left-full min-w-[8rem] rounded-md border bg-popover p-1 shadow-md">
+              {STATUS_COLORS.map(({ label, value }) => (
+                <div
+                  key={label}
+                  role="menuitem"
+                  className={ITEM}
+                  onClick={() => {
+                    setNodes((prev) =>
+                      prev.map((n) =>
+                        n.id === target.nodeId ? { ...n, data: { ...n.data, color: value } } : n,
+                      ),
+                    );
+                    close();
+                  }}
+                >
+                  <span
+                    className={cn(
+                      'inline-block size-2.5 rounded-full border',
+                      getNodeColorStyle(value)?.dot ?? 'border-gray-300 bg-transparent',
+                    )}
+                  />
+                  {label}
+                  {nodeData?.color === value && <span className="ml-auto text-xs">✓</span>}
+                </div>
+              ))}
             </div>
           )}
+        </div>,
+        hasSrc ? (
           <div
+            key="screenshot"
             role="menuitem"
-            className={cn(ITEM, 'relative')}
-            onMouseEnter={() => setColorSubOpen(true)}
-            onMouseLeave={() => setColorSubOpen(false)}
+            className={ITEM}
+            onClick={() => {
+              onOpenDialog({
+                type: 'screenshot',
+                src: `data:image/png;base64,${nodeData!.screenshot}`,
+                label: nodeData!.label,
+              });
+              close();
+            }}
           >
-            <PaletteIcon className={ICON} />
-            색상 태그
-            <ChevronRightIcon size={14} className="ml-auto" />
-            {colorSubOpen && (
-              <div className="absolute top-0 left-full min-w-[8rem] rounded-md border bg-popover p-1 shadow-md">
-                {STATUS_COLORS.map(({ label, value }) => (
-                  <div
-                    key={label}
-                    role="menuitem"
-                    className={ITEM}
-                    onClick={() => {
-                      setNodes((prev) =>
-                        prev.map((n) =>
-                          n.id === target.nodeId ? { ...n, data: { ...n.data, color: value } } : n,
-                        ),
-                      );
-                      close();
-                    }}
-                  >
-                    <span
-                      className={cn(
-                        'inline-block size-2.5 rounded-full border',
-                        getNodeColorStyle(value)?.dot ?? 'border-gray-300 bg-transparent',
-                      )}
-                    />
-                    {label}
-                    {nodeData?.color === value && <span className="ml-auto text-xs">✓</span>}
-                  </div>
-                ))}
-              </div>
-            )}
+            <MaximizeIcon className={ICON} />
+            크게 보기
           </div>
-          {hasSrc && (
-            <>
-              <div className={SEPARATOR} />
-              <div
-                role="menuitem"
-                className={ITEM}
-                onClick={() => {
-                  onOpenDialog({
-                    type: 'screenshot',
-                    src: `data:image/png;base64,${nodeData!.screenshot}`,
-                    label: nodeData!.label,
-                  });
-                  close();
-                }}
-              >
-                <MaximizeIcon className={ICON} />
-                크게 보기
-              </div>
-            </>
-          )}
-        </>
-      );
-    } // end else (single selection)
+        ) : null,
+      ],
+      // 그룹 3: 댓글 생성
+      [addCommentItem],
+    ];
   } else if (target.type === 'groupNode') {
     const group = getNode(target.nodeId);
     const otherNodesSelected = selectedNodes.some((n) => n.id !== target.nodeId);
 
-    items = (
-      <>
-        {!otherNodesSelected && (
+    sections = [
+      // 단일 선택일 때만 그룹 액션 노출; 다중 선택 시 모두 null → 구분선 없이 댓글 생성만 표시
+      [
+        !otherNodesSelected ? (
           <div
+            key="groupEdit"
             role="menuitem"
             className={ITEM}
             onClick={() => {
@@ -287,9 +329,10 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             <PencilIcon className={ICON} />
             그룹 수정
           </div>
-        )}
-        {!otherNodesSelected && (
+        ) : null,
+        !otherNodesSelected ? (
           <div
+            key="groupUngroup"
             role="menuitem"
             className={ITEM_DESTRUCTIVE}
             onClick={() => {
@@ -314,17 +357,19 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             <UngroupIcon className={ICON} />
             그룹 해제
           </div>
-        )}
-      </>
-    );
+        ) : null,
+      ],
+      [addCommentItem],
+    ];
   } else if (target.type === 'edge') {
     const edge = getEdge(target.edgeId);
     const edgeData = edge?.data as FlowEdgeData | undefined;
     const hasComment = !!edgeData?.comment;
 
-    items = (
-      <>
+    sections = [
+      [
         <div
+          key="edgeCommentEdit"
           role="menuitem"
           className={ITEM}
           onClick={() => {
@@ -334,9 +379,10 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
         >
           <MessageSquareIcon className={ICON} />
           코멘트 편집
-        </div>
-        {hasComment && (
+        </div>,
+        hasComment ? (
           <div
+            key="edgeCommentDelete"
             role="menuitem"
             className={ITEM_DESTRUCTIVE}
             onClick={() => {
@@ -351,8 +397,9 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             <Trash2Icon className={ICON} />
             코멘트 삭제
           </div>
-        )}
+        ) : null,
         <div
+          key="edgeDelete"
           role="menuitem"
           className={ITEM_DESTRUCTIVE}
           onClick={() => {
@@ -362,36 +409,13 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
         >
           <Trash2Icon className={ICON} />
           엣지 삭제
-        </div>
-      </>
-    );
+        </div>,
+      ],
+      [addCommentItem],
+    ];
+  } else {
+    sections = [[addCommentItem]];
   }
-
-  const addCommentItem = (
-    <>
-      <div className={SEPARATOR} />
-      <div
-        role="menuitem"
-        className={ITEM}
-        onClick={() => {
-          const pos = screenToFlowPosition({ x: screenX, y: screenY });
-          setNodes((prev) => [
-            ...prev,
-            {
-              id: `comment-${Date.now()}`,
-              type: 'commentNode',
-              position: pos,
-              data: { content: '', author: 'localhost', createdAt: new Date().toISOString() },
-            },
-          ]);
-          close();
-        }}
-      >
-        <MessageSquarePlusIcon className={ICON} />
-        댓글 생성
-      </div>
-    </>
-  );
 
   return createPortal(
     <div
@@ -400,8 +424,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
       style={{ left: screenX, top: screenY }}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {items}
-      {addCommentItem}
+      <MenuGroups sections={sections} />
     </div>,
     document.body,
   );
