@@ -77,14 +77,34 @@ function ActionButton({
       </Button>
     );
   }
-  // base-ui Tooltip은 asChild 대신 render prop으로 트리거 엘리먼트를 교체한다
+
+  // submit 버튼은 비활성화 없이 툴팁만 표시 (유효성 조건이 복잡하므로)
+  if (props.type === 'submit') {
+    return (
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button className={className} onClick={onClick} {...props} title={undefined}>
+              {children}
+            </Button>
+          }
+        />
+        <TooltipContent>{tooltip}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  // 일반 버튼: disabled + 툴팁
+  // disabled:pointer-events-none 으로 span이 hover 이벤트를 받아 툴팁이 동작한다
   return (
     <Tooltip>
       <TooltipTrigger
         render={
-          <Button className={className} {...props}>
-            {children}
-          </Button>
+          <span className="inline-flex cursor-not-allowed">
+            <Button disabled className={className} {...props} title={undefined}>
+              {children}
+            </Button>
+          </span>
         }
       />
       <TooltipContent>{tooltip}</TooltipContent>
