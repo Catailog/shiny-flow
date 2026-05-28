@@ -22,13 +22,46 @@ export const GROUP_COLORS = [
   { label: '보라', value: 'purple' },
 ] as const;
 
-export const GROUP_COLOR_STYLES: Record<string, { border: string; bg: string; text: string }> = {
-  gray: { border: 'border-gray-400', bg: 'bg-gray-200/70', text: 'text-gray-600' },
-  green: { border: 'border-green-500', bg: 'bg-green-100/70', text: 'text-green-700' },
-  blue: { border: 'border-blue-500', bg: 'bg-blue-100/70', text: 'text-blue-700' },
-  yellow: { border: 'border-yellow-500', bg: 'bg-yellow-100/70', text: 'text-yellow-700' },
-  red: { border: 'border-red-500', bg: 'bg-red-100/70', text: 'text-red-700' },
-  purple: { border: 'border-purple-500', bg: 'bg-purple-100/70', text: 'text-purple-700' },
+export const GROUP_COLOR_STYLES: Record<
+  string,
+  { border: string; bg: string; text: string; button: string }
+> = {
+  gray: {
+    border: 'border-gray-400',
+    bg: 'bg-gray-200/70',
+    text: 'text-gray-600',
+    button: 'bg-gray-400',
+  },
+  green: {
+    border: 'border-green-500',
+    bg: 'bg-green-100/70',
+    text: 'text-green-700',
+    button: 'bg-green-500',
+  },
+  blue: {
+    border: 'border-blue-500',
+    bg: 'bg-blue-100/70',
+    text: 'text-blue-700',
+    button: 'bg-blue-500',
+  },
+  yellow: {
+    border: 'border-yellow-500',
+    bg: 'bg-yellow-100/70',
+    text: 'text-yellow-700',
+    button: 'bg-yellow-400',
+  },
+  red: {
+    border: 'border-red-500',
+    bg: 'bg-red-100/70',
+    text: 'text-red-700',
+    button: 'bg-red-500',
+  },
+  purple: {
+    border: 'border-purple-500',
+    bg: 'bg-purple-100/70',
+    text: 'text-purple-700',
+    button: 'bg-purple-500',
+  },
 };
 
 export function getNodeColorStyle(color?: string) {

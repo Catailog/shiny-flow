@@ -400,8 +400,8 @@ function GroupCreateDialog({
                   onClick={() => setColor(colorValue)}
                   className={cn(
                     'h-6 w-6 rounded-full border-2 p-0 transition-transform',
-                    s.bg.replace('/70', ''),
-                    color === colorValue ? `${s.border} scale-125` : 'border-gray-300',
+                    s.button,
+                    color === colorValue ? 'scale-125 border-white' : 'border-transparent',
                   )}
                 />
               );

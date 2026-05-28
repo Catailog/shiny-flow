@@ -27,7 +27,7 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
         !isDescendantOf(n.id, draggedNode.id, allNodes),
     );
 
-    const group = groups.find((g) => {
+    const matching = groups.filter((g) => {
       const gAbs = getAbsolutePosition(g, allNodes);
       const gW = g.width ?? (g.style?.width as number | undefined) ?? 0;
       const gH = g.height ?? (g.style?.height as number | undefined) ?? 0;
@@ -35,6 +35,11 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
         centerX >= gAbs.x && centerX <= gAbs.x + gW && centerY >= gAbs.y && centerY <= gAbs.y + gH
       );
     });
+
+    // 겹치는 그룹이 여럿이면 가장 안쪽(자식) 그룹 우선: 다른 매칭 그룹의 자손인 그룹을 선택
+    const group = matching.find(
+      (g) => !matching.some((other) => isDescendantOf(other.id, g.id, allNodes)),
+    );
 
     return { group, absX, absY };
   }, []);
