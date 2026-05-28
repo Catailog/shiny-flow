@@ -63,6 +63,8 @@ type Props = {
 
 export type ProjectInputHandle = {
   validateForCapture: () => Promise<void>;
+  getConfig: () => AnalyzeFormValues;
+  restoreConfig: (values: AnalyzeFormValues) => void;
 };
 
 // 비활성 조건이 충족될 때 tooltip을 보여주고 클릭을 막는 버튼 래퍼
@@ -129,6 +131,8 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
     watch,
     setValue,
     trigger,
+    getValues,
+    reset,
     clearErrors,
     formState: { errors },
   } = useForm<AnalyzeFormValues>({
@@ -170,6 +174,11 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
       setPinned(true);
       setValue('screenshot', true);
       await trigger();
+    },
+    getConfig: () => getValues(),
+    restoreConfig: (values: AnalyzeFormValues) => {
+      reset(values);
+      setPinned(true);
     },
   }));
 

@@ -7,6 +7,7 @@ import { Loader2Icon } from 'lucide-react';
 
 import { FlowViewer, type FlowViewerHandle } from '@/features/flow-viewer';
 import {
+  type AnalyzeFormValues,
   type AnalyzeOptions,
   type AuthInput,
   ProjectInput,
@@ -27,11 +28,18 @@ type State =
   | { status: 'success'; graph: FlowGraph; snapshot?: RfSnapshot }
   | { status: 'error'; message: string };
 
+type PendingImport = {
+  graph: FlowGraph;
+  snapshot?: RfSnapshot;
+  analyzeConfig: AnalyzeFormValues;
+};
+
 export default function Home() {
   const [state, setState] = useState<State>({ status: 'idle' });
   const [graphKey, setGraphKey] = useState(0);
   const [slowWarning, setSlowWarning] = useState(false);
   const [overlayError, setOverlayError] = useState<string | null>(null);
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [screenshotOptions, setScreenshotOptions] = useState<{
     baseUrl: string;
     auth?: AuthInput;
@@ -88,7 +96,8 @@ export default function Home() {
     if (state.status !== 'success') return;
     const rfNodes = viewerRef.current?.getNodes() ?? [];
     const rfEdges = viewerRef.current?.getEdges() ?? [];
-    const payload = { graph: state.graph, rfNodes, rfEdges };
+    const analyzeConfig = projectInputRef.current?.getConfig();
+    const payload = { graph: state.graph, rfNodes, rfEdges, analyzeConfig };
     const json = JSON.stringify(payload, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -109,22 +118,31 @@ export default function Home() {
       try {
         const parsed = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
         const graphRaw = parsed.graph as Record<string, unknown> | undefined;
+        const analyzeConfig = parsed.analyzeConfig as AnalyzeFormValues | undefined;
+
+        let graph: FlowGraph;
+        let snapshot: RfSnapshot | undefined;
+
         if (graphRaw && Array.isArray(graphRaw.nodes) && Array.isArray(graphRaw.edges)) {
-          // 현재 포맷: { graph, rfNodes, rfEdges }
-          const snapshot: RfSnapshot | undefined =
+          graph = graphRaw as FlowGraph;
+          snapshot =
             Array.isArray(parsed.rfNodes) && Array.isArray(parsed.rfEdges)
               ? { rfNodes: parsed.rfNodes as Node[], rfEdges: parsed.rfEdges as Edge[] }
               : undefined;
-          setState({ status: 'success', graph: graphRaw as FlowGraph, snapshot });
-          setGraphKey((k) => k + 1);
         } else if (Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
-          // 구 포맷: FlowGraph 직접 저장
-          setState({ status: 'success', graph: parsed as FlowGraph });
-          setGraphKey((k) => k + 1);
+          graph = parsed as FlowGraph;
         } else {
           throw new Error('유효한 shiny-flow JSON 파일이 아닙니다.');
         }
+
         setScreenshotOptions(null);
+
+        if (analyzeConfig) {
+          setPendingImport({ graph, snapshot, analyzeConfig });
+        } else {
+          setState({ status: 'success', graph, snapshot });
+          setGraphKey((k) => k + 1);
+        }
       } catch (err) {
         setState({
           status: 'error',
@@ -182,6 +200,15 @@ export default function Home() {
     }
   };
 
+  const applyPendingImport = (restoreConfig: boolean) => {
+    if (!pendingImport) return;
+    const { graph, snapshot, analyzeConfig } = pendingImport;
+    if (restoreConfig) projectInputRef.current?.restoreConfig(analyzeConfig);
+    setState({ status: 'success', graph, snapshot });
+    setGraphKey((k) => k + 1);
+    setPendingImport(null);
+  };
+
   const isLoading = state.status === 'loading';
 
   return (
@@ -203,6 +230,25 @@ export default function Home() {
           canExport={state.status === 'success'}
         />
       </header>
+
+      {pendingImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="flex w-80 flex-col gap-4 rounded-xl border bg-popover p-5 shadow-lg">
+            <p className="text-sm font-medium">분석 설정도 불러올까요?</p>
+            <p className="text-xs text-muted-foreground">
+              프로젝트 경로, 서버 URL, 인증 정보 등 분석 설정을 함께 복원합니다.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => applyPendingImport(false)}>
+                건너뛰기
+              </Button>
+              <Button size="sm" onClick={() => applyPendingImport(true)}>
+                불러오기
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="flex flex-1 flex-col items-center justify-center overflow-hidden">
         {state.status === 'idle' && (
