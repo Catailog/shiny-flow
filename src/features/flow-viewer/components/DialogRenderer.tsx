@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 
 import { GROUP_Z_INDEX, NODE_WIDTH } from '../lib/layout';
 import { GROUP_COLORS, GROUP_COLOR_STYLES } from '../lib/nodeColors';
-import { getAbsolutePosition, recomputeGroupZIndexes } from '../lib/nodeUtils';
+import { getAbsolutePosition, placeAfterParent, recomputeGroupZIndexes } from '../lib/nodeUtils';
 import type { DialogRequest, FlowNodeData, GroupNodeData } from '../types';
 import { MemoEditor } from './MemoEditor';
 
@@ -355,7 +355,19 @@ function GroupCreateDialog({
           position: { x: absPos.x - absX, y: absPos.y - absY },
         };
       });
-      return recomputeGroupZIndexes([groupNode, ...updated]);
+      // ReactFlow requires parent nodes to appear before their children in the array.
+      // Insert the new group right after its parent; fall back to the front if no parent.
+      let ordered: Node[];
+      if (commonParentId) {
+        const parentIdx = updated.findIndex((n) => n.id === commonParentId);
+        ordered =
+          parentIdx >= 0
+            ? [...updated.slice(0, parentIdx + 1), groupNode, ...updated.slice(parentIdx + 1)]
+            : [groupNode, ...updated];
+      } else {
+        ordered = [groupNode, ...updated];
+      }
+      return recomputeGroupZIndexes(ordered);
     });
     onClose();
   };

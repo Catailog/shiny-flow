@@ -27,6 +27,18 @@ function groupDepth(nodeId: string, allNodes: Node[], visited = new Set<string>(
   return 1 + groupDepth(node.parentId, allNodes, visited);
 }
 
+// ReactFlow requires parent nodes to appear BEFORE their children in the array.
+// When a node's parentId is newly set, call this to move it after its parent if needed.
+export function placeAfterParent(nodes: Node[], nodeId: string, parentId: string): Node[] {
+  const nodeIdx = nodes.findIndex((n) => n.id === nodeId);
+  const parentIdx = nodes.findIndex((n) => n.id === parentId);
+  if (nodeIdx < 0 || parentIdx < 0 || nodeIdx > parentIdx) return nodes;
+  const node = nodes[nodeIdx];
+  const without = [...nodes.slice(0, nodeIdx), ...nodes.slice(nodeIdx + 1)];
+  const newParentIdx = without.findIndex((n) => n.id === parentId);
+  return [...without.slice(0, newParentIdx + 1), node, ...without.slice(newParentIdx + 1)];
+}
+
 export function recomputeGroupZIndexes(nodes: Node[]): Node[] {
   return nodes.map((n) => {
     if (n.type !== 'groupNode') return n;

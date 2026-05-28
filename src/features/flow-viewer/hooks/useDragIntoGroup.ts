@@ -3,7 +3,12 @@ import { useCallback, useState } from 'react';
 import type { Node } from '@xyflow/react';
 
 import { NODE_WIDTH } from '../lib/layout';
-import { getAbsolutePosition, isDescendantOf, recomputeGroupZIndexes } from '../lib/nodeUtils';
+import {
+  getAbsolutePosition,
+  isDescendantOf,
+  placeAfterParent,
+  recomputeGroupZIndexes,
+} from '../lib/nodeUtils';
 
 export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) => Node[]) => void) {
   const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null);
@@ -72,7 +77,12 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
           return n;
         });
 
-        return recomputeGroupZIndexes(mapped);
+        // ReactFlow requires parent nodes to appear before children in the array.
+        const ordered = targetGroup
+          ? placeAfterParent(mapped, draggedNode.id, targetGroup.id)
+          : mapped;
+
+        return recomputeGroupZIndexes(ordered);
       });
     },
     [setNodes, findTargetGroup],
