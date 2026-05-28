@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import type { Node } from '@xyflow/react';
 
 import { NODE_WIDTH } from '../lib/layout';
-import { getAbsolutePosition, isDescendantOf } from '../lib/nodeUtils';
+import { getAbsolutePosition, isDescendantOf, recomputeGroupZIndexes } from '../lib/nodeUtils';
 
 export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) => Node[]) => void) {
   const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null);
@@ -51,7 +51,7 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
       setNodes((prev) => {
         const { group: targetGroup, absX, absY } = findTargetGroup(draggedNode, prev);
 
-        return prev.map((n) => {
+        const mapped = prev.map((n) => {
           if (n.id !== draggedNode.id) return n;
 
           if (targetGroup) {
@@ -71,6 +71,8 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
 
           return n;
         });
+
+        return recomputeGroupZIndexes(mapped);
       });
     },
     [setNodes, findTargetGroup],

@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 
 import { GROUP_Z_INDEX, NODE_WIDTH } from '../lib/layout';
 import { GROUP_COLORS, GROUP_COLOR_STYLES } from '../lib/nodeColors';
-import { getAbsolutePosition } from '../lib/nodeUtils';
+import { getAbsolutePosition, recomputeGroupZIndexes } from '../lib/nodeUtils';
 import type { DialogRequest, FlowNodeData, GroupNodeData } from '../types';
 import { MemoEditor } from './MemoEditor';
 
@@ -316,14 +316,28 @@ function GroupCreateDialog({
 
   const confirm = () => {
     const trimmed = label.trim() || '그룹';
-    const { x, y, width, height } = computeGroupBounds(pendingNodes, nodes);
+    const { x: absX, y: absY, width, height } = computeGroupBounds(pendingNodes, nodes);
     const groupId = `group-${Date.now()}`;
     const pendingIds = new Set(pendingNodes.map((n) => n.id));
+
+    // 선택 노드들이 같은 부모 그룹 안에 있으면 새 그룹도 그 안에 속함
+    const parentIdSet = new Set(pendingNodes.map((n) => n.parentId ?? null));
+    const commonParentId = parentIdSet.size === 1 ? ([...parentIdSet][0] as string | null) : null;
+
+    let groupPosition: { x: number; y: number };
+    if (commonParentId) {
+      const parentNode = nodes.find((n) => n.id === commonParentId);
+      const parentAbs = parentNode ? getAbsolutePosition(parentNode, nodes) : { x: 0, y: 0 };
+      groupPosition = { x: absX - parentAbs.x, y: absY - parentAbs.y };
+    } else {
+      groupPosition = { x: absX, y: absY };
+    }
 
     const groupNode: Node<GroupNodeData> = {
       id: groupId,
       type: 'groupNode',
-      position: { x, y },
+      position: groupPosition,
+      ...(commonParentId ? { parentId: commonParentId } : {}),
       style: { width, height },
       data: { label: trimmed, color },
       selectable: true,
@@ -338,10 +352,10 @@ function GroupCreateDialog({
           ...n,
           parentId: groupId,
           extent: undefined,
-          position: { x: absPos.x - x, y: absPos.y - y },
+          position: { x: absPos.x - absX, y: absPos.y - absY },
         };
       });
-      return [groupNode, ...updated];
+      return recomputeGroupZIndexes([groupNode, ...updated]);
     });
     onClose();
   };
