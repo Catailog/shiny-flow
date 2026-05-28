@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import Image from 'next/image';
+
 import { Handle, type Node, type NodeProps, NodeToolbar, Position } from '@xyflow/react';
 import { CameraIcon, ChevronRightIcon, LoaderIcon, LogInIcon } from 'lucide-react';
 
@@ -26,10 +28,9 @@ function extractParams(route: string): string[] {
 
 export function FlowNode({ id, data, selected }: Props) {
   const { openDialog } = useFlowActions();
-  const { collapsedIds, hasChildren, hiddenCount } = useCollapseContext();
+  const { collapsedIds, hiddenCount } = useCollapseContext();
   const { available, captureNode, validateForCapture } = useScreenshotContext();
   const isCollapsed = collapsedIds.has(id);
-  const canCollapse = hasChildren(id);
   const hiddenChildCount = hiddenCount(id);
 
   const src = data.screenshot ? `data:image/png;base64,${data.screenshot}` : null;
@@ -80,7 +81,7 @@ export function FlowNode({ id, data, selected }: Props) {
 
       <div
         className={cn(
-          'group flex w-[280px] cursor-pointer flex-col overflow-hidden rounded-lg shadow-sm',
+          'group flex w-70 cursor-pointer flex-col overflow-hidden rounded-lg shadow-sm',
           colorStyle
             ? `border-2 ${colorStyle.border} ${colorStyle.bg}`
             : `border ${data.isDeadEnd ? 'border-brand-accent/60 bg-brand-accent/10' : 'border-brand-secondary bg-brand-light'}`,
@@ -121,14 +122,18 @@ export function FlowNode({ id, data, selected }: Props) {
         )}
 
         {src && (
-          <img
+          <Image
             src={src}
             alt={data.label}
-            className="block w-full cursor-pointer border-b border-inherit"
+            width={280}
+            height={0}
+            style={{ height: 'auto', width: '100%' }}
+            className="block cursor-pointer border-b border-inherit"
             onDoubleClick={(e) => {
               e.stopPropagation();
               openDialog({ type: 'screenshot', src, label: data.label });
             }}
+            unoptimized
           />
         )}
         {!src && (
@@ -157,36 +162,36 @@ export function FlowNode({ id, data, selected }: Props) {
         <Handle
           type="target"
           position={Position.Top}
-          className="!h-3 !w-3 !border-2 !border-brand-secondary !bg-white opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           position={Position.Bottom}
-          className="!h-3 !w-3 !border-2 !border-brand-secondary !bg-white opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="target"
           id="target-left"
           position={Position.Left}
-          className="!h-3 !w-3 !border-2 !border-brand-secondary !bg-white opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           id="source-left"
           position={Position.Left}
-          className="!h-3 !w-3 !border-2 !border-brand-secondary !bg-white opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="target"
           id="target-right"
           position={Position.Right}
-          className="!h-3 !w-3 !border-2 !border-brand-secondary !bg-white opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           id="source-right"
           position={Position.Right}
-          className="!h-3 !w-3 !border-2 !border-brand-secondary !bg-white opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
         />
       </div>
     </>

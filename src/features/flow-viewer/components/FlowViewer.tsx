@@ -70,17 +70,17 @@ function AutoLayout({
 }) {
   const nodesInitialized = useNodesInitialized();
   const { getNodes, fitView } = useReactFlow();
-  const [done, setDone] = useState(false);
+  const doneRef = useRef(false);
 
   useEffect(() => {
-    if (!nodesInitialized || done) return;
+    if (!nodesInitialized || doneRef.current) return;
+    doneRef.current = true;
     if (!skipLayout) {
       const relayouted = applyDagreLayout(getNodes(), edges);
       onLayout(relayouted);
     }
-    setDone(true);
     requestAnimationFrame(() => fitView());
-  }, [nodesInitialized, done, edges, onLayout, getNodes, fitView, skipLayout]);
+  }, [nodesInitialized, edges, onLayout, getNodes, fitView, skipLayout]);
 
   return null;
 }

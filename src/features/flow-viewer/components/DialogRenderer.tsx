@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import Image from 'next/image';
+
 import { type Edge, type Node } from '@xyflow/react';
 
 import { Button } from '@/components/ui/button';
@@ -52,10 +54,14 @@ function ScreenshotDialog({
         showCloseButton={false}
       >
         <DialogTitle className="sr-only">{label} 스크린샷</DialogTitle>
-        <img
+        <Image
           src={src}
           alt={label}
-          className="block max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+          width={1280}
+          height={0}
+          style={{ height: 'auto', maxHeight: '90vh', maxWidth: '90vw', width: 'auto' }}
+          className="block rounded-lg object-contain"
+          unoptimized
         />
       </DialogContent>
     </Dialog>

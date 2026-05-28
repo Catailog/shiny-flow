@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef, useImperativeHandle, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -16,12 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-} from '@/components/ui/input-group';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -128,7 +123,6 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
     register: _register,
     handleSubmit,
     control,
-    watch,
     setValue,
     trigger,
     getValues,
@@ -182,13 +176,26 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
     },
   }));
 
-  const screenshot = watch('screenshot');
-  const authType = watch('authType');
-  const baseUrl = watch('baseUrl');
-  const loginUrl = watch('loginUrl');
-  const usernameSelector = watch('usernameSelector');
-  const passwordSelector = watch('passwordSelector');
-  const submitSelector = watch('submitSelector');
+  const [
+    screenshot,
+    authType,
+    baseUrl,
+    loginUrl,
+    usernameSelector,
+    passwordSelector,
+    submitSelector,
+  ] = useWatch({
+    control,
+    name: [
+      'screenshot',
+      'authType',
+      'baseUrl',
+      'loginUrl',
+      'usernameSelector',
+      'passwordSelector',
+      'submitSelector',
+    ],
+  });
 
   const submitHandler = handleSubmit((values) => {
     if (isLoading) return;
