@@ -87,7 +87,9 @@ function AutoLayout({
 }
 
 function GroupButton({ onOpenDialog }: { onOpenDialog: (req: DialogRequest) => void }) {
-  const selected = useStore((s) => s.nodes.filter((n) => n.selected && n.type === 'flowNode'));
+  const selected = useStore((s) =>
+    s.nodes.filter((n) => n.selected && (n.type === 'flowNode' || n.type === 'groupNode')),
+  );
   const disabled = selected.length < 2;
 
   return (

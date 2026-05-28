@@ -3,40 +3,40 @@ import { useCallback, useState } from 'react';
 import type { Node } from '@xyflow/react';
 
 import { NODE_WIDTH } from '../lib/layout';
+import { getAbsolutePosition, isDescendantOf } from '../lib/nodeUtils';
 
 export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) => Node[]) => void) {
   const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null);
 
   const findTargetGroup = useCallback((draggedNode: Node, allNodes: Node[]) => {
-    const groups = allNodes.filter((n) => n.type === 'groupNode');
     const nodeW = draggedNode.measured?.width ?? NODE_WIDTH;
     const nodeH = draggedNode.measured?.height ?? 100;
-    const parent = draggedNode.parentId
-      ? allNodes.find((n) => n.id === draggedNode.parentId)
-      : null;
-    const absX = parent ? parent.position.x + draggedNode.position.x : draggedNode.position.x;
-    const absY = parent ? parent.position.y + draggedNode.position.y : draggedNode.position.y;
+    const { x: absX, y: absY } = getAbsolutePosition(draggedNode, allNodes);
     const centerX = absX + nodeW / 2;
     const centerY = absY + nodeH / 2;
-    return {
-      group: groups.find((g) => {
-        const gW = g.width ?? (g.style?.width as number | undefined) ?? 0;
-        const gH = g.height ?? (g.style?.height as number | undefined) ?? 0;
-        return (
-          centerX >= g.position.x &&
-          centerX <= g.position.x + gW &&
-          centerY >= g.position.y &&
-          centerY <= g.position.y + gH
-        );
-      }),
-      absX,
-      absY,
-    };
+
+    const groups = allNodes.filter(
+      (n) =>
+        n.type === 'groupNode' &&
+        n.id !== draggedNode.id &&
+        !isDescendantOf(n.id, draggedNode.id, allNodes),
+    );
+
+    const group = groups.find((g) => {
+      const gAbs = getAbsolutePosition(g, allNodes);
+      const gW = g.width ?? (g.style?.width as number | undefined) ?? 0;
+      const gH = g.height ?? (g.style?.height as number | undefined) ?? 0;
+      return (
+        centerX >= gAbs.x && centerX <= gAbs.x + gW && centerY >= gAbs.y && centerY <= gAbs.y + gH
+      );
+    });
+
+    return { group, absX, absY };
   }, []);
 
   const handleNodeDrag = useCallback(
     (_e: React.MouseEvent, draggedNode: Node) => {
-      if (draggedNode.type !== 'flowNode') return;
+      if (draggedNode.type !== 'flowNode' && draggedNode.type !== 'groupNode') return;
       const { group } = findTargetGroup(draggedNode, nodes);
       setDragOverGroupId(group?.id ?? null);
     },
@@ -46,7 +46,7 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
   const handleNodeDragStop = useCallback(
     (_e: React.MouseEvent, draggedNode: Node) => {
       setDragOverGroupId(null);
-      if (draggedNode.type !== 'flowNode') return;
+      if (draggedNode.type !== 'flowNode' && draggedNode.type !== 'groupNode') return;
 
       setNodes((prev) => {
         const { group: targetGroup, absX, absY } = findTargetGroup(draggedNode, prev);
@@ -56,14 +56,12 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
 
           if (targetGroup) {
             if (n.parentId === targetGroup.id) return n;
+            const tAbs = getAbsolutePosition(targetGroup, prev);
             return {
               ...n,
               parentId: targetGroup.id,
               extent: undefined,
-              position: {
-                x: absX - targetGroup.position.x,
-                y: absY - targetGroup.position.y,
-              },
+              position: { x: absX - tAbs.x, y: absY - tAbs.y },
             };
           }
 

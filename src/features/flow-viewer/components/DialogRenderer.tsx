@@ -21,18 +21,21 @@ import { cn } from '@/lib/utils';
 
 import { GROUP_Z_INDEX, NODE_WIDTH } from '../lib/layout';
 import { GROUP_COLORS, GROUP_COLOR_STYLES } from '../lib/nodeColors';
+import { getAbsolutePosition } from '../lib/nodeUtils';
 import type { DialogRequest, FlowNodeData, GroupNodeData } from '../types';
 import { MemoEditor } from './MemoEditor';
 
 // --- helpers ---
 
-function computeGroupBounds(selected: Node[], padding = 48) {
-  const minX = Math.min(...selected.map((n) => n.position.x)) - padding;
-  const minY = Math.min(...selected.map((n) => n.position.y)) - padding;
+function computeGroupBounds(selected: Node[], allNodes: Node[], padding = 48) {
+  const absPositions = selected.map((n) => getAbsolutePosition(n, allNodes));
+  const minX = Math.min(...absPositions.map((p) => p.x)) - padding;
+  const minY = Math.min(...absPositions.map((p) => p.y)) - padding;
   const maxX =
-    Math.max(...selected.map((n) => n.position.x + (n.measured?.width ?? NODE_WIDTH))) + padding;
+    Math.max(...selected.map((n, i) => absPositions[i].x + (n.measured?.width ?? NODE_WIDTH))) +
+    padding;
   const maxY =
-    Math.max(...selected.map((n) => n.position.y + (n.measured?.height ?? 100))) + padding;
+    Math.max(...selected.map((n, i) => absPositions[i].y + (n.measured?.height ?? 100))) + padding;
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 
@@ -299,10 +302,12 @@ function EdgeCommentDialog({
 
 function GroupCreateDialog({
   pendingNodes,
+  nodes,
   setNodes,
   onClose,
 }: {
   pendingNodes: Node[];
+  nodes: Node[];
   setNodes: (fn: (prev: Node[]) => Node[]) => void;
   onClose: () => void;
 }) {
@@ -311,7 +316,7 @@ function GroupCreateDialog({
 
   const confirm = () => {
     const trimmed = label.trim() || '그룹';
-    const { x, y, width, height } = computeGroupBounds(pendingNodes);
+    const { x, y, width, height } = computeGroupBounds(pendingNodes, nodes);
     const groupId = `group-${Date.now()}`;
     const pendingIds = new Set(pendingNodes.map((n) => n.id));
 
@@ -328,11 +333,12 @@ function GroupCreateDialog({
     setNodes((prev) => {
       const updated = prev.map((n) => {
         if (!pendingIds.has(n.id)) return n;
+        const absPos = getAbsolutePosition(n, prev);
         return {
           ...n,
           parentId: groupId,
           extent: undefined,
-          position: { x: n.position.x - x, y: n.position.y - y },
+          position: { x: absPos.x - x, y: absPos.y - y },
         };
       });
       return [groupNode, ...updated];
@@ -504,6 +510,7 @@ export function DialogRenderer({
       return (
         <GroupCreateDialog
           pendingNodes={dialogRequest.nodes}
+          nodes={nodes}
           setNodes={setNodes}
           onClose={onClose}
         />
