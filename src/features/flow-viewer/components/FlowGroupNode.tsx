@@ -19,7 +19,7 @@ export function FlowGroupNode({ id, data, width, height, selected }: Props) {
 
   return (
     <>
-      <NodeToolbar position={Position.Top} align="start" isVisible offset={6}>
+      <NodeToolbar position={Position.Top} align="start" isVisible offset={6} style={{ zIndex: 1 }}>
         <span className={cn('cursor-default text-xs font-semibold select-none', colorStyle.text)}>
           {data.label}
         </span>

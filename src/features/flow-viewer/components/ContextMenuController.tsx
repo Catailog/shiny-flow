@@ -275,17 +275,19 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
 
     items = (
       <>
-        <div
-          role="menuitem"
-          className={ITEM}
-          onClick={() => {
-            onOpenDialog({ type: 'groupEdit', nodeId: target.nodeId });
-            close();
-          }}
-        >
-          <PencilIcon className={ICON} />
-          그룹 수정
-        </div>
+        {!otherNodesSelected && (
+          <div
+            role="menuitem"
+            className={ITEM}
+            onClick={() => {
+              onOpenDialog({ type: 'groupEdit', nodeId: target.nodeId });
+              close();
+            }}
+          >
+            <PencilIcon className={ICON} />
+            그룹 수정
+          </div>
+        )}
         {!otherNodesSelected && (
           <div
             role="menuitem"

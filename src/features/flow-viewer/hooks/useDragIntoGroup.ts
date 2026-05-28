@@ -36,7 +36,7 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
       );
     });
 
-    // 겹치는 그룹이 여럿이면 가장 안쪽(자식) 그룹 우선: 다른 매칭 그룹의 자손인 그룹을 선택
+    // 겹치는 그룹이 여럿이면 가장 안쪽(자식) 그룹 우선
     const group = matching.find(
       (g) => !matching.some((other) => isDescendantOf(other.id, g.id, allNodes)),
     );
@@ -61,33 +61,81 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
       setNodes((prev) => {
         const { group: targetGroup, absX, absY } = findTargetGroup(draggedNode, prev);
 
-        const mapped = prev.map((n) => {
-          if (n.id !== draggedNode.id) return n;
+        // 다중 선택된 노드 중 드래그 대상 외 나머지 (그룹에 넣을 수 있는 타입만)
+        const otherSelected = prev.filter(
+          (n) =>
+            n.selected &&
+            n.id !== draggedNode.id &&
+            (n.type === 'flowNode' || n.type === 'groupNode') &&
+            // 순환 중첩 방지: target 그룹의 조상인 노드는 제외
+            !(targetGroup && isDescendantOf(targetGroup.id, n.id, prev)),
+        );
 
-          if (targetGroup) {
-            if (n.parentId === targetGroup.id) return n;
-            const tAbs = getAbsolutePosition(targetGroup, prev);
-            return {
-              ...n,
+        // 드래그 노드 + 다른 선택 노드 모두에 적용할 업데이트 계산
+        const updates = new Map<string, Partial<Node>>();
+
+        if (targetGroup) {
+          const tAbs = getAbsolutePosition(targetGroup, prev);
+          if (draggedNode.parentId !== targetGroup.id) {
+            updates.set(draggedNode.id, {
               parentId: targetGroup.id,
               extent: undefined,
               position: { x: absX - tAbs.x, y: absY - tAbs.y },
-            };
+            });
           }
-
-          if (n.parentId) {
-            return { ...n, parentId: undefined, extent: undefined, position: { x: absX, y: absY } };
+          for (const n of otherSelected) {
+            if (n.parentId === targetGroup.id) continue;
+            const nodeAbs = getAbsolutePosition(n, prev);
+            updates.set(n.id, {
+              parentId: targetGroup.id,
+              extent: undefined,
+              position: { x: nodeAbs.x - tAbs.x, y: nodeAbs.y - tAbs.y },
+            });
           }
+        } else {
+          // 그룹 바깥으로 드래그
+          if (draggedNode.parentId) {
+            updates.set(draggedNode.id, {
+              parentId: undefined,
+              extent: undefined,
+              position: { x: absX, y: absY },
+            });
+          }
+          for (const n of otherSelected) {
+            if (!n.parentId) continue;
+            const nodeAbs = getAbsolutePosition(n, prev);
+            updates.set(n.id, { parentId: undefined, extent: undefined, position: nodeAbs });
+          }
+        }
 
-          return n;
+        if (updates.size === 0) return prev;
+
+        let mapped = prev.map((n) => {
+          const update = updates.get(n.id);
+          return update ? { ...n, ...update } : n;
         });
 
-        // ReactFlow requires parent nodes to appear before children in the array.
-        const ordered = targetGroup
-          ? placeAfterParent(mapped, draggedNode.id, targetGroup.id)
-          : mapped;
+        // ReactFlow requires parent before children — 이동한 노드들을 부모 뒤에 배치
+        if (targetGroup) {
+          const movedIds = [...updates.keys()];
+          const withoutMoved = mapped.filter((n) => !movedIds.includes(n.id));
+          const parentIdx = withoutMoved.findIndex((n) => n.id === targetGroup.id);
+          const movedNodes = movedIds
+            .map((id) => mapped.find((n) => n.id === id))
+            .filter((n): n is Node => !!n);
+          if (parentIdx >= 0) {
+            mapped = [
+              ...withoutMoved.slice(0, parentIdx + 1),
+              ...movedNodes,
+              ...withoutMoved.slice(parentIdx + 1),
+            ];
+          }
+        } else if (updates.size === 1) {
+          // 단일 노드 이탈 시 기존 ordering 유지
+          mapped = placeAfterParent(mapped, draggedNode.id, draggedNode.parentId ?? '');
+        }
 
-        return recomputeGroupZIndexes(ordered);
+        return recomputeGroupZIndexes(mapped);
       });
     },
     [setNodes, findTargetGroup],
