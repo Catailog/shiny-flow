@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import path from 'path';
+
 import { type FlowEdge, analyzeProject } from '@/lib/analyzer';
 import {
   type AuthBody,
+  type AuthOptions,
   ServerUnavailableError,
   captureRoutesOnPage,
   parseAuth,
@@ -41,7 +44,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const parsedAuth = auth ? parseAuth(auth) : undefined;
+    let parsedAuth: AuthOptions | undefined;
+    if (auth?.type === 'script') {
+      parsedAuth = { type: 'script', scriptPath: path.join(normalizedPath, 'shiny-flow.auth.js') };
+    } else if (auth) {
+      parsedAuth = parseAuth(auth);
+    }
 
     // analyzeProject와 브라우저 세션 셋업(서버 확인 + 실행 + 인증)을 병렬로 실행
     const [graph, session] = await Promise.all([

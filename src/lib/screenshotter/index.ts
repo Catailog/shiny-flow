@@ -1,4 +1,5 @@
 import { type Browser, type Page, chromium } from 'playwright';
+import { pathToFileURL } from 'url';
 
 export type ScreenshotResult = {
   route: string;
@@ -21,28 +22,10 @@ export type PlaywrightCookie = {
 
 export type AuthOptions =
   | { type: 'cookies'; cookies: PlaywrightCookie[] }
-  | {
-      type: 'form';
-      loginUrl: string;
-      usernameSelector: string;
-      passwordSelector: string;
-      submitSelector: string;
-      username: string;
-      password: string;
-    };
+  | { type: 'script'; scriptPath: string };
 
-// Wire format sent from client / API body (cookiesJson is raw JSON string)
-export type AuthBody =
-  | { type: 'cookies'; cookiesJson: string }
-  | {
-      type: 'form';
-      loginUrl: string;
-      usernameSelector: string;
-      passwordSelector: string;
-      submitSelector: string;
-      username: string;
-      password: string;
-    };
+// Wire format sent from client / API body
+export type AuthBody = { type: 'cookies'; cookiesJson: string } | { type: 'script' };
 
 export function parseAuth(auth: AuthBody): AuthOptions | undefined {
   if (auth.type === 'cookies') {
@@ -53,19 +36,6 @@ export function parseAuth(auth: AuthBody): AuthOptions | undefined {
     } catch {
       return undefined;
     }
-  }
-  if (auth.type === 'form') {
-    const { loginUrl, usernameSelector, passwordSelector, submitSelector, username, password } =
-      auth;
-    return {
-      type: 'form',
-      loginUrl,
-      usernameSelector,
-      passwordSelector,
-      submitSelector,
-      username,
-      password,
-    } satisfies AuthOptions;
   }
 }
 
@@ -110,36 +80,6 @@ async function checkServerAvailable(baseUrl: string, timeoutMs: number): Promise
   }
 }
 
-function toFriendlyAuthError(
-  e: unknown,
-  auth: {
-    loginUrl: string;
-    usernameSelector: string;
-    passwordSelector: string;
-    submitSelector: string;
-  },
-): Error {
-  if (!(e instanceof Error)) return new Error('로그인 처리 중 알 수 없는 오류가 발생했습니다.');
-
-  const locatorMatch = e.message.match(/waiting for locator\('([^']+)'\)/);
-  if (locatorMatch) {
-    const sel = locatorMatch[1];
-    if (sel === auth.usernameSelector)
-      return new Error(`아이디 셀렉터를 찾을 수 없습니다: "${sel}"`);
-    if (sel === auth.passwordSelector)
-      return new Error(`비밀번호 셀렉터를 찾을 수 없습니다: "${sel}"`);
-    if (sel === auth.submitSelector)
-      return new Error(`제출 버튼 셀렉터를 찾을 수 없습니다: "${sel}"`);
-    return new Error(`셀렉터를 찾을 수 없습니다: "${sel}"`);
-  }
-
-  if (e.message.includes('Timeout') && e.message.includes('exceeded')) {
-    return new Error(`로그인 페이지 응답 시간이 초과되었습니다 (${auth.loginUrl})`);
-  }
-
-  return new Error(`로그인 처리 중 오류: ${e.message.split('\n')[0]}`);
-}
-
 // Launches browser, applies auth, and returns the authenticated session.
 // Caller is responsible for closing browser.close() when done.
 export async function setupBrowserSession({
@@ -164,45 +104,13 @@ export async function setupBrowserSession({
     const page = await context.newPage();
     await page.setViewportSize({ width: viewportWidth, height: viewportHeight });
 
-    if (auth?.type === 'form') {
-      const base = baseUrl.replace(/\/$/, '');
-      const loginFullUrl = auth.loginUrl.startsWith('http')
-        ? auth.loginUrl
-        : `${base}${auth.loginUrl.startsWith('/') ? auth.loginUrl : '/' + auth.loginUrl}`;
-
-      try {
-        await page.goto(loginFullUrl, { waitUntil, timeout: timeoutMs });
-
-        const usernameCount = await page.locator(auth.usernameSelector).count();
-        if (usernameCount === 0)
-          throw new Error(`아이디 셀렉터를 찾을 수 없습니다: "${auth.usernameSelector}"`);
-        const passwordCount = await page.locator(auth.passwordSelector).count();
-        if (passwordCount === 0)
-          throw new Error(`비밀번호 셀렉터를 찾을 수 없습니다: "${auth.passwordSelector}"`);
-        const submitCount = await page.locator(auth.submitSelector).count();
-        if (submitCount === 0)
-          throw new Error(`제출 버튼 셀렉터를 찾을 수 없습니다: "${auth.submitSelector}"`);
-
-        await page.fill(auth.usernameSelector, auth.username, { timeout: timeoutMs });
-        await page.fill(auth.passwordSelector, auth.password, { timeout: timeoutMs });
-        const loginPageUrl = page.url();
-        await Promise.all([
-          page.waitForURL((url) => url.href !== loginPageUrl, {
-            waitUntil: 'networkidle',
-            timeout: timeoutMs,
-          }),
-          page.click(auth.submitSelector, { timeout: timeoutMs }),
-        ]).catch(() => {});
-      } catch (e) {
-        if (
-          e instanceof Error &&
-          (e.message.startsWith('아이디 셀렉터를') ||
-            e.message.startsWith('비밀번호 셀렉터를') ||
-            e.message.startsWith('제출 버튼 셀렉터를'))
-        )
-          throw e;
-        throw toFriendlyAuthError(e, auth);
+    if (auth?.type === 'script') {
+      const mod = await import(/* webpackIgnore: true */ pathToFileURL(auth.scriptPath).href);
+      const authFn: unknown = mod.default ?? mod;
+      if (typeof authFn !== 'function') {
+        throw new Error('shiny-flow.auth.js가 함수를 export하지 않습니다.');
       }
+      await authFn(page, baseUrl);
     }
 
     return { browser, page };

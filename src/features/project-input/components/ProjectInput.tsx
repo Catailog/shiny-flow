@@ -29,17 +29,9 @@ export type CookiesAuthInput = {
   cookiesJson: string;
 };
 
-export type FormAuthInput = {
-  type: 'form';
-  loginUrl: string;
-  usernameSelector: string;
-  passwordSelector: string;
-  submitSelector: string;
-  username: string;
-  password: string;
-};
+export type ScriptAuthInput = { type: 'script' };
 
-export type AuthInput = CookiesAuthInput | FormAuthInput;
+export type AuthInput = CookiesAuthInput | ScriptAuthInput;
 
 export type AnalyzeOptions = {
   path: string;
@@ -163,12 +155,6 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
       baseUrl: '',
       authType: 'none',
       cookiesJson: '',
-      loginUrl: '',
-      usernameSelector: '',
-      username: '',
-      passwordSelector: '',
-      password: '',
-      submitSelector: '',
     },
   });
 
@@ -200,25 +186,9 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
     },
   }));
 
-  const [
-    screenshot,
-    authType,
-    baseUrl,
-    loginUrl,
-    usernameSelector,
-    passwordSelector,
-    submitSelector,
-  ] = useWatch({
+  const [screenshot, authType, baseUrl] = useWatch({
     control,
-    name: [
-      'screenshot',
-      'authType',
-      'baseUrl',
-      'loginUrl',
-      'usernameSelector',
-      'passwordSelector',
-      'submitSelector',
-    ],
+    name: ['screenshot', 'authType', 'baseUrl'],
   });
 
   const submitHandler = handleSubmit((values) => {
@@ -227,16 +197,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
     if (values.screenshot) {
       if (values.authType === 'cookies')
         auth = { type: 'cookies', cookiesJson: values.cookiesJson };
-      else if (values.authType === 'form')
-        auth = {
-          type: 'form',
-          loginUrl: values.loginUrl,
-          usernameSelector: values.usernameSelector,
-          passwordSelector: values.passwordSelector,
-          submitSelector: values.submitSelector,
-          username: values.username,
-          password: values.password,
-        };
+      else if (values.authType === 'script') auth = { type: 'script' };
     }
     onAnalyze({
       path: values.path.trim(),
@@ -348,7 +309,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">인증:</span>
-                  {(['none', 'cookies', 'form'] as const).map((t) => (
+                  {(['none', 'cookies', 'script'] as const).map((t) => (
                     <ActionButton
                       key={t}
                       type="button"
@@ -358,10 +319,23 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
                       onClick={() => setValue('authType', t)}
                       tooltip={loadingTip}
                     >
-                      {t === 'none' ? '없음' : t === 'cookies' ? '쿠키 주입' : 'Form 로그인'}
+                      {t === 'none' ? '없음' : t === 'cookies' ? '쿠키 주입' : '스크립트'}
                     </ActionButton>
                   ))}
                 </div>
+
+                {authType === 'script' && (
+                  <p className="text-xs text-muted-foreground">
+                    프로젝트 루트의{' '}
+                    <code className="rounded bg-muted px-1 py-0.5 font-mono">
+                      shiny-flow.auth.js
+                    </code>
+                    를 자동으로 실행합니다.{' '}
+                    <span className="opacity-60">
+                      파일이 없으면 npx shiny-flow init 으로 생성하세요.
+                    </span>
+                  </p>
+                )}
 
                 {authType === 'cookies' && (
                   <div className="flex flex-col gap-1">
@@ -378,126 +352,6 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
                       className="h-24 font-mono text-xs"
                     />
                     <FieldError message={errors.cookiesJson?.message} />
-                  </div>
-                )}
-
-                {authType === 'form' && (
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex gap-1.5">
-                      <div className="flex flex-1 flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">로그인 URL</span>
-                        <InputGroup>
-                          <InputGroupInput
-                            {...register('loginUrl')}
-                            placeholder="로그인 URL"
-                            aria-invalid={!!errors.loginUrl}
-                            className="text-sm"
-                          />
-                          {!loginUrl && (
-                            <ExampleFill
-                              label="/login"
-                              onClick={() =>
-                                setValue('loginUrl', '/login', { shouldValidate: true })
-                              }
-                              tooltip={loadingTip}
-                            />
-                          )}
-                        </InputGroup>
-                        <FieldError message={errors.loginUrl?.message} />
-                      </div>
-                      <div className="flex flex-1 flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">제출 버튼 셀렉터</span>
-                        <InputGroup>
-                          <InputGroupInput
-                            {...register('submitSelector')}
-                            placeholder="제출 버튼 셀렉터"
-                            aria-invalid={!!errors.submitSelector}
-                            className="text-sm"
-                          />
-                          {!submitSelector && (
-                            <ExampleFill
-                              label="button[type=submit]"
-                              onClick={() =>
-                                setValue('submitSelector', 'button[type=submit]', {
-                                  shouldValidate: true,
-                                })
-                              }
-                              tooltip={loadingTip}
-                            />
-                          )}
-                        </InputGroup>
-                        <FieldError message={errors.submitSelector?.message} />
-                      </div>
-                    </div>
-
-                    <div className="flex gap-1.5">
-                      <div className="flex flex-1 flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">아이디 셀렉터</span>
-                        <InputGroup>
-                          <InputGroupInput
-                            {...register('usernameSelector')}
-                            placeholder="아이디 셀렉터"
-                            aria-invalid={!!errors.usernameSelector}
-                            className="text-sm"
-                          />
-                          {!usernameSelector && (
-                            <ExampleFill
-                              label="#email"
-                              onClick={() =>
-                                setValue('usernameSelector', '#email', { shouldValidate: true })
-                              }
-                              tooltip={loadingTip}
-                            />
-                          )}
-                        </InputGroup>
-                        <FieldError message={errors.usernameSelector?.message} />
-                      </div>
-                      <div className="flex flex-1 flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">비밀번호 셀렉터</span>
-                        <InputGroup>
-                          <InputGroupInput
-                            {...register('passwordSelector')}
-                            placeholder="비밀번호 셀렉터"
-                            aria-invalid={!!errors.passwordSelector}
-                            className="text-sm"
-                          />
-                          {!passwordSelector && (
-                            <ExampleFill
-                              label="#password"
-                              onClick={() =>
-                                setValue('passwordSelector', '#password', { shouldValidate: true })
-                              }
-                              tooltip={loadingTip}
-                            />
-                          )}
-                        </InputGroup>
-                        <FieldError message={errors.passwordSelector?.message} />
-                      </div>
-                    </div>
-
-                    <div className="flex gap-1.5">
-                      <div className="flex flex-1 flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">아이디</span>
-                        <Input
-                          {...register('username')}
-                          placeholder="아이디 / 이메일"
-                          aria-invalid={!!errors.username}
-                          className="text-sm"
-                        />
-                        <FieldError message={errors.username?.message} />
-                      </div>
-                      <div className="flex flex-1 flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">비밀번호</span>
-                        <Input
-                          {...register('password')}
-                          type="password"
-                          placeholder="비밀번호"
-                          aria-invalid={!!errors.password}
-                          className="text-sm"
-                        />
-                        <FieldError message={errors.password?.message} />
-                      </div>
-                    </div>
                   </div>
                 )}
               </div>

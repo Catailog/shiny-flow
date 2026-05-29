@@ -5,14 +5,8 @@ export const analyzeSchema = z
     path: z.string().min(1, '프로젝트 경로를 입력해주세요.'),
     screenshot: z.boolean(),
     baseUrl: z.string(),
-    authType: z.enum(['none', 'cookies', 'form']),
+    authType: z.enum(['none', 'cookies', 'script']),
     cookiesJson: z.string(),
-    loginUrl: z.string(),
-    usernameSelector: z.string(),
-    username: z.string(),
-    passwordSelector: z.string(),
-    password: z.string(),
-    submitSelector: z.string(),
   })
   .superRefine((data, ctx) => {
     if (!data.screenshot) return;
@@ -30,44 +24,6 @@ export const analyzeSchema = z
         message: '쿠키 JSON을 입력해주세요.',
         path: ['cookiesJson'],
       });
-    }
-    if (data.authType === 'form') {
-      if (!data.loginUrl.trim())
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: '로그인 URL을 입력해주세요.',
-          path: ['loginUrl'],
-        });
-      if (!data.usernameSelector.trim())
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: '아이디 셀렉터를 입력해주세요.',
-          path: ['usernameSelector'],
-        });
-      if (!data.username.trim())
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: '아이디를 입력해주세요.',
-          path: ['username'],
-        });
-      if (!data.passwordSelector.trim())
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: '비밀번호 셀렉터를 입력해주세요.',
-          path: ['passwordSelector'],
-        });
-      if (!data.password.trim())
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: '비밀번호를 입력해주세요.',
-          path: ['password'],
-        });
-      if (!data.submitSelector.trim())
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: '제출 버튼 셀렉터를 입력해주세요.',
-          path: ['submitSelector'],
-        });
     }
   });
 
