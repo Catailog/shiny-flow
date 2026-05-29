@@ -1,6 +1,7 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   images: {
     dangerouslyAllowSVG: true,
     // base64 data URL 이미지 허용
