@@ -231,8 +231,8 @@ else {
   }
 
   async function main() {
-    const { default: getPort } = await import('get-port');
-    const port = await getPort({ port: preferredPort });
+    const { default: getPort, portNumbers } = await import('get-port');
+    const port = await getPort({ port: portNumbers(preferredPort, preferredPort + 100) });
     const hostname = 'localhost';
 
     if (port !== preferredPort) {
