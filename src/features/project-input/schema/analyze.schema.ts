@@ -26,6 +26,22 @@ export const analyzeSchema = z
         path: ['cookiesJson'],
       });
     }
+    if (data.authType === 'script') {
+      const p = data.scriptPath.trim();
+      if (!p) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: '스크립트 경로를 입력해주세요.',
+          path: ['scriptPath'],
+        });
+      } else if (!/\.(js|mjs|cjs)$/i.test(p)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: '.js 파일 경로를 입력해주세요.',
+          path: ['scriptPath'],
+        });
+      }
+    }
   });
 
 export type AnalyzeFormValues = z.infer<typeof analyzeSchema>;

@@ -336,6 +336,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
                       <InputGroupInput
                         {...register('scriptPath')}
                         placeholder="shiny-flow.auth.js"
+                        aria-invalid={!!errors.scriptPath}
                         className="text-sm"
                       />
                       {!scriptPath && (
@@ -348,6 +349,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
                         />
                       )}
                     </InputGroup>
+                    <FieldError message={errors.scriptPath?.message} />
                     <p className="text-xs text-muted-foreground opacity-60">
                       파일이 없으면 npx shiny-flow init 으로 생성하세요.
                     </p>
