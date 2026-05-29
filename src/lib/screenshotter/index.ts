@@ -25,7 +25,9 @@ export type AuthOptions =
   | { type: 'script'; scriptPath: string };
 
 // Wire format sent from client / API body
-export type AuthBody = { type: 'cookies'; cookiesJson: string } | { type: 'script' };
+export type AuthBody =
+  | { type: 'cookies'; cookiesJson: string }
+  | { type: 'script'; scriptPath: string };
 
 export function parseAuth(auth: AuthBody): AuthOptions | undefined {
   if (auth.type === 'cookies') {

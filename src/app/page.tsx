@@ -228,6 +228,7 @@ export default function Home() {
       baseUrl: cliUrl,
       authType: 'none',
       cookiesJson: '',
+      scriptPath: 'shiny-flow.auth.js',
     });
 
     handleAnalyzeRef.current({ path: cliPath, screenshot: cliScreenshot, baseUrl: cliUrl });

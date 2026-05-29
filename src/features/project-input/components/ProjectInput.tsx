@@ -29,7 +29,7 @@ export type CookiesAuthInput = {
   cookiesJson: string;
 };
 
-export type ScriptAuthInput = { type: 'script' };
+export type ScriptAuthInput = { type: 'script'; scriptPath: string };
 
 export type AuthInput = CookiesAuthInput | ScriptAuthInput;
 
@@ -155,6 +155,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
       baseUrl: '',
       authType: 'none',
       cookiesJson: '',
+      scriptPath: 'shiny-flow.auth.js',
     },
   });
 
@@ -197,7 +198,8 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
     if (values.screenshot) {
       if (values.authType === 'cookies')
         auth = { type: 'cookies', cookiesJson: values.cookiesJson };
-      else if (values.authType === 'script') auth = { type: 'script' };
+      else if (values.authType === 'script')
+        auth = { type: 'script', scriptPath: values.scriptPath.trim() || 'shiny-flow.auth.js' };
     }
     onAnalyze({
       path: values.path.trim(),
@@ -325,16 +327,22 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
                 </div>
 
                 {authType === 'script' && (
-                  <p className="text-xs text-muted-foreground">
-                    프로젝트 루트의{' '}
-                    <code className="rounded bg-muted px-1 py-0.5 font-mono">
-                      shiny-flow.auth.js
-                    </code>
-                    를 자동으로 실행합니다.{' '}
-                    <span className="opacity-60">
-                      파일이 없으면 npx shiny-flow init 으로 생성하세요.
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">
+                      스크립트 경로{' '}
+                      <span className="opacity-60">(프로젝트 루트 기준 상대 경로)</span>
                     </span>
-                  </p>
+                    <InputGroup className="w-72">
+                      <InputGroupInput
+                        {...register('scriptPath')}
+                        placeholder="shiny-flow.auth.js"
+                        className="text-sm"
+                      />
+                    </InputGroup>
+                    <p className="text-xs text-muted-foreground opacity-60">
+                      파일이 없으면 npx shiny-flow init 으로 생성하세요.
+                    </p>
+                  </div>
                 )}
 
                 {authType === 'cookies' && (

@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   try {
     let parsedAuth: AuthOptions | undefined;
     if (auth?.type === 'script') {
-      parsedAuth = { type: 'script', scriptPath: path.join(normalizedPath, 'shiny-flow.auth.js') };
+      parsedAuth = { type: 'script', scriptPath: path.join(normalizedPath, auth.scriptPath) };
     } else if (auth) {
       parsedAuth = parseAuth(auth);
     }

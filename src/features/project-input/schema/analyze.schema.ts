@@ -7,6 +7,7 @@ export const analyzeSchema = z
     baseUrl: z.string(),
     authType: z.enum(['none', 'cookies', 'script']),
     cookiesJson: z.string(),
+    scriptPath: z.string(),
   })
   .superRefine((data, ctx) => {
     if (!data.screenshot) return;
