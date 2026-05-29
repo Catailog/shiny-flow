@@ -43,6 +43,7 @@ export default function Home() {
   const [screenshotOptions, setScreenshotOptions] = useState<{
     baseUrl: string;
     auth?: AuthInput;
+    projectPath: string;
   } | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -162,7 +163,7 @@ export default function Home() {
     setSlowWarningSync(false);
     setOverlayError(null);
     setState({ status: 'loading' });
-    setScreenshotOptions(screenshot && baseUrl ? { baseUrl, auth } : null);
+    setScreenshotOptions(screenshot && baseUrl ? { baseUrl, auth, projectPath: path } : null);
     startSlowTimer();
 
     try {

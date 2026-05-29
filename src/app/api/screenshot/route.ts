@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import path from 'path';
+
 import {
   type AuthBody,
+  type AuthOptions,
   ServerUnavailableError,
   captureScreenshots,
   parseAuth,
 } from '@/lib/screenshotter';
+import { normalizePath } from '@/lib/utils';
 
 type RequestBody = {
   baseUrl: string;
   route: string;
   auth?: AuthBody;
+  projectPath?: string;
 };
 
 export async function POST(req: NextRequest) {
@@ -21,7 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '요청 본문이 올바른 JSON이 아닙니다.' }, { status: 400 });
   }
 
-  const { baseUrl, route, auth } = body;
+  const { baseUrl, route, auth, projectPath } = body;
 
   if (!baseUrl || !route) {
     return NextResponse.json({ error: 'baseUrl과 route가 필요합니다.' }, { status: 400 });
@@ -39,7 +44,13 @@ export async function POST(req: NextRequest) {
     }
 
     // 2차 시도: 리다이렉트 감지 → auth로 로그인 후 재캡처
-    const parsedAuth = parseAuth(auth);
+    let parsedAuth: AuthOptions | undefined;
+    if (auth.type === 'script' && projectPath) {
+      const relScript = auth.scriptPath.replace(/^[/\\]+/, '');
+      parsedAuth = { type: 'script', scriptPath: path.join(normalizePath(projectPath), relScript) };
+    } else {
+      parsedAuth = parseAuth(auth);
+    }
     const retry = await captureScreenshots({ baseUrl, routes: [route], auth: parsedAuth });
     const retryResult = retry[0];
 

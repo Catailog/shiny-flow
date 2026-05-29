@@ -112,7 +112,7 @@ export type FlowViewerHandle = {
 
 type Props = {
   graph: FlowGraph;
-  screenshotOptions: { baseUrl: string; auth?: AuthInput } | null;
+  screenshotOptions: { baseUrl: string; auth?: AuthInput; projectPath: string } | null;
   savedRfNodes?: Node[];
   savedRfEdges?: Edge[];
   onValidateForCapture?: () => Promise<void>;
@@ -259,6 +259,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
           baseUrl: screenshotOptions.baseUrl,
           route: resolvedRoute,
           auth: screenshotOptions.auth,
+          projectPath: screenshotOptions.projectPath,
         }),
       });
       if (!res.ok) return;
