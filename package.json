@@ -1,6 +1,6 @@
 {
   "name": "shiny-flow",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "bin": {
     "shiny-flow": "./bin/cli.js"
   },
