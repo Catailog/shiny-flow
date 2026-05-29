@@ -8,19 +8,34 @@ const args = process.argv.slice(2);
 
 if (args[0] === 'init') {
   const authSnippet = `// shiny-flow.auth.js
-// 이 파일을 수정해서 프로젝트의 로그인 로직을 작성하세요.
-// npx shiny-flow . -s 실행 시 자동으로 불러옵니다.
+// Edit this file to handle authentication for your project.
+// It is automatically loaded when running: npx shiny-flow .
 
 /**
- * @param {import('playwright').Page} page
- * @param {string} baseUrl  예: 'http://localhost:3000'
+ * Called once before screenshots are taken.
+ * Log in here so that all subsequent page visits are authenticated.
+ *
+ * @param {import('playwright').Page} page - Playwright page object
+ * @param {string} baseUrl - Base URL of your dev server, e.g. 'http://localhost:3000'
  */
 module.exports = async function authenticate(page, baseUrl) {
+  // Navigate to your login page
   await page.goto(baseUrl + '/login');
+
+  // Fill in the username or email field
+  // Replace '#email' with the CSS selector for your username input
   await page.fill('#email', 'your@email.com');
+
+  // Fill in the password field
+  // Replace '#password' with the CSS selector for your password input
   await page.fill('#password', 'yourpassword');
+
+  // Click the login / submit button
+  // Replace 'button[type=submit]' with the CSS selector for your submit button
   await page.click('button[type=submit]');
-  // 로그인 후 이동할 페이지를 기다립니다
+
+  // Wait until the browser navigates away from the login page
+  // Replace '**/dashboard' with the URL pattern of the page shown after a successful login
   await page.waitForURL('**/dashboard');
 };
 `;
@@ -78,13 +93,32 @@ while (i < args.length) {
 const portFlag = args.indexOf('--port');
 const preferredPort = portFlag !== -1 ? Number(args[portFlag + 1]) : 3000;
 
-const screenshot = args.includes('-s') || args.includes('--screenshot');
-
 const urlFlag = args.indexOf('-u') !== -1 ? args.indexOf('-u') : args.indexOf('--url');
 const targetUrl = urlFlag !== -1 ? args[urlFlag + 1] : 'http://localhost:3000';
 
 const rawProjectPath = positionalArgs[0];
 const projectPath = rawProjectPath ? nodePath.resolve(rawProjectPath) : '';
+
+// path가 주어지면 screenshot 기본값 true
+const screenshot = args.includes('-s') || args.includes('--screenshot') || !!rawProjectPath;
+
+// auth 자동 감지: 프로젝트 루트에 shiny-flow.auth.js가 있으면 script, 없으면 none
+let authType = 'none';
+let scriptPath = 'shiny-flow.auth.js';
+if (projectPath && screenshot) {
+  const authFile = nodePath.join(projectPath, 'shiny-flow.auth.js');
+  if (fs.existsSync(authFile)) {
+    authType = 'script';
+  } else {
+    console.log(`\n[shiny-flow] shiny-flow.auth.js not found in ${projectPath}`);
+    console.log('[shiny-flow] Continuing without authentication.\n');
+    console.log('[shiny-flow] To set up script authentication:');
+    console.log('[shiny-flow]   1. Run `npx shiny-flow init` in your project directory');
+    console.log('[shiny-flow]   2. Edit shiny-flow.auth.js with your login logic');
+    console.log('[shiny-flow]   3. Re-run `npx shiny-flow .`\n');
+    console.log('[shiny-flow] Or open the app and set a custom script path in Auth settings.\n');
+  }
+}
 
 async function main() {
   const { default: getPort } = await import('get-port');
@@ -100,6 +134,10 @@ async function main() {
   if (projectPath) query.set('path', projectPath);
   if (screenshot) query.set('screenshot', 'true');
   if (targetUrl) query.set('url', targetUrl);
+  if (authType !== 'none') {
+    query.set('authType', authType);
+    query.set('scriptPath', scriptPath);
+  }
   const queryString = query.toString() ? `?${query.toString()}` : '';
 
   process.env.PORT = String(port);

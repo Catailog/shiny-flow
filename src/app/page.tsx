@@ -219,6 +219,8 @@ export default function Home() {
 
     const cliScreenshot = params.get('screenshot') === 'true';
     const cliUrl = params.get('url') ?? '';
+    const cliAuthType = (params.get('authType') ?? 'none') as 'none' | 'cookies' | 'script';
+    const cliScriptPath = params.get('scriptPath') ?? 'shiny-flow.auth.js';
 
     window.history.replaceState({}, '', '/');
 
@@ -226,12 +228,15 @@ export default function Home() {
       path: cliPath,
       screenshot: cliScreenshot,
       baseUrl: cliUrl,
-      authType: 'none',
+      authType: cliAuthType,
       cookiesJson: '',
-      scriptPath: 'shiny-flow.auth.js',
+      scriptPath: cliScriptPath,
     });
 
-    handleAnalyzeRef.current({ path: cliPath, screenshot: cliScreenshot, baseUrl: cliUrl });
+    const auth =
+      cliAuthType === 'script' ? { type: 'script' as const, scriptPath: cliScriptPath } : undefined;
+
+    handleAnalyzeRef.current({ path: cliPath, screenshot: cliScreenshot, baseUrl: cliUrl, auth });
   }, []);
 
   const isLoading = state.status === 'loading';
