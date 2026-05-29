@@ -20,6 +20,14 @@ function hasFlag(aliases) {
   return aliases.some((a) => args.includes(a));
 }
 
+// ─── 버전 ────────────────────────────────────────────────────────────────────
+
+if (hasFlag(['--version', '-v'])) {
+  const { version } = require('../package.json');
+  console.log(version);
+  process.exit(0);
+}
+
 // ─── 언어 감지 (전체 공통) ───────────────────────────────────────────────────
 
 const lang = flagValue(['--lang', '-l']) ?? 'en';
