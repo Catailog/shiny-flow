@@ -187,9 +187,9 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
     },
   }));
 
-  const [screenshot, authType, baseUrl] = useWatch({
+  const [screenshot, authType, baseUrl, scriptPath] = useWatch({
     control,
-    name: ['screenshot', 'authType', 'baseUrl'],
+    name: ['screenshot', 'authType', 'baseUrl', 'scriptPath'],
   });
 
   const submitHandler = handleSubmit((values) => {
@@ -338,6 +338,15 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
                         placeholder="shiny-flow.auth.js"
                         className="text-sm"
                       />
+                      {!scriptPath && (
+                        <ExampleFill
+                          label="shiny-flow.auth.js"
+                          onClick={() =>
+                            setValue('scriptPath', 'shiny-flow.auth.js', { shouldValidate: true })
+                          }
+                          tooltip={loadingTip}
+                        />
+                      )}
                     </InputGroup>
                     <p className="text-xs text-muted-foreground opacity-60">
                       파일이 없으면 npx shiny-flow init 으로 생성하세요.

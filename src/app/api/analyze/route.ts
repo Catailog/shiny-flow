@@ -46,7 +46,8 @@ export async function POST(req: NextRequest) {
   try {
     let parsedAuth: AuthOptions | undefined;
     if (auth?.type === 'script') {
-      parsedAuth = { type: 'script', scriptPath: path.join(normalizedPath, auth.scriptPath) };
+      const relScript = auth.scriptPath.replace(/^[/\\]+/, '');
+      parsedAuth = { type: 'script', scriptPath: path.join(normalizedPath, relScript) };
     } else if (auth) {
       parsedAuth = parseAuth(auth);
     }
