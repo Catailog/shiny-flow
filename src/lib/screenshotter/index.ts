@@ -1,4 +1,4 @@
-import { type Browser, type Page, chromium } from 'playwright';
+import type { Browser, Page } from 'playwright';
 import { pathToFileURL } from 'url';
 
 export type ScreenshotResult = {
@@ -95,6 +95,7 @@ export async function setupBrowserSession({
 }: SessionOptions): Promise<BrowserSession> {
   await checkServerAvailable(baseUrl, 5000);
 
+  const { chromium } = await import('playwright');
   const browser = await chromium.launch();
   try {
     const context = await browser.newContext({ deviceScaleFactor });
