@@ -1,9 +1,55 @@
 #!/usr/bin/env node
 
 const nodePath = require('path');
+const fs = require('fs');
 const { spawn } = require('child_process');
 
 const args = process.argv.slice(2);
+
+if (args[0] === 'init') {
+  const authSnippet = `// shiny-flow.auth.js
+// 이 파일을 수정해서 프로젝트의 로그인 로직을 작성하세요.
+// npx shiny-flow . -s 실행 시 자동으로 불러옵니다.
+
+/**
+ * @param {import('playwright').Page} page
+ * @param {string} baseUrl  예: 'http://localhost:3000'
+ */
+module.exports = async function authenticate(page, baseUrl) {
+  await page.goto(baseUrl + '/login');
+  await page.fill('#email', 'your@email.com');
+  await page.fill('#password', 'yourpassword');
+  await page.click('button[type=submit]');
+  // 로그인 후 이동할 페이지를 기다립니다
+  await page.waitForURL('**/dashboard');
+};
+`;
+
+  const authFile = nodePath.join(process.cwd(), 'shiny-flow.auth.js');
+  if (fs.existsSync(authFile)) {
+    console.log('shiny-flow.auth.js already exists, skipping.');
+  } else {
+    fs.writeFileSync(authFile, authSnippet);
+    console.log('Created shiny-flow.auth.js');
+  }
+
+  const gitignoreFile = nodePath.join(process.cwd(), '.gitignore');
+  const entry = 'shiny-flow.auth.js';
+  if (fs.existsSync(gitignoreFile)) {
+    const content = fs.readFileSync(gitignoreFile, 'utf8');
+    if (!content.includes(entry)) {
+      fs.appendFileSync(gitignoreFile, `\n# shiny-flow\n${entry}\n`);
+      console.log('Added shiny-flow.auth.js to .gitignore');
+    } else {
+      console.log('.gitignore already includes shiny-flow.auth.js, skipping.');
+    }
+  } else {
+    fs.writeFileSync(gitignoreFile, `# shiny-flow\n${entry}\n`);
+    console.log('Created .gitignore with shiny-flow.auth.js');
+  }
+
+  process.exit(0);
+}
 
 // positional 인자와 named 플래그 분리
 const positionalArgs = [];
