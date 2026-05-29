@@ -13,18 +13,14 @@ if (existsSync(publicDir)) {
   cpSync(publicDir, join(standalone, 'public'), { recursive: true });
 }
 
-// Next.js NFT(Node File Tracing)가 동적 require로 참조되는 파일을 누락하는 경우 보완.
-// standalone에 없는 파일을 project node_modules에서 직접 복사한다.
-const nftMissing = [
-  // playwright-core가 런타임에 동적으로 require하는 파일
-  join('playwright-core', 'browsers.json'),
-];
-for (const rel of nftMissing) {
-  const src = join(root, 'node_modules', rel);
-  const dst = join(standalone, 'node_modules', rel);
-  if (existsSync(src) && !existsSync(dst)) {
-    cpSync(src, dst);
-    console.log(`Copied missing: ${rel}`);
+// Next.js NFT(Node File Tracing)가 playwright/playwright-core의 동적 require 파일을
+// 대거 누락시키므로 전체 패키지를 node_modules에서 통째로 덮어쓴다.
+for (const pkg of ['playwright', 'playwright-core']) {
+  const src = join(root, 'node_modules', pkg);
+  const dst = join(standalone, 'node_modules', pkg);
+  if (existsSync(src)) {
+    cpSync(src, dst, { recursive: true, force: true });
+    console.log(`Replaced: ${pkg}`);
   }
 }
 
