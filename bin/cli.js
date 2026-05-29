@@ -37,7 +37,9 @@ const lang = flagValue(['--lang', '-l']) ?? 'en';
 const MESSAGES = {
   en: {
     init: {
-      alreadyExists: 'shiny-flow.auth.js already exists, skipping.',
+      overwritePrompt: 'shiny-flow.auth.js already exists. Overwrite? (y/N) ',
+      overwriteSkipped: 'Skipped.',
+      overwritten: 'Overwritten shiny-flow.auth.js',
       created: 'Created shiny-flow.auth.js',
       gitignoreAlready: '.gitignore already includes shiny-flow.auth.js, skipping.',
       gitignorePrompt: 'Add shiny-flow.auth.js to .gitignore? (Y/n) ',
@@ -57,7 +59,9 @@ const MESSAGES = {
   },
   ko: {
     init: {
-      alreadyExists: 'shiny-flow.auth.js가 이미 존재합니다. 건너뜁니다.',
+      overwritePrompt: 'shiny-flow.auth.js가 이미 존재합니다. 덮어쓸까요? (y/N) ',
+      overwriteSkipped: '건너뜁니다.',
+      overwritten: 'shiny-flow.auth.js를 덮어썼습니다.',
       created: 'shiny-flow.auth.js를 생성했습니다.',
       gitignoreAlready: '.gitignore에 shiny-flow.auth.js가 이미 포함되어 있습니다. 건너뜁니다.',
       gitignorePrompt: '.gitignore에 shiny-flow.auth.js를 추가할까요? (Y/n) ',
@@ -152,38 +156,58 @@ module.exports = async function authenticate(page, baseUrl) {
   const authSnippet = snippets[lang] ?? snippets.en;
 
   const authFile = nodePath.join(process.cwd(), 'shiny-flow.auth.js');
+
+  function promptGitignore() {
+    const gitignoreFile = nodePath.join(process.cwd(), '.gitignore');
+    const entry = 'shiny-flow.auth.js';
+    const alreadyIgnored =
+      fs.existsSync(gitignoreFile) && fs.readFileSync(gitignoreFile, 'utf8').includes(entry);
+
+    if (alreadyIgnored) {
+      console.log(msg.init.gitignoreAlready);
+      process.exit(0);
+    }
+
+    const rl = require('readline').createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+    rl.question(msg.init.gitignorePrompt, (answer) => {
+      rl.close();
+      if (answer.trim().toLowerCase() === 'n') {
+        console.log(msg.init.gitignoreSkipped);
+        process.exit(0);
+      }
+      if (fs.existsSync(gitignoreFile)) {
+        fs.appendFileSync(gitignoreFile, `\n# shiny-flow\n${entry}\n`);
+      } else {
+        fs.writeFileSync(gitignoreFile, `# shiny-flow\n${entry}\n`);
+      }
+      console.log(msg.init.gitignoreAdded);
+      process.exit(0);
+    });
+  }
+
   if (fs.existsSync(authFile)) {
-    console.log(msg.init.alreadyExists);
+    const rl = require('readline').createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+    rl.question(msg.init.overwritePrompt, (answer) => {
+      rl.close();
+      if (answer.trim().toLowerCase() === 'y') {
+        fs.writeFileSync(authFile, authSnippet);
+        console.log(msg.init.overwritten);
+      } else {
+        console.log(msg.init.overwriteSkipped);
+      }
+      promptGitignore();
+    });
   } else {
     fs.writeFileSync(authFile, authSnippet);
     console.log(msg.init.created);
+    promptGitignore();
   }
-
-  const gitignoreFile = nodePath.join(process.cwd(), '.gitignore');
-  const entry = 'shiny-flow.auth.js';
-  const alreadyIgnored =
-    fs.existsSync(gitignoreFile) && fs.readFileSync(gitignoreFile, 'utf8').includes(entry);
-
-  if (alreadyIgnored) {
-    console.log(msg.init.gitignoreAlready);
-    process.exit(0);
-  }
-
-  const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout });
-  rl.question(msg.init.gitignorePrompt, (answer) => {
-    rl.close();
-    if (answer.trim().toLowerCase() === 'n') {
-      console.log(msg.init.gitignoreSkipped);
-      process.exit(0);
-    }
-    if (fs.existsSync(gitignoreFile)) {
-      fs.appendFileSync(gitignoreFile, `\n# shiny-flow\n${entry}\n`);
-    } else {
-      fs.writeFileSync(gitignoreFile, `# shiny-flow\n${entry}\n`);
-    }
-    console.log(msg.init.gitignoreAdded);
-    process.exit(0);
-  });
 }
 
 // ─── 서버 실행 ───────────────────────────────────────────────────────────────
