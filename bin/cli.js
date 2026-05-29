@@ -255,6 +255,9 @@ else {
   }
 
   async function main() {
+    const { version } = require('../package.json');
+    console.log(`shiny-flow v${version}`);
+
     const { default: getPort, portNumbers } = await import('get-port');
     const port = await getPort({ port: portNumbers(preferredPort, preferredPort + 100) });
     const hostname = 'localhost';
