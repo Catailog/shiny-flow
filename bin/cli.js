@@ -21,59 +21,70 @@ while (i < args.length) {
 }
 
 const portFlag = args.indexOf('--port');
-const port = portFlag !== -1 ? args[portFlag + 1] : process.env.PORT || '3000';
-const hostname = 'localhost';
+const preferredPort = portFlag !== -1 ? Number(args[portFlag + 1]) : 3000;
 
 const screenshot = args.includes('-s') || args.includes('--screenshot');
 
 const urlFlag = args.indexOf('-u') !== -1 ? args.indexOf('-u') : args.indexOf('--url');
-const targetUrl = urlFlag !== -1 ? args[urlFlag + 1] : '';
+const targetUrl = urlFlag !== -1 ? args[urlFlag + 1] : 'http://localhost:3000';
 
 const rawProjectPath = positionalArgs[0];
 const projectPath = rawProjectPath ? nodePath.resolve(rawProjectPath) : '';
 
-// 쿼리 파라미터 조립
-const query = new URLSearchParams();
-if (projectPath) query.set('path', projectPath);
-if (screenshot) query.set('screenshot', 'true');
-if (targetUrl) query.set('url', targetUrl);
-const queryString = query.toString() ? `?${query.toString()}` : '';
+async function main() {
+  const { default: getPort } = await import('get-port');
+  const port = await getPort({ port: preferredPort });
+  const hostname = 'localhost';
 
-process.env.PORT = port;
-process.env.HOSTNAME = hostname;
-process.env.NODE_ENV = 'production';
-
-const serverPath = nodePath.join(__dirname, '..', '.next', 'standalone', 'server.js');
-
-const server = spawn(process.execPath, [serverPath], {
-  env: { ...process.env },
-  stdio: ['inherit', 'pipe', 'inherit'],
-});
-
-let opened = false;
-const openBrowser = () => {
-  if (opened) return;
-  opened = true;
-  import('open').then(({ default: open }) => open(`http://${hostname}:${port}${queryString}`));
-};
-
-server.stdout.on('data', (data) => {
-  process.stdout.write(data);
-  const text = data.toString();
-  if (text.includes('localhost') || text.includes('Local')) {
-    openBrowser();
+  if (port !== preferredPort) {
+    console.log(`Port ${preferredPort} is in use, using ${port} instead.`);
   }
-});
 
-// 서버 ready 신호를 못 받은 경우 fallback
-setTimeout(openBrowser, 3000);
+  // 쿼리 파라미터 조립
+  const query = new URLSearchParams();
+  if (projectPath) query.set('path', projectPath);
+  if (screenshot) query.set('screenshot', 'true');
+  if (targetUrl) query.set('url', targetUrl);
+  const queryString = query.toString() ? `?${query.toString()}` : '';
 
-server.on('error', (err) => {
-  console.error('Failed to start server:', err.message);
-  process.exit(1);
-});
+  process.env.PORT = String(port);
+  process.env.HOSTNAME = hostname;
+  process.env.NODE_ENV = 'production';
 
-process.on('SIGINT', () => {
-  server.kill('SIGINT');
-  process.exit(0);
-});
+  const serverPath = nodePath.join(__dirname, '..', '.next', 'standalone', 'server.js');
+
+  const server = spawn(process.execPath, [serverPath], {
+    env: { ...process.env },
+    stdio: ['inherit', 'pipe', 'inherit'],
+  });
+
+  let opened = false;
+  const openBrowser = () => {
+    if (opened) return;
+    opened = true;
+    import('open').then(({ default: open }) => open(`http://${hostname}:${port}${queryString}`));
+  };
+
+  server.stdout.on('data', (data) => {
+    process.stdout.write(data);
+    const text = data.toString();
+    if (text.includes('localhost') || text.includes('Local')) {
+      openBrowser();
+    }
+  });
+
+  // 서버 ready 신호를 못 받은 경우 fallback
+  setTimeout(openBrowser, 3000);
+
+  server.on('error', (err) => {
+    console.error('Failed to start server:', err.message);
+    process.exit(1);
+  });
+
+  process.on('SIGINT', () => {
+    server.kill('SIGINT');
+    process.exit(0);
+  });
+}
+
+main();
