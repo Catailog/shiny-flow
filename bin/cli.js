@@ -35,20 +35,29 @@ module.exports = async function authenticate(page, baseUrl) {
 
   const gitignoreFile = nodePath.join(process.cwd(), '.gitignore');
   const entry = 'shiny-flow.auth.js';
-  if (fs.existsSync(gitignoreFile)) {
-    const content = fs.readFileSync(gitignoreFile, 'utf8');
-    if (!content.includes(entry)) {
-      fs.appendFileSync(gitignoreFile, `\n# shiny-flow\n${entry}\n`);
-      console.log('Added shiny-flow.auth.js to .gitignore');
-    } else {
-      console.log('.gitignore already includes shiny-flow.auth.js, skipping.');
-    }
-  } else {
-    fs.writeFileSync(gitignoreFile, `# shiny-flow\n${entry}\n`);
-    console.log('Created .gitignore with shiny-flow.auth.js');
+  const alreadyIgnored =
+    fs.existsSync(gitignoreFile) && fs.readFileSync(gitignoreFile, 'utf8').includes(entry);
+
+  if (alreadyIgnored) {
+    console.log('.gitignore already includes shiny-flow.auth.js, skipping.');
+    process.exit(0);
   }
 
-  process.exit(0);
+  const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout });
+  rl.question('Add shiny-flow.auth.js to .gitignore? [Y/n] ', (answer) => {
+    rl.close();
+    if (answer.trim().toLowerCase() === 'n') {
+      console.log('Skipped.');
+      process.exit(0);
+    }
+    if (fs.existsSync(gitignoreFile)) {
+      fs.appendFileSync(gitignoreFile, `\n# shiny-flow\n${entry}\n`);
+    } else {
+      fs.writeFileSync(gitignoreFile, `# shiny-flow\n${entry}\n`);
+    }
+    console.log('Added shiny-flow.auth.js to .gitignore');
+    process.exit(0);
+  });
 }
 
 // positional 인자와 named 플래그 분리
