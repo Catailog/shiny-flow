@@ -32,7 +32,7 @@ const MESSAGES = {
       alreadyExists: 'shiny-flow.auth.js already exists, skipping.',
       created: 'Created shiny-flow.auth.js',
       gitignoreAlready: '.gitignore already includes shiny-flow.auth.js, skipping.',
-      gitignorePrompt: 'Add shiny-flow.auth.js to .gitignore? [Y/n] ',
+      gitignorePrompt: 'Add shiny-flow.auth.js to .gitignore? (Y/n) ',
       gitignoreSkipped: 'Skipped.',
       gitignoreAdded: 'Added shiny-flow.auth.js to .gitignore',
     },
@@ -52,7 +52,7 @@ const MESSAGES = {
       alreadyExists: 'shiny-flow.auth.js가 이미 존재합니다. 건너뜁니다.',
       created: 'shiny-flow.auth.js를 생성했습니다.',
       gitignoreAlready: '.gitignore에 shiny-flow.auth.js가 이미 포함되어 있습니다. 건너뜁니다.',
-      gitignorePrompt: '.gitignore에 shiny-flow.auth.js를 추가할까요? [Y/n] ',
+      gitignorePrompt: '.gitignore에 shiny-flow.auth.js를 추가할까요? (Y/n) ',
       gitignoreSkipped: '건너뜁니다.',
       gitignoreAdded: '.gitignore에 shiny-flow.auth.js를 추가했습니다.',
     },
@@ -179,104 +179,105 @@ module.exports = async function authenticate(page, baseUrl) {
 }
 
 // ─── 서버 실행 ───────────────────────────────────────────────────────────────
-
-// positional 인자와 named 플래그 분리
-const VALUE_FLAGS = ['--port', '-p', '--url', '-u', '--lang', '-l'];
-const positionalArgs = [];
-let i = 0;
-while (i < args.length) {
-  const arg = args[i];
-  if (VALUE_FLAGS.includes(arg) && i + 1 < args.length) {
-    i += 2;
-  } else if (arg.startsWith('-')) {
-    i += 1;
-  } else {
-    positionalArgs.push(arg);
-    i += 1;
-  }
-}
-
-const preferredPort = Number(flagValue(['--port', '-p']) ?? 3000);
-const targetUrl = flagValue(['--url', '-u']) ?? 'http://localhost:3000';
-const rawProjectPath = positionalArgs[0];
-const projectPath = rawProjectPath ? nodePath.resolve(rawProjectPath) : '';
-
-// path가 주어지면 screenshot 기본값 true
-const screenshot = hasFlag(['--screenshot', '-s']) || !!rawProjectPath;
-
-// auth 자동 감지
-let authType = 'none';
-const scriptPath = 'shiny-flow.auth.js';
-if (projectPath && screenshot) {
-  const authFile = nodePath.join(projectPath, 'shiny-flow.auth.js');
-  if (fs.existsSync(authFile)) {
-    authType = 'script';
-  } else {
-    console.log(msg.server.authNotFound(projectPath));
-    console.log(msg.server.noAuth);
-    console.log(msg.server.authSetup);
-    console.log(msg.server.authStep1);
-    console.log(msg.server.authStep2);
-    console.log(msg.server.authStep3);
-    console.log(msg.server.authManual);
-  }
-}
-
-async function main() {
-  const { default: getPort } = await import('get-port');
-  const port = await getPort({ port: preferredPort });
-  const hostname = 'localhost';
-
-  if (port !== preferredPort) {
-    console.log(msg.server.portInUse(preferredPort, port));
-  }
-
-  const query = new URLSearchParams();
-  if (projectPath) query.set('path', projectPath);
-  if (screenshot) query.set('screenshot', 'true');
-  if (targetUrl) query.set('url', targetUrl);
-  if (authType !== 'none') {
-    query.set('authType', authType);
-    query.set('scriptPath', scriptPath);
-  }
-  const queryString = query.toString() ? `?${query.toString()}` : '';
-
-  process.env.PORT = String(port);
-  process.env.HOSTNAME = hostname;
-  process.env.NODE_ENV = 'production';
-
-  const serverPath = nodePath.join(__dirname, '..', '.next', 'standalone', 'server.js');
-
-  const server = spawn(process.execPath, [serverPath], {
-    env: { ...process.env },
-    stdio: ['inherit', 'pipe', 'inherit'],
-  });
-
-  let opened = false;
-  const openBrowser = () => {
-    if (opened) return;
-    opened = true;
-    import('open').then(({ default: open }) => open(`http://${hostname}:${port}${queryString}`));
-  };
-
-  server.stdout.on('data', (data) => {
-    process.stdout.write(data);
-    if (data.toString().includes('localhost') || data.toString().includes('Local')) {
-      openBrowser();
+else {
+  // positional 인자와 named 플래그 분리
+  const VALUE_FLAGS = ['--port', '-p', '--url', '-u', '--lang', '-l'];
+  const positionalArgs = [];
+  let i = 0;
+  while (i < args.length) {
+    const arg = args[i];
+    if (VALUE_FLAGS.includes(arg) && i + 1 < args.length) {
+      i += 2;
+    } else if (arg.startsWith('-')) {
+      i += 1;
+    } else {
+      positionalArgs.push(arg);
+      i += 1;
     }
-  });
+  }
 
-  setTimeout(openBrowser, 3000);
+  const preferredPort = Number(flagValue(['--port', '-p']) ?? 3000);
+  const targetUrl = flagValue(['--url', '-u']) ?? 'http://localhost:3000';
+  const rawProjectPath = positionalArgs[0];
+  const projectPath = rawProjectPath ? nodePath.resolve(rawProjectPath) : '';
 
-  server.on('error', (err) => {
-    console.error('Failed to start server:', err.message);
-    process.exit(1);
-  });
+  // path가 주어지면 screenshot 기본값 true
+  const screenshot = hasFlag(['--screenshot', '-s']) || !!rawProjectPath;
 
-  process.on('SIGINT', () => {
-    server.kill('SIGINT');
-    process.exit(0);
-  });
+  // auth 자동 감지
+  let authType = 'none';
+  const scriptPath = 'shiny-flow.auth.js';
+  if (projectPath && screenshot) {
+    const authFile = nodePath.join(projectPath, 'shiny-flow.auth.js');
+    if (fs.existsSync(authFile)) {
+      authType = 'script';
+    } else {
+      console.log(msg.server.authNotFound(projectPath));
+      console.log(msg.server.noAuth);
+      console.log(msg.server.authSetup);
+      console.log(msg.server.authStep1);
+      console.log(msg.server.authStep2);
+      console.log(msg.server.authStep3);
+      console.log(msg.server.authManual);
+    }
+  }
+
+  async function main() {
+    const { default: getPort } = await import('get-port');
+    const port = await getPort({ port: preferredPort });
+    const hostname = 'localhost';
+
+    if (port !== preferredPort) {
+      console.log(msg.server.portInUse(preferredPort, port));
+    }
+
+    const query = new URLSearchParams();
+    if (projectPath) query.set('path', projectPath);
+    if (screenshot) query.set('screenshot', 'true');
+    if (targetUrl) query.set('url', targetUrl);
+    if (authType !== 'none') {
+      query.set('authType', authType);
+      query.set('scriptPath', scriptPath);
+    }
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+
+    process.env.PORT = String(port);
+    process.env.HOSTNAME = hostname;
+    process.env.NODE_ENV = 'production';
+
+    const serverPath = nodePath.join(__dirname, '..', '.next', 'standalone', 'server.js');
+
+    const server = spawn(process.execPath, [serverPath], {
+      env: { ...process.env },
+      stdio: ['inherit', 'pipe', 'inherit'],
+    });
+
+    let opened = false;
+    const openBrowser = () => {
+      if (opened) return;
+      opened = true;
+      import('open').then(({ default: open }) => open(`http://${hostname}:${port}${queryString}`));
+    };
+
+    server.stdout.on('data', (data) => {
+      process.stdout.write(data);
+      if (data.toString().includes('localhost') || data.toString().includes('Local')) {
+        openBrowser();
+      }
+    });
+
+    setTimeout(openBrowser, 3000);
+
+    server.on('error', (err) => {
+      console.error('Failed to start server:', err.message);
+      process.exit(1);
+    });
+
+    process.on('SIGINT', () => {
+      server.kill('SIGINT');
+      process.exit(0);
+    });
+  }
+
+  main();
 }
-
-main();
