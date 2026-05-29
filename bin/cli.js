@@ -6,10 +6,74 @@ const { spawn } = require('child_process');
 
 const args = process.argv.slice(2);
 
-if (args[0] === 'init') {
-  const langFlag = args.indexOf('--lang');
-  const lang = langFlag !== -1 ? args[langFlag + 1] : 'en';
+// ─── 플래그 파싱 헬퍼 ────────────────────────────────────────────────────────
 
+function flagValue(aliases) {
+  for (const alias of aliases) {
+    const idx = args.indexOf(alias);
+    if (idx !== -1 && idx + 1 < args.length) return args[idx + 1];
+  }
+  return null;
+}
+
+function hasFlag(aliases) {
+  return aliases.some((a) => args.includes(a));
+}
+
+// ─── 언어 감지 (전체 공통) ───────────────────────────────────────────────────
+
+const lang = flagValue(['--lang', '-l']) ?? 'en';
+
+// ─── 메시지 ──────────────────────────────────────────────────────────────────
+
+const MESSAGES = {
+  en: {
+    init: {
+      alreadyExists: 'shiny-flow.auth.js already exists, skipping.',
+      created: 'Created shiny-flow.auth.js',
+      gitignoreAlready: '.gitignore already includes shiny-flow.auth.js, skipping.',
+      gitignorePrompt: 'Add shiny-flow.auth.js to .gitignore? [Y/n] ',
+      gitignoreSkipped: 'Skipped.',
+      gitignoreAdded: 'Added shiny-flow.auth.js to .gitignore',
+    },
+    server: {
+      portInUse: (p, a) => `Port ${p} is in use, using ${a} instead.`,
+      authNotFound: (path) => `\n[shiny-flow] shiny-flow.auth.js not found in ${path}`,
+      noAuth: '[shiny-flow] Continuing without authentication.\n',
+      authSetup: '[shiny-flow] To set up script authentication:',
+      authStep1: '[shiny-flow]   1. Run `npx shiny-flow init` in your project directory',
+      authStep2: '[shiny-flow]   2. Edit shiny-flow.auth.js with your login logic',
+      authStep3: '[shiny-flow]   3. Re-run `npx shiny-flow .`\n',
+      authManual: '[shiny-flow] Or open the app and set a custom script path in Auth settings.\n',
+    },
+  },
+  ko: {
+    init: {
+      alreadyExists: 'shiny-flow.auth.js가 이미 존재합니다. 건너뜁니다.',
+      created: 'shiny-flow.auth.js를 생성했습니다.',
+      gitignoreAlready: '.gitignore에 shiny-flow.auth.js가 이미 포함되어 있습니다. 건너뜁니다.',
+      gitignorePrompt: '.gitignore에 shiny-flow.auth.js를 추가할까요? [Y/n] ',
+      gitignoreSkipped: '건너뜁니다.',
+      gitignoreAdded: '.gitignore에 shiny-flow.auth.js를 추가했습니다.',
+    },
+    server: {
+      portInUse: (p, a) => `포트 ${p}이(가) 사용 중입니다. ${a} 포트를 사용합니다.`,
+      authNotFound: (path) => `\n[shiny-flow] ${path}에서 shiny-flow.auth.js를 찾을 수 없습니다.`,
+      noAuth: '[shiny-flow] 인증 없이 계속합니다.\n',
+      authSetup: '[shiny-flow] 스크립트 인증을 설정하려면:',
+      authStep1: '[shiny-flow]   1. 프로젝트 디렉토리에서 `npx shiny-flow init --lang ko` 실행',
+      authStep2: '[shiny-flow]   2. shiny-flow.auth.js에 로그인 로직 작성',
+      authStep3: '[shiny-flow]   3. `npx shiny-flow .` 다시 실행\n',
+      authManual: '[shiny-flow] 또는 앱을 열어 인증 설정에서 스크립트 경로를 직접 입력하세요.\n',
+    },
+  },
+};
+
+const msg = MESSAGES[lang] ?? MESSAGES.en;
+
+// ─── init 서브커맨드 ─────────────────────────────────────────────────────────
+
+if (args[0] === 'init') {
   const snippets = {
     en: `// shiny-flow.auth.js
 // Edit this file to handle authentication for your project.
@@ -81,10 +145,10 @@ module.exports = async function authenticate(page, baseUrl) {
 
   const authFile = nodePath.join(process.cwd(), 'shiny-flow.auth.js');
   if (fs.existsSync(authFile)) {
-    console.log('shiny-flow.auth.js already exists, skipping.');
+    console.log(msg.init.alreadyExists);
   } else {
     fs.writeFileSync(authFile, authSnippet);
-    console.log('Created shiny-flow.auth.js');
+    console.log(msg.init.created);
   }
 
   const gitignoreFile = nodePath.join(process.cwd(), '.gitignore');
@@ -93,15 +157,15 @@ module.exports = async function authenticate(page, baseUrl) {
     fs.existsSync(gitignoreFile) && fs.readFileSync(gitignoreFile, 'utf8').includes(entry);
 
   if (alreadyIgnored) {
-    console.log('.gitignore already includes shiny-flow.auth.js, skipping.');
+    console.log(msg.init.gitignoreAlready);
     process.exit(0);
   }
 
   const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout });
-  rl.question('Add shiny-flow.auth.js to .gitignore? [Y/n] ', (answer) => {
+  rl.question(msg.init.gitignorePrompt, (answer) => {
     rl.close();
     if (answer.trim().toLowerCase() === 'n') {
-      console.log('Skipped.');
+      console.log(msg.init.gitignoreSkipped);
       process.exit(0);
     }
     if (fs.existsSync(gitignoreFile)) {
@@ -109,17 +173,20 @@ module.exports = async function authenticate(page, baseUrl) {
     } else {
       fs.writeFileSync(gitignoreFile, `# shiny-flow\n${entry}\n`);
     }
-    console.log('Added shiny-flow.auth.js to .gitignore');
+    console.log(msg.init.gitignoreAdded);
     process.exit(0);
   });
 }
 
+// ─── 서버 실행 ───────────────────────────────────────────────────────────────
+
 // positional 인자와 named 플래그 분리
+const VALUE_FLAGS = ['--port', '-p', '--url', '-u', '--lang', '-l'];
 const positionalArgs = [];
 let i = 0;
 while (i < args.length) {
   const arg = args[i];
-  if ((arg === '--port' || arg === '-u' || arg === '--url') && i + 1 < args.length) {
+  if (VALUE_FLAGS.includes(arg) && i + 1 < args.length) {
     i += 2;
   } else if (arg.startsWith('-')) {
     i += 1;
@@ -129,33 +196,29 @@ while (i < args.length) {
   }
 }
 
-const portFlag = args.indexOf('--port');
-const preferredPort = portFlag !== -1 ? Number(args[portFlag + 1]) : 3000;
-
-const urlFlag = args.indexOf('-u') !== -1 ? args.indexOf('-u') : args.indexOf('--url');
-const targetUrl = urlFlag !== -1 ? args[urlFlag + 1] : 'http://localhost:3000';
-
+const preferredPort = Number(flagValue(['--port', '-p']) ?? 3000);
+const targetUrl = flagValue(['--url', '-u']) ?? 'http://localhost:3000';
 const rawProjectPath = positionalArgs[0];
 const projectPath = rawProjectPath ? nodePath.resolve(rawProjectPath) : '';
 
 // path가 주어지면 screenshot 기본값 true
-const screenshot = args.includes('-s') || args.includes('--screenshot') || !!rawProjectPath;
+const screenshot = hasFlag(['--screenshot', '-s']) || !!rawProjectPath;
 
-// auth 자동 감지: 프로젝트 루트에 shiny-flow.auth.js가 있으면 script, 없으면 none
+// auth 자동 감지
 let authType = 'none';
-let scriptPath = 'shiny-flow.auth.js';
+const scriptPath = 'shiny-flow.auth.js';
 if (projectPath && screenshot) {
   const authFile = nodePath.join(projectPath, 'shiny-flow.auth.js');
   if (fs.existsSync(authFile)) {
     authType = 'script';
   } else {
-    console.log(`\n[shiny-flow] shiny-flow.auth.js not found in ${projectPath}`);
-    console.log('[shiny-flow] Continuing without authentication.\n');
-    console.log('[shiny-flow] To set up script authentication:');
-    console.log('[shiny-flow]   1. Run `npx shiny-flow init` in your project directory');
-    console.log('[shiny-flow]   2. Edit shiny-flow.auth.js with your login logic');
-    console.log('[shiny-flow]   3. Re-run `npx shiny-flow .`\n');
-    console.log('[shiny-flow] Or open the app and set a custom script path in Auth settings.\n');
+    console.log(msg.server.authNotFound(projectPath));
+    console.log(msg.server.noAuth);
+    console.log(msg.server.authSetup);
+    console.log(msg.server.authStep1);
+    console.log(msg.server.authStep2);
+    console.log(msg.server.authStep3);
+    console.log(msg.server.authManual);
   }
 }
 
@@ -165,10 +228,9 @@ async function main() {
   const hostname = 'localhost';
 
   if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is in use, using ${port} instead.`);
+    console.log(msg.server.portInUse(preferredPort, port));
   }
 
-  // 쿼리 파라미터 조립
   const query = new URLSearchParams();
   if (projectPath) query.set('path', projectPath);
   if (screenshot) query.set('screenshot', 'true');
@@ -199,13 +261,11 @@ async function main() {
 
   server.stdout.on('data', (data) => {
     process.stdout.write(data);
-    const text = data.toString();
-    if (text.includes('localhost') || text.includes('Local')) {
+    if (data.toString().includes('localhost') || data.toString().includes('Local')) {
       openBrowser();
     }
   });
 
-  // 서버 ready 신호를 못 받은 경우 fallback
   setTimeout(openBrowser, 3000);
 
   server.on('error', (err) => {
