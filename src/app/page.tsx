@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { Edge, Node } from '@xyflow/react';
 import { Loader2Icon } from 'lucide-react';
@@ -208,6 +208,36 @@ export default function Home() {
     setGraphKey((k) => k + 1);
     setPendingImport(null);
   };
+
+  const handleAnalyzeRef = useRef(handleAnalyze);
+  handleAnalyzeRef.current = handleAnalyze;
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cliPath = params.get('path');
+    if (!cliPath) return;
+
+    const cliScreenshot = params.get('screenshot') === 'true';
+    const cliUrl = params.get('url') ?? '';
+
+    window.history.replaceState({}, '', '/');
+
+    projectInputRef.current?.restoreConfig({
+      path: cliPath,
+      screenshot: cliScreenshot,
+      baseUrl: cliUrl,
+      authType: 'none',
+      cookiesJson: '',
+      loginUrl: '',
+      usernameSelector: '',
+      username: '',
+      passwordSelector: '',
+      password: '',
+      submitSelector: '',
+    });
+
+    handleAnalyzeRef.current({ path: cliPath, screenshot: cliScreenshot, baseUrl: cliUrl });
+  }, []);
 
   const isLoading = state.status === 'loading';
 
