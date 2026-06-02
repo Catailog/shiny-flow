@@ -535,7 +535,7 @@ export function HomePage({ isCloudMode }: Props) {
                         </span>
                       }
                     />
-                    <TooltipContent>로그아웃 (GitHub 계정 전환 포함)</TooltipContent>
+                    <TooltipContent>로그아웃</TooltipContent>
                   </Tooltip>
                 </>
               ) : (
