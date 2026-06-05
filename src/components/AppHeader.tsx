@@ -1,8 +1,9 @@
 'use client';
 
 import { signIn, signOut, useSession } from 'next-auth/react';
+import { useTheme } from 'next-themes';
 
-import { ChevronDownIcon, LogOutIcon, MoonIcon } from 'lucide-react';
+import { ChevronDownIcon, LogOutIcon, MoonIcon, SunIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -27,6 +28,9 @@ type Props = {
 export function AppHeader({ isCloudMode }: Props) {
   const { data: session } = useSession();
   const isLoggedIn = !!session?.user;
+
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   const currentLang: Lang = 'en';
   const current = LANGUAGES.find((l) => l.code === currentLang)!;
@@ -53,9 +57,9 @@ export function AppHeader({ isCloudMode }: Props) {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* 다크모드 토글 — 구현 전 자리만 */}
-        <Button variant="ghost" size="icon">
-          <MoonIcon size={15} />
+        {/* 다크모드 토글 */}
+        <Button variant="ghost" size="icon" onClick={() => setTheme(isDark ? 'light' : 'dark')}>
+          {isDark ? <SunIcon size={15} /> : <MoonIcon size={15} />}
         </Button>
 
         {isCloudMode && (

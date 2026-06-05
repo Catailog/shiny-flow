@@ -68,19 +68,19 @@ export function FlowCommentNode({ id, data }: Props) {
           <div className="flex h-full items-center justify-center">
             <div
               className={cn(
-                'flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 bg-white shadow-md transition-colors',
-                hasContent ? 'border-blue-400 bg-blue-50' : 'border-gray-300',
+                'flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 bg-background shadow-md transition-colors',
+                hasContent ? 'border-blue-400 bg-blue-50 dark:bg-blue-950' : 'border-border',
               )}
             >
               <MessageCircleIcon
                 size={20}
-                className={hasContent ? 'text-blue-400' : 'text-gray-400'}
+                className={hasContent ? 'text-blue-400' : 'text-muted-foreground'}
               />
             </div>
           </div>
 
           {hovered && (
-            <div className="absolute top-0 left-14 z-50 w-max max-w-52 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-lg">
+            <div className="absolute top-0 left-14 z-50 w-max max-w-52 rounded-lg border border-border bg-popover px-3 py-2 text-sm shadow-lg">
               {(data.author || timeRef) && (
                 <>
                   <p className="text-xs text-muted-foreground">
@@ -93,7 +93,7 @@ export function FlowCommentNode({ id, data }: Props) {
                 </>
               )}
               {hasContent ? (
-                <p className="whitespace-pre-wrap text-gray-700">{data.content}</p>
+                <p className="whitespace-pre-wrap text-foreground">{data.content}</p>
               ) : (
                 <p className="text-xs whitespace-nowrap text-muted-foreground">
                   클릭하여 댓글 추가

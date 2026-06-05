@@ -155,6 +155,7 @@
     --ring: var(--brand-primary);
 
     --placeholder-foreground: color-mix(in srgb, var(--brand-secondary) 60%, transparent);
+    --input-background: #2e3d35;
 
     /* status (dark) */
     --success: #5a9e6f;

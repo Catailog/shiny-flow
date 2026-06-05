@@ -162,36 +162,36 @@ export function FlowNode({ id, data, selected }: Props) {
         <Handle
           type="target"
           position={Position.Top}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           position={Position.Bottom}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="target"
           id="target-left"
           position={Position.Left}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           id="source-left"
           position={Position.Left}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="target"
           id="target-right"
           position={Position.Right}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           id="source-right"
           position={Position.Right}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
       </div>
     </>

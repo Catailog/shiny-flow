@@ -56,7 +56,7 @@ function EdgeHandle({
       onMouseDown={onMouseDown}
       onDoubleClick={onDoubleClick}
     >
-      <div className="h-3 w-3 rounded-full border-2 border-brand-primary bg-white shadow-sm" />
+      <div className="h-3 w-3 rounded-full border-2 border-brand-primary bg-background shadow-sm" />
     </div>
   );
 }
@@ -258,7 +258,7 @@ export function FlowEdge({
             title="드래그: 곡선 조정 / 더블클릭: 직선으로 복원"
             {...badgeDragHandlers}
           >
-            <div className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600 shadow-sm">
+            <div className="rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground shadow-sm">
               {comment}
             </div>
           </div>

@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import 'flag-icons/css/flag-icons.min.css';
 
 import { AuthSessionProvider } from '@/components/AuthSessionProvider';
+import { ThemeProvider } from '@/components/ThemeProvider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 import './globals.css';
@@ -31,9 +32,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
-        <AuthSessionProvider>
-          <TooltipProvider>{children}</TooltipProvider>
-        </AuthSessionProvider>
+        <ThemeProvider>
+          <AuthSessionProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+          </AuthSessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
