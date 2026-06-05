@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 
-import { useSession } from 'next-auth/react';
-
 import type { Edge, Node } from '@xyflow/react';
 
 import type { AnalyzeFormValues } from '@/features/project-input';
@@ -52,11 +50,9 @@ type Deps = {
 };
 
 export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
-  session: ReturnType<typeof useSession>['data'];
   state: CloudFlowState;
   actions: CloudFlowActions;
 } {
-  const { data: session } = useSession();
   const [cloudFlowId, setCloudFlowId] = useState<string | null>(null);
   const [cloudFlowName, setCloudFlowName] = useState('');
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -169,7 +165,6 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
   };
 
   return {
-    session,
     state: {
       cloudFlowId,
       cloudFlowName,

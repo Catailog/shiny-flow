@@ -1,14 +1,12 @@
 'use client';
 
-import type { Session } from 'next-auth';
-import { signIn, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 
 import {
   CheckIcon,
   CloudUploadIcon,
   FolderOpenIcon,
   Loader2Icon,
-  LogOutIcon,
   Share2Icon,
   Trash2Icon,
 } from 'lucide-react';
@@ -28,12 +26,12 @@ import type { CloudFlowActions, CloudFlowState } from '../hooks/useCloudFlow';
 
 type Props = {
   hasFlow: boolean;
-  session: Session | null;
   state: CloudFlowState;
   actions: CloudFlowActions;
 };
 
-export function CloudToolbar({ hasFlow, session, state, actions }: Props) {
+export function CloudToolbar({ hasFlow, state, actions }: Props) {
+  const { data: session } = useSession();
   const {
     cloudFlowId,
     cloudFlowName,
@@ -159,30 +157,6 @@ export function CloudToolbar({ hasFlow, session, state, actions }: Props) {
               (busyAction === 'share' ? '공유 링크를 서버에 저장하는 중입니다.' : '링크 복사')}
           </TooltipContent>
         </Tooltip>
-      </div>
-
-      <div className="ml-auto flex items-center gap-2">
-        {isLoggedIn ? (
-          <>
-            <span className="text-xs text-muted-foreground">{session.user.name}</span>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <span className="inline-flex">
-                    <Button variant="ghost" size="icon" onClick={() => signOut()}>
-                      <LogOutIcon size={15} />
-                    </Button>
-                  </span>
-                }
-              />
-              <TooltipContent>로그아웃</TooltipContent>
-            </Tooltip>
-          </>
-        ) : (
-          <Button variant="outline" size="sm" onClick={() => signIn('github')}>
-            GitHub 로그인
-          </Button>
-        )}
       </div>
 
       {/* 저장 이름 입력 다이얼로그 */}

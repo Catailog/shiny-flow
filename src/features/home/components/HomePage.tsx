@@ -14,6 +14,7 @@ import {
   type ProjectInputHandle,
 } from '@/features/project-input';
 
+import { AppHeader } from '@/components/AppHeader';
 import { Button } from '@/components/ui/button';
 
 import type { FlowData } from '@/lib/adapters';
@@ -257,11 +258,7 @@ export function HomePage({ isCloudMode }: Props) {
     };
   };
 
-  const {
-    session,
-    state: cloudState,
-    actions: cloudActions,
-  } = useCloudFlow({
+  const { state: cloudState, actions: cloudActions } = useCloudFlow({
     getCurrentFlowData,
     onFlowLoaded: ({ graph, rfNodes, rfEdges, analyzeConfig, id: _id, name: _name }) => {
       setState({ status: 'success', graph, snapshot: { rfNodes, rfEdges } });
@@ -278,7 +275,8 @@ export function HomePage({ isCloudMode }: Props) {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <header className="flex items-center gap-4 border-b border-border px-6 py-4">
+      <AppHeader isCloudMode={isCloudMode} />
+      <div className="flex items-center gap-4 border-b border-border px-6 py-4">
         <input
           ref={fileInputRef}
           type="file"
@@ -296,14 +294,9 @@ export function HomePage({ isCloudMode }: Props) {
         />
 
         {isCloudMode && (
-          <CloudToolbar
-            hasFlow={hasFlow}
-            session={session}
-            state={cloudState}
-            actions={cloudActions}
-          />
+          <CloudToolbar hasFlow={hasFlow} state={cloudState} actions={cloudActions} />
         )}
-      </header>
+      </div>
 
       {/* 저장 이름 입력 / 내 플로우 다이얼로그는 CloudToolbar 내부에서 렌더링 */}
 
