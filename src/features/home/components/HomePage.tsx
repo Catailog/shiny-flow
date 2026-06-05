@@ -2,18 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { signIn, signOut, useSession } from 'next-auth/react';
-
 import type { Edge, Node } from '@xyflow/react';
-import {
-  CheckIcon,
-  CloudUploadIcon,
-  FolderOpenIcon,
-  Loader2Icon,
-  LogOutIcon,
-  Share2Icon,
-  Trash2Icon,
-} from 'lucide-react';
+import { Loader2Icon } from 'lucide-react';
 
 import { FlowViewer, type FlowViewerHandle } from '@/features/flow-viewer';
 import {
@@ -25,18 +15,12 @@ import {
 } from '@/features/project-input';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-import { type FlowMeta, cloudFlowAdapter } from '@/lib/adapters';
+import type { FlowData } from '@/lib/adapters';
 import type { FlowGraph } from '@/lib/analyzer';
+
+import { useCloudFlow } from '../hooks/useCloudFlow';
+import { CloudToolbar } from './CloudToolbar';
 
 const SLOW_TIMEOUT_MS = 20000;
 
@@ -69,20 +53,6 @@ export function HomePage({ isCloudMode }: Props) {
     auth?: AuthInput;
     projectPath: string;
   } | null>(null);
-
-  // Cloud state
-  const { data: session } = useSession();
-  const [cloudFlowId, setCloudFlowId] = useState<string | null>(null);
-  const [cloudFlowName, setCloudFlowName] = useState('');
-  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [saveNameInput, setSaveNameInput] = useState('');
-  const [myFlowsOpen, setMyFlowsOpen] = useState(false);
-  const [flowsList, setFlowsList] = useState<FlowMeta[]>([]);
-  const [busyAction, setBusyAction] = useState<'save' | 'myFlows' | 'share' | null>(null);
-  const [shareCopied, setShareCopied] = useState(false);
-  const [rowBusy, setRowBusy] = useState<{ id: string; action: 'share' | 'delete' } | null>(null);
-  const [copiedFlowId, setCopiedFlowId] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
   const viewerRef = useRef<FlowViewerHandle>(null);
@@ -277,9 +247,7 @@ export function HomePage({ isCloudMode }: Props) {
     handleAnalyzeRef.current({ path: cliPath, screenshot: cliScreenshot, baseUrl: cliUrl, auth });
   }, []);
 
-  // --- Cloud handlers ---
-
-  const getCurrentFlowData = () => {
+  const getCurrentFlowData = (): FlowData | null => {
     if (state.status !== 'success') return null;
     return {
       graph: state.graph,
@@ -289,125 +257,24 @@ export function HomePage({ isCloudMode }: Props) {
     };
   };
 
-  const handleCloudSave = () => {
-    const data = getCurrentFlowData();
-    if (!data) return;
-    const fallback = data.graph.projectPath.split(/[\\/]/).at(-1) ?? 'flow';
-    setSaveNameInput(cloudFlowName || fallback);
-    setSaveDialogOpen(true);
-  };
-
-  const handleSaveConfirm = async () => {
-    const data = getCurrentFlowData();
-    if (!data || !saveNameInput.trim()) return;
-
-    const name = saveNameInput.trim();
-    try {
-      setBusyAction('save');
-      if (cloudFlowId && name === cloudFlowName) {
-        await cloudFlowAdapter.save(cloudFlowId, data);
-      } else {
-        const id = await cloudFlowAdapter.create(name, data);
-        setCloudFlowId(id);
-      }
-      setCloudFlowName(name);
-      setSaveDialogOpen(false);
-    } finally {
-      setBusyAction(null);
-    }
-  };
-
-  const handleOpenMyFlows = async () => {
-    try {
-      setBusyAction('myFlows');
-      const flows = await cloudFlowAdapter.list();
-      setFlowsList(flows);
-      setMyFlowsOpen(true);
-    } finally {
-      setBusyAction(null);
-    }
-  };
-
-  const handleLoadFlow = async (id: string, name: string) => {
-    try {
-      setBusyAction('myFlows');
-      const data = await cloudFlowAdapter.load(id);
-      if (!data) return;
-      setState({
-        status: 'success',
-        graph: data.graph,
-        snapshot: { rfNodes: data.rfNodes, rfEdges: data.rfEdges },
-      });
+  const {
+    session,
+    state: cloudState,
+    actions: cloudActions,
+  } = useCloudFlow({
+    getCurrentFlowData,
+    onFlowLoaded: ({ graph, rfNodes, rfEdges, analyzeConfig, id: _id, name: _name }) => {
+      setState({ status: 'success', graph, snapshot: { rfNodes, rfEdges } });
       setGraphKey((k) => k + 1);
-      setCloudFlowId(id);
-      setCloudFlowName(name);
-      setMyFlowsOpen(false);
       setScreenshotOptions(null);
-      if (data.analyzeConfig) {
-        projectInputRef.current?.restoreConfig(data.analyzeConfig as AnalyzeFormValues);
+      if (analyzeConfig) {
+        projectInputRef.current?.restoreConfig(analyzeConfig);
       }
-    } finally {
-      setBusyAction(null);
-    }
-  };
-
-  const handleShare = async () => {
-    if (!cloudFlowId) return;
-    try {
-      setBusyAction('share');
-      const url = await cloudFlowAdapter.share(cloudFlowId);
-      await navigator.clipboard.writeText(url);
-      setShareCopied(true);
-      setTimeout(() => setShareCopied(false), 2000);
-    } finally {
-      setBusyAction(null);
-    }
-  };
-
-  const handleShareFlow = async (id: string) => {
-    try {
-      setRowBusy({ id, action: 'share' });
-      const url = await cloudFlowAdapter.share(id);
-      await navigator.clipboard.writeText(url);
-      setCopiedFlowId(id);
-      setTimeout(() => setCopiedFlowId(null), 2000);
-    } finally {
-      setRowBusy(null);
-    }
-  };
-
-  const handleDeleteFlow = async (id: string) => {
-    try {
-      setRowBusy({ id, action: 'delete' });
-      await cloudFlowAdapter.delete(id);
-      setFlowsList((prev) => prev.filter((f) => f.id !== id));
-      setConfirmDeleteId(null);
-      if (cloudFlowId === id) {
-        setCloudFlowId(null);
-        setCloudFlowName('');
-      }
-    } finally {
-      setRowBusy(null);
-    }
-  };
+    },
+  });
 
   const isLoading = state.status === 'loading';
   const hasFlow = state.status === 'success';
-  const isLoggedIn = !!session?.user;
-
-  const saveDisabledTip = !hasFlow
-    ? '분석된 그래프가 없습니다.'
-    : !isLoggedIn
-      ? '로그인이 필요합니다.'
-      : undefined;
-
-  const myFlowsDisabledTip = !isLoggedIn ? '로그인이 필요합니다.' : undefined;
-
-  const shareDisabledTip = !isLoggedIn
-    ? '로그인이 필요합니다.'
-    : !cloudFlowId
-      ? '먼저 저장해야 공유할 수 있습니다.'
-      : undefined;
 
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -429,267 +296,16 @@ export function HomePage({ isCloudMode }: Props) {
         />
 
         {isCloudMode && (
-          <>
-            <div className="flex items-center gap-2">
-              {/* 저장 */}
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <span
-                      className={saveDisabledTip ? 'inline-flex cursor-not-allowed' : 'inline-flex'}
-                    >
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={!!saveDisabledTip || busyAction === 'save'}
-                        onClick={handleCloudSave}
-                      >
-                        {busyAction === 'save' ? (
-                          <Loader2Icon size={14} className="animate-spin" />
-                        ) : (
-                          <CloudUploadIcon size={14} />
-                        )}
-                        저장
-                      </Button>
-                    </span>
-                  }
-                />
-                {saveDisabledTip && <TooltipContent>{saveDisabledTip}</TooltipContent>}
-              </Tooltip>
-
-              {/* 내 플로우 */}
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <span
-                      className={
-                        myFlowsDisabledTip ? 'inline-flex cursor-not-allowed' : 'inline-flex'
-                      }
-                    >
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={!!myFlowsDisabledTip || busyAction === 'myFlows'}
-                        onClick={handleOpenMyFlows}
-                      >
-                        {busyAction === 'myFlows' ? (
-                          <Loader2Icon size={14} className="animate-spin" />
-                        ) : (
-                          <FolderOpenIcon size={14} />
-                        )}
-                        내 플로우
-                      </Button>
-                    </span>
-                  }
-                />
-                {myFlowsDisabledTip && <TooltipContent>{myFlowsDisabledTip}</TooltipContent>}
-              </Tooltip>
-
-              {/* 공유 */}
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <span
-                      className={
-                        shareDisabledTip ? 'inline-flex cursor-not-allowed' : 'inline-flex'
-                      }
-                    >
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={!!shareDisabledTip || busyAction === 'share'}
-                        onClick={handleShare}
-                      >
-                        {busyAction === 'share' ? (
-                          <Loader2Icon size={14} className="animate-spin" />
-                        ) : shareCopied ? (
-                          <CheckIcon size={14} />
-                        ) : (
-                          <Share2Icon size={14} />
-                        )}
-                        {busyAction === 'share' ? '생성 중...' : shareCopied ? '복사됨' : '공유'}
-                      </Button>
-                    </span>
-                  }
-                />
-                <TooltipContent>
-                  {shareDisabledTip ??
-                    (busyAction === 'share'
-                      ? '공유 링크를 서버에 저장하는 중입니다.'
-                      : '링크 복사')}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-
-            <div className="ml-auto flex items-center gap-2">
-              {isLoggedIn ? (
-                <>
-                  <span className="text-xs text-muted-foreground">{session.user.name}</span>
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <span className="inline-flex">
-                          <Button variant="ghost" size="icon" onClick={() => signOut()}>
-                            <LogOutIcon size={15} />
-                          </Button>
-                        </span>
-                      }
-                    />
-                    <TooltipContent>로그아웃</TooltipContent>
-                  </Tooltip>
-                </>
-              ) : (
-                <Button variant="outline" size="sm" onClick={() => signIn('github')}>
-                  GitHub 로그인
-                </Button>
-              )}
-            </div>
-          </>
+          <CloudToolbar
+            hasFlow={hasFlow}
+            session={session}
+            state={cloudState}
+            actions={cloudActions}
+          />
         )}
       </header>
 
-      {/* 저장 이름 입력 다이얼로그 */}
-      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-        <DialogContent showCloseButton={false}>
-          <DialogHeader>
-            <DialogTitle>플로우 저장</DialogTitle>
-          </DialogHeader>
-          <Input
-            value={saveNameInput}
-            onChange={(e) => setSaveNameInput(e.target.value)}
-            placeholder="플로우 이름"
-            onKeyDown={(e) => e.key === 'Enter' && handleSaveConfirm()}
-            autoFocus
-          />
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setSaveDialogOpen(false)}>
-              취소
-            </Button>
-            <Button
-              size="sm"
-              disabled={!saveNameInput.trim() || busyAction === 'save'}
-              onClick={handleSaveConfirm}
-            >
-              {busyAction === 'save' && <Loader2Icon size={14} className="animate-spin" />}
-              저장
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 내 플로우 목록 다이얼로그 */}
-      <Dialog
-        open={myFlowsOpen}
-        onOpenChange={(open) => {
-          setMyFlowsOpen(open);
-          if (!open) setConfirmDeleteId(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>내 플로우</DialogTitle>
-          </DialogHeader>
-          {flowsList.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              저장된 플로우가 없습니다.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {flowsList.map((f) => {
-                const isRowBusy = rowBusy?.id === f.id;
-                const isCopied = copiedFlowId === f.id;
-                const isConfirming = confirmDeleteId === f.id;
-                return (
-                  <li key={f.id} className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      className="h-auto flex-1 justify-between px-3 py-2 text-sm font-normal"
-                      onClick={() => handleLoadFlow(f.id, f.name)}
-                      disabled={!!rowBusy || busyAction === 'myFlows' || isConfirming}
-                    >
-                      <span>{f.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(f.updatedAt).toLocaleString('ko-KR', {
-                          dateStyle: 'short',
-                          timeStyle: 'medium',
-                          hour12: false,
-                        })}
-                      </span>
-                    </Button>
-
-                    {isConfirming ? (
-                      <>
-                        <span className="text-xs text-destructive">삭제할까요?</span>
-                        <Button
-                          variant="destructive"
-                          size="xs"
-                          disabled={isRowBusy}
-                          onClick={() => handleDeleteFlow(f.id)}
-                        >
-                          {isRowBusy ? <Loader2Icon size={12} className="animate-spin" /> : '삭제'}
-                        </Button>
-                        <Button variant="ghost" size="xs" onClick={() => setConfirmDeleteId(null)}>
-                          취소
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <span className="inline-flex">
-                                <Button
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  disabled={!!rowBusy || busyAction === 'myFlows'}
-                                  onClick={() => handleShareFlow(f.id)}
-                                >
-                                  {isRowBusy && rowBusy?.action === 'share' ? (
-                                    <Loader2Icon size={13} className="animate-spin" />
-                                  ) : isCopied ? (
-                                    <CheckIcon size={13} />
-                                  ) : (
-                                    <Share2Icon size={13} />
-                                  )}
-                                </Button>
-                              </span>
-                            }
-                          />
-                          <TooltipContent>
-                            {isRowBusy && rowBusy?.action === 'share'
-                              ? '공유 링크를 서버에 저장하는 중입니다.'
-                              : isCopied
-                                ? '복사됨'
-                                : '공유 링크 복사'}
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <span className="inline-flex">
-                                <Button
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  disabled={!!rowBusy || busyAction === 'myFlows'}
-                                  onClick={() => setConfirmDeleteId(f.id)}
-                                  className="text-muted-foreground hover:text-destructive"
-                                >
-                                  <Trash2Icon size={13} />
-                                </Button>
-                              </span>
-                            }
-                          />
-                          <TooltipContent>삭제</TooltipContent>
-                        </Tooltip>
-                      </>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* 저장 이름 입력 / 내 플로우 다이얼로그는 CloudToolbar 내부에서 렌더링 */}
 
       {pendingImport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
