@@ -1,17 +1,10 @@
 'use client';
 
-import { forwardRef, useImperativeHandle, useState } from 'react';
+import { forwardRef, useImperativeHandle, useMemo } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  ChevronDownIcon,
-  DownloadIcon,
-  Loader2Icon,
-  PinIcon,
-  PinOffIcon,
-  UploadIcon,
-} from 'lucide-react';
+import { DownloadIcon, Loader2Icon, UploadIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -20,9 +13,9 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/in
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-import { cn } from '@/lib/utils';
+import { useT } from '@/hooks/useT';
 
-import { type AnalyzeFormValues, analyzeSchema } from '../schema/analyze.schema';
+import { type AnalyzeFormValues, makeAnalyzeSchema } from '../schema/analyze.schema';
 
 export type CookiesAuthInput = {
   type: 'cookies';
@@ -54,7 +47,6 @@ export type ProjectInputHandle = {
   restoreConfig: (values: AnalyzeFormValues) => void;
 };
 
-// 비활성 조건이 충족될 때 tooltip을 보여주고 클릭을 막는 버튼 래퍼
 function ActionButton({
   tooltip,
   label,
@@ -73,8 +65,6 @@ function ActionButton({
     );
   }
 
-  // disabled 이유(tooltip)가 있으면 disabled 처리
-  // disabled:pointer-events-none 으로 span이 hover 이벤트를 받아 툴팁이 동작한다
   if (tooltip) {
     return (
       <Tooltip>
@@ -92,7 +82,6 @@ function ActionButton({
     );
   }
 
-  // 활성 상태 + shadcn 툴팁 (label이거나 submit의 tooltip)
   return (
     <Tooltip>
       <TooltipTrigger
@@ -118,15 +107,17 @@ function ExampleFill({
   label,
   onClick,
   tooltip,
+  eg,
 }: {
   label: string;
   onClick: () => void;
   tooltip?: string;
+  eg: string;
 }) {
   return (
     <InputGroupAddon align="inline-end">
       <ActionButton type="button" variant="ghost" size="xs" onClick={onClick} tooltip={tooltip}>
-        (예: <span className="underline">{label}</span>)
+        ({eg}: <span className="underline">{label}</span>)
       </ActionButton>
     </InputGroupAddon>
   );
@@ -136,6 +127,20 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
   { onAnalyze, isLoading, onImport, onExport, canExport },
   ref,
 ) {
+  const t = useT();
+
+  const schema = useMemo(
+    () =>
+      makeAnalyzeSchema({
+        pathRequired: t.input.pathRequired,
+        serverUrlRequired: t.input.serverUrlRequired,
+        cookiesRequired: t.input.cookiesRequired,
+        scriptRequired: t.input.scriptRequired,
+        scriptExtension: t.input.scriptExtension,
+      }),
+    [t],
+  );
+
   const {
     register: _register,
     handleSubmit,
@@ -147,7 +152,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
     clearErrors,
     formState: { errors },
   } = useForm<AnalyzeFormValues>({
-    resolver: zodResolver(analyzeSchema),
+    resolver: zodResolver(schema),
     reValidateMode: 'onSubmit',
     defaultValues: {
       path: '',
@@ -170,14 +175,8 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
     };
   };
 
-  const [hovered, setHovered] = useState(false);
-  const [focused, setFocused] = useState(false);
-  const [pinned, setPinned] = useState(false);
-  const expanded = pinned || hovered || focused;
-
   useImperativeHandle(ref, () => ({
     validateForCapture: async () => {
-      setPinned(true);
       setValue('screenshot', true);
       await trigger();
     },
@@ -209,190 +208,155 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
     });
   });
 
-  const loadingTip = isLoading ? '분석 중입니다.' : undefined;
+  const loadingTip = isLoading ? t.home.analyzeDisabled : undefined;
 
   return (
-    <form
-      onSubmit={submitHandler}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onFocusCapture={() => setFocused(true)}
-      onBlurCapture={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);
-      }}
-      className="flex flex-1 flex-col gap-2"
-    >
-      <div className="flex items-end gap-2">
-        <div className="flex flex-1 flex-col gap-1">
-          <span className="text-xs text-muted-foreground">프로젝트 경로</span>
+    <form onSubmit={submitHandler} className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-muted-foreground">{t.input.projectPath}</span>
+        <div className="flex items-center gap-2">
           <Input
             {...register('path')}
-            placeholder="Next.js 프로젝트 절대 경로 (예: C:/Users/me/my-project)"
+            placeholder={t.input.projectPathPlaceholder}
             aria-invalid={!!errors.path}
             className="flex-1"
           />
-          <FieldError message={errors.path?.message} />
+          {onImport && (
+            <ActionButton
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={onImport}
+              tooltip={loadingTip}
+              label={t.input.importJson}
+            >
+              <UploadIcon size={16} />
+            </ActionButton>
+          )}
+          {onExport !== undefined && (
+            <ActionButton
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={onExport}
+              tooltip={!canExport ? t.input.exportDisabled : undefined}
+              label={t.input.exportJson}
+            >
+              <DownloadIcon size={16} />
+            </ActionButton>
+          )}
         </div>
-        {onImport && (
-          <ActionButton
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={onImport}
-            tooltip={loadingTip}
-            label="JSON 불러오기"
-          >
-            <UploadIcon size={16} />
-          </ActionButton>
-        )}
-        {onExport !== undefined && (
-          <ActionButton
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={onExport}
-            tooltip={!canExport ? '분석된 그래프가 없어 JSON 내보내기가 불가능합니다.' : undefined}
-            label="JSON 내보내기"
-          >
-            <DownloadIcon size={16} />
-          </ActionButton>
-        )}
-        <ActionButton type="submit" tooltip={loadingTip}>
-          {isLoading && <Loader2Icon className="animate-spin" />}
-          {isLoading ? '분석 중...' : '분석'}
-        </ActionButton>
+        <FieldError message={errors.path?.message} />
       </div>
 
-      <div
-        className={cn(
-          'grid transition-[grid-template-rows] duration-200 ease-in-out',
-          expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-        )}
-      >
-        <div className="overflow-hidden">
-          <div className="flex flex-col gap-2 p-1">
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="flex cursor-pointer items-center gap-1.5 text-sm">
-                <Controller
-                  control={control}
-                  name="screenshot"
-                  render={({ field }) => (
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                  )}
+      <div className="flex flex-col gap-3">
+        <label className="flex cursor-pointer items-center gap-1.5 text-sm">
+          <Controller
+            control={control}
+            name="screenshot"
+            render={({ field }) => (
+              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+            )}
+          />
+          <span className="text-muted-foreground">{t.input.screenshot}</span>
+        </label>
+
+        {screenshot && (
+          <>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">{t.input.serverUrl}</span>
+              <InputGroup className="w-full">
+                <InputGroupInput
+                  {...register('baseUrl')}
+                  placeholder={t.input.serverUrlPlaceholder}
+                  aria-invalid={!!errors.baseUrl}
+                  className="text-sm"
                 />
-                <span className="text-muted-foreground">스크린샷 캡처</span>
-              </label>
-              {screenshot && (
+                {!baseUrl && (
+                  <ExampleFill
+                    label="http://localhost:3000"
+                    onClick={() =>
+                      setValue('baseUrl', 'http://localhost:3000', { shouldValidate: true })
+                    }
+                    tooltip={loadingTip}
+                    eg={t.input.eg}
+                  />
+                )}
+              </InputGroup>
+              <FieldError message={errors.baseUrl?.message} />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{t.input.auth}</span>
+                {(['none', 'cookies', 'script'] as const).map((at) => (
+                  <ActionButton
+                    key={at}
+                    type="button"
+                    variant={authType === at ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setValue('authType', at)}
+                    tooltip={loadingTip}
+                  >
+                    {at === 'none'
+                      ? t.input.authNone
+                      : at === 'cookies'
+                        ? t.input.authCookies
+                        : t.input.authScript}
+                  </ActionButton>
+                ))}
+              </div>
+
+              {authType === 'script' && (
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">서버 URL</span>
-                  <InputGroup className="w-72">
+                  <span className="text-xs text-muted-foreground">{t.input.scriptPath}</span>
+                  <InputGroup className="w-full">
                     <InputGroupInput
-                      {...register('baseUrl')}
-                      placeholder="대상 서버 URL"
-                      aria-invalid={!!errors.baseUrl}
+                      {...register('scriptPath')}
+                      placeholder="shiny-flow.auth.js"
+                      aria-invalid={!!errors.scriptPath}
                       className="text-sm"
                     />
-                    {!baseUrl && (
+                    {!scriptPath && (
                       <ExampleFill
-                        label="http://localhost:3000"
+                        label="shiny-flow.auth.js"
                         onClick={() =>
-                          setValue('baseUrl', 'http://localhost:3000', { shouldValidate: true })
+                          setValue('scriptPath', 'shiny-flow.auth.js', { shouldValidate: true })
                         }
                         tooltip={loadingTip}
+                        eg={t.input.eg}
                       />
                     )}
                   </InputGroup>
-                  <FieldError message={errors.baseUrl?.message} />
+                  <FieldError message={errors.scriptPath?.message} />
+                  <p className="text-xs text-muted-foreground opacity-60">
+                    {t.input.scriptPathHint}
+                  </p>
+                </div>
+              )}
+
+              {authType === 'cookies' && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">{t.input.cookiesJson}</span>
+                  <Textarea
+                    {...register('cookiesJson')}
+                    placeholder='[{"name":"session","value":"abc123","domain":"localhost"}]'
+                    aria-invalid={!!errors.cookiesJson}
+                    className="h-24 font-mono text-xs"
+                  />
+                  <FieldError message={errors.cookiesJson?.message} />
                 </div>
               )}
             </div>
-
-            {screenshot && (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">인증:</span>
-                  {(['none', 'cookies', 'script'] as const).map((t) => (
-                    <ActionButton
-                      key={t}
-                      type="button"
-                      variant={authType === t ? 'default' : 'outline'}
-                      size="sm"
-                      className="h-6 px-2 text-xs"
-                      onClick={() => setValue('authType', t)}
-                      tooltip={loadingTip}
-                    >
-                      {t === 'none' ? '없음' : t === 'cookies' ? '쿠키 주입' : '스크립트'}
-                    </ActionButton>
-                  ))}
-                </div>
-
-                {authType === 'script' && (
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">
-                      스크립트 경로{' '}
-                      <span className="opacity-60">(프로젝트 루트 기준 상대 경로)</span>
-                    </span>
-                    <InputGroup className="w-72">
-                      <InputGroupInput
-                        {...register('scriptPath')}
-                        placeholder="shiny-flow.auth.js"
-                        aria-invalid={!!errors.scriptPath}
-                        className="text-sm"
-                      />
-                      {!scriptPath && (
-                        <ExampleFill
-                          label="shiny-flow.auth.js"
-                          onClick={() =>
-                            setValue('scriptPath', 'shiny-flow.auth.js', { shouldValidate: true })
-                          }
-                          tooltip={loadingTip}
-                        />
-                      )}
-                    </InputGroup>
-                    <FieldError message={errors.scriptPath?.message} />
-                    <p className="text-xs text-muted-foreground opacity-60">
-                      파일이 없으면 npx shiny-flow init 으로 생성하세요.
-                    </p>
-                  </div>
-                )}
-
-                {authType === 'cookies' && (
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">
-                      쿠키 JSON{' '}
-                      <span className="opacity-60">
-                        (DevTools › Application › Cookies에서 복사)
-                      </span>
-                    </span>
-                    <Textarea
-                      {...register('cookiesJson')}
-                      placeholder='[{"name":"session","value":"abc123","domain":"localhost"}]'
-                      aria-invalid={!!errors.cookiesJson}
-                      className="h-24 font-mono text-xs"
-                    />
-                    <FieldError message={errors.cookiesJson?.message} />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={() => setPinned((p) => !p)}
-        className="mx-auto flex h-5 w-5 items-center justify-center p-0 text-muted-foreground/40 hover:text-muted-foreground"
-      >
-        {pinned ? (
-          <PinOffIcon size={13} />
-        ) : expanded ? (
-          <PinIcon size={13} />
-        ) : (
-          <ChevronDownIcon size={13} />
-        )}
-      </Button>
+      <ActionButton type="submit" tooltip={loadingTip} className="w-full">
+        {isLoading && <Loader2Icon className="animate-spin" />}
+        {isLoading ? t.input.analyzing : t.input.analyze}
+      </ActionButton>
     </form>
   );
 });

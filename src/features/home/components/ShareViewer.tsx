@@ -4,17 +4,20 @@ import { FlowViewer } from '@/features/flow-viewer';
 
 import type { FlowData } from '@/lib/adapters';
 
+import { useT } from '@/hooks/useT';
+
 type Props = {
   name: string;
   data: FlowData;
 };
 
 export function ShareViewer({ name, data }: Props) {
+  const t = useT();
   return (
     <div className="flex h-screen flex-col bg-background">
       <header className="flex items-center gap-3 border-b border-border px-6 py-4">
         <h1 className="text-sm font-medium">{name}</h1>
-        <span className="text-xs text-muted-foreground">읽기 전용</span>
+        <span className="text-xs text-muted-foreground">{t.shareViewer.readOnly}</span>
       </header>
       <main className="flex flex-1 overflow-hidden">
         <FlowViewer

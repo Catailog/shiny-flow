@@ -1,36 +1,117 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# shiny-flow
 
-## Getting Started
+> [한국어](./README.ko.md)
 
-First, run the development server:
+Visualize your Next.js App Router project as an interactive page-flow graph.
+
+**Live demo: [shiny-flow.vercel.app](https://shiny-flow.vercel.app)**
+
+---
+
+## Features
+
+**Analyzer**
+
+- Scans pages and layouts across your Next.js App Router project
+- Recursively traces `<Link>`, `router.push`, and `redirect` calls to build edges
+- Automatically resolves `tsconfig.json` path aliases
+
+**Flow Viewer**
+
+- Auto-layout via Dagre
+- Node grouping with collapse / expand
+- Memos, color tags, and comment nodes
+- Context menu on nodes, edges, and canvas
+- JSON export / import to save and restore your graph
+
+**Screenshots**
+
+- Captures each page using Playwright
+- Supports cookie-based and form-based authentication
+- Re-capture with custom dynamic route parameters
+- Detects and flags redirects
+
+**Cloud (SaaS)**
+
+- Save and load flows across sessions (GitHub login required)
+- Generate shareable read-only links
+
+---
+
+## CLI
+
+### Basic usage
+
+Run inside your Next.js project directory with the dev server already running:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Analyze the current directory and open with screenshots
+npx shiny-flow .
+
+# Specify a path explicitly
+npx shiny-flow <path/to/your/project>
+
+# Open the viewer only, without analysis or screenshots
+npx shiny-flow
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Passing a path (including `.`) automatically enables screenshot capture and project analysis. Without a path, only the viewer opens.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Options
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Flag           | Alias | Default                 | Description                                          |
+| -------------- | ----- | ----------------------- | ---------------------------------------------------- |
+| `--url`        | `-u`  | `http://localhost:3000` | URL of the target dev server                         |
+| `--port`       | `-p`  | `3000`                  | Port for the shiny-flow server                       |
+| `--screenshot` | `-s`  | —                       | Enable screenshots (auto-enabled when path is given) |
+| `--lang`       | `-l`  | `en`                    | Language (`en` / `ko`)                               |
+| `--version`    | `-v`  | —                       | Print version                                        |
 
-## Learn More
+### Authentication
 
-To learn more about Next.js, take a look at the following resources:
+To capture screenshots of pages behind a login wall, generate an auth script in your project directory:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npx shiny-flow init
+# or Korean template:
+npx shiny-flow init --lang ko
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This creates `shiny-flow.auth.js` — edit it with your login logic (Playwright API). It is auto-loaded when you pass a project path.
 
-## Deploy on Vercel
+```bash
+npx shiny-flow <path/to/your/project>
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Example: form-based login**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```js
+// shiny-flow.auth.js
+module.exports = async function authenticate(page, baseUrl) {
+  await page.goto(baseUrl + '/login');
+  await page.fill('#email', 'user@example.com');
+  await page.fill('#password', 'yourpassword');
+  await page.click('button[type=submit]');
+  await page.waitForURL('**/dashboard');
+};
+```
+
+Replace the selectors and credentials with the values for your app. The `page` argument is a [Playwright `Page`](https://playwright.dev/docs/api/class-page) object, so any Playwright API is available.
+
+---
+
+## Web App
+
+Visit [shiny-flow.vercel.app](https://shiny-flow.vercel.app) and point it at your running local dev server.
+
+Sign in with GitHub to save flows and share them with a link.
+
+---
+
+## Stack
+
+- Next.js 16 (App Router), React 19, TypeScript
+- Tailwind CSS v4, shadcn/ui
+- React Flow (@xyflow/react), Dagre
+- Supabase, Auth.js v5
+- Playwright

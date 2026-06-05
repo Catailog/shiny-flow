@@ -12,6 +12,8 @@ import {
   useStore,
 } from '@xyflow/react';
 
+import { useT } from '@/hooks/useT';
+
 import {
   type Face,
   buildSelfLoopPath,
@@ -34,12 +36,14 @@ function EdgeHandle({
   x,
   y,
   zoom,
+  title,
   onMouseDown,
   onDoubleClick,
 }: {
   x: number;
   y: number;
   zoom: number;
+  title: string;
   onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
   onDoubleClick: (e: React.MouseEvent<HTMLDivElement>) => void;
 }) {
@@ -52,11 +56,11 @@ function EdgeHandle({
         zIndex: 20,
         pointerEvents: 'all',
       }}
-      title="드래그: 연결점 이동 / 더블클릭: 자동 위치 복원"
+      title={title}
       onMouseDown={onMouseDown}
       onDoubleClick={onDoubleClick}
     >
-      <div className="h-3 w-3 rounded-full border-2 border-brand-primary bg-white shadow-sm" />
+      <div className="h-3 w-3 rounded-full border-2 border-brand-primary bg-background shadow-sm" />
     </div>
   );
 }
@@ -74,6 +78,7 @@ export function FlowEdge({
 }: Props) {
   const zoom = useStore((s) => s.transform[2]);
   const { setEdges, screenToFlowPosition } = useReactFlow();
+  const t = useT();
   const sourceNode = useStore(useCallback((s) => s.nodeLookup.get(source), [source]));
   const targetNode = useStore(useCallback((s) => s.nodeLookup.get(target), [target]));
 
@@ -255,10 +260,10 @@ export function FlowEdge({
               pointerEvents: 'all',
               cursor: 'grab',
             }}
-            title="드래그: 곡선 조정 / 더블클릭: 직선으로 복원"
+            title={t.flowEdge.dragCurve}
             {...badgeDragHandlers}
           >
-            <div className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600 shadow-sm">
+            <div className="rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground shadow-sm">
               {comment}
             </div>
           </div>
@@ -274,8 +279,20 @@ export function FlowEdge({
               leaveTimer.current = setTimeout(() => setHovered(false), 150);
             }}
           >
-            <EdgeHandle x={sp.x} y={sp.y} zoom={zoom} {...makeDragHandlers('source', sourceNode)} />
-            <EdgeHandle x={tp.x} y={tp.y} zoom={zoom} {...makeDragHandlers('target', targetNode)} />
+            <EdgeHandle
+              x={sp.x}
+              y={sp.y}
+              zoom={zoom}
+              title={t.flowEdge.dragConnectionPoint}
+              {...makeDragHandlers('source', sourceNode)}
+            />
+            <EdgeHandle
+              x={tp.x}
+              y={tp.y}
+              zoom={zoom}
+              title={t.flowEdge.dragConnectionPoint}
+              {...makeDragHandlers('target', targetNode)}
+            />
           </div>
         )}
       </EdgeLabelRenderer>

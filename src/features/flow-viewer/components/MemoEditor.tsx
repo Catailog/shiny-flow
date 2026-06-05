@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 
 import { cn } from '@/lib/utils';
 
+import { useT } from '@/hooks/useT';
+
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     fontSize: {
@@ -63,16 +65,26 @@ const FONT_SIZES = [
   { label: 'XL', size: '24px' },
 ] as const;
 
-const TEXT_COLORS = [
-  { label: '기본', value: 'inherit' },
-  { label: '빨강', value: '#ef4444' },
-  { label: '주황', value: '#f97316' },
-  { label: '노랑', value: '#eab308' },
-  { label: '초록', value: '#22c55e' },
-  { label: '파랑', value: '#3b82f6' },
-  { label: '보라', value: '#a855f7' },
-  { label: '회색', value: '#6b7280' },
-] as const;
+type MemoColorKey =
+  | 'colorDefault'
+  | 'colorRed'
+  | 'colorOrange'
+  | 'colorYellow'
+  | 'colorGreen'
+  | 'colorBlue'
+  | 'colorPurple'
+  | 'colorGray';
+
+const TEXT_COLOR_VALUES: { key: MemoColorKey; value: string }[] = [
+  { key: 'colorDefault', value: 'inherit' },
+  { key: 'colorRed', value: '#ef4444' },
+  { key: 'colorOrange', value: '#f97316' },
+  { key: 'colorYellow', value: '#eab308' },
+  { key: 'colorGreen', value: '#22c55e' },
+  { key: 'colorBlue', value: '#3b82f6' },
+  { key: 'colorPurple', value: '#a855f7' },
+  { key: 'colorGray', value: '#6b7280' },
+];
 
 type Props = {
   value: string;
@@ -105,6 +117,12 @@ function ToolbarButton({
 
 export function MemoEditor({ value, onChange }: Props) {
   const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
+  const t = useT();
+
+  const TEXT_COLORS = TEXT_COLOR_VALUES.map(({ key, value: color }) => ({
+    label: t.memoEditor[key],
+    value: color,
+  }));
 
   const editor = useEditor({
     extensions: [
@@ -113,7 +131,7 @@ export function MemoEditor({ value, onChange }: Props) {
       TextStyle,
       FontSize,
       Color,
-      Placeholder.configure({ placeholder: '메모를 입력하세요...' }),
+      Placeholder.configure({ placeholder: t.memoEditor.placeholder }),
     ],
     content: value,
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
@@ -158,21 +176,21 @@ export function MemoEditor({ value, onChange }: Props) {
         <ToolbarButton
           active={editor.isActive('bold')}
           onClick={() => editor.chain().focus().toggleBold().run()}
-          title="굵게"
+          title={t.memoEditor.bold}
         >
           <BoldIcon size={14} style={{ fill: 'none' }} />
         </ToolbarButton>
         <ToolbarButton
           active={editor.isActive('italic')}
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          title="기울임"
+          title={t.memoEditor.italic}
         >
           <ItalicIcon size={14} style={{ fill: 'none' }} />
         </ToolbarButton>
         <ToolbarButton
           active={editor.isActive('underline')}
           onClick={() => editor.chain().focus().toggleUnderline().run()}
-          title="밑줄"
+          title={t.memoEditor.underline}
         >
           <UnderlineIcon size={14} style={{ fill: 'none' }} />
         </ToolbarButton>
@@ -183,14 +201,14 @@ export function MemoEditor({ value, onChange }: Props) {
         <ToolbarButton
           active={editor.isActive('bulletList')}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          title="글머리 기호 목록"
+          title={t.memoEditor.bulletList}
         >
           <ListIcon size={14} style={{ fill: 'none' }} />
         </ToolbarButton>
         <ToolbarButton
           active={editor.isActive('orderedList')}
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          title="번호 매기기 목록"
+          title={t.memoEditor.orderedList}
         >
           <ListOrderedIcon size={14} style={{ fill: 'none' }} />
         </ToolbarButton>
@@ -210,7 +228,7 @@ export function MemoEditor({ value, onChange }: Props) {
                 : editor.chain().focus().setFontSize(size).run()
             }
             className="w-7 text-xs"
-            title={`글씨 크기 ${label}`}
+            title={t.memoEditor.fontSize(label)}
           >
             {label}
           </Button>

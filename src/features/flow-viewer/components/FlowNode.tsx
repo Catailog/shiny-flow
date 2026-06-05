@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input';
 
 import { cn } from '@/lib/utils';
 
+import { useT } from '@/hooks/useT';
+
 import { useFlowActions } from '../actionsContext';
 import { useCollapseContext } from '../collapseContext';
 import { getNodeColorStyle } from '../lib/nodeColors';
@@ -28,6 +30,7 @@ function extractParams(route: string): string[] {
 
 export function FlowNode({ id, data, selected }: Props) {
   const { openDialog } = useFlowActions();
+  const t = useT();
   const { collapsedIds, hiddenCount } = useCollapseContext();
   const { available, captureNode, validateForCapture } = useScreenshotContext();
   const isCollapsed = collapsedIds.has(id);
@@ -70,7 +73,7 @@ export function FlowNode({ id, data, selected }: Props) {
                   openDialog({ type: 'screenshot', src: redirectedSrc, label: data.label });
               }}
               className="h-auto p-0"
-              title="리다이렉트 되기 전 화면 보기"
+              title={t.flowNode.viewBeforeRedirect}
             >
               <LogInIcon size={13} className="shrink-0 text-warning" />
             </Button>
@@ -96,7 +99,7 @@ export function FlowNode({ id, data, selected }: Props) {
                 <Input
                   value={paramValues[param] ?? ''}
                   onChange={(e) => setParamValues((prev) => ({ ...prev, [param]: e.target.value }))}
-                  placeholder="값 입력"
+                  placeholder={t.flowNode.enterValue}
                   className="nodrag h-5 w-20 rounded-sm px-1.5 text-xs"
                 />
               </label>
@@ -116,7 +119,7 @@ export function FlowNode({ id, data, selected }: Props) {
               ) : (
                 <CameraIcon size={10} />
               )}
-              재캡처
+              {t.flowNode.recapture}
             </Button>
           </div>
         )}
@@ -155,43 +158,43 @@ export function FlowNode({ id, data, selected }: Props) {
         {isCollapsed && (
           <div className="flex items-center gap-1 border-t border-inherit px-3 py-1.5 text-xs text-muted-foreground">
             <ChevronRightIcon size={11} />
-            {hiddenChildCount > 0 ? `${hiddenChildCount}개 노드 숨김` : '접힘'}
+            {hiddenChildCount > 0 ? t.flowNode.hiddenNodes(hiddenChildCount) : t.flowNode.collapsed}
           </div>
         )}
 
         <Handle
           type="target"
           position={Position.Top}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           position={Position.Bottom}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="target"
           id="target-left"
           position={Position.Left}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           id="source-left"
           position={Position.Left}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="target"
           id="target-right"
           position={Position.Right}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           id="source-right"
           position={Position.Right}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
       </div>
     </>
