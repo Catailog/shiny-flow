@@ -49,7 +49,7 @@ export function AppHeader({ isCloudMode }: Props) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {LANGUAGES.map((lang) => (
-              <DropdownMenuItem key={lang.code} className="gap-2">
+              <DropdownMenuItem key={lang.code} className="cursor-pointer gap-2">
                 <span className={`fi fi-${lang.flag} text-sm`} />
                 {lang.label}
               </DropdownMenuItem>
