@@ -10,6 +10,10 @@
    bg-success, bg-warning, bg-info 등으로 사용
 ───────────────────────────────────────────── */
 @theme inline {
+  /* transition */
+  --transition-duration-normal: var(--transition-normal);
+  --transition-delay-normal: var(--transition-normal);
+
   /* brand */
   --color-brand-primary: var(--brand-primary);
   --color-brand-secondary: var(--brand-secondary);
@@ -78,6 +82,8 @@
 @layer base {
   :root {
     /* ── 브랜드 팔레트 (단일 출처) ───────────── */
+    --transition-normal: 200ms;
+
     --brand-primary: #708a70;
     --brand-secondary: #a3b5a3;
     --brand-accent: #d4a373;

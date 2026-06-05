@@ -78,7 +78,7 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {/* 저장 */}
         <Tooltip>
           <TooltipTrigger

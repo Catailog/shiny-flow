@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { Edge, Node } from '@xyflow/react';
-import { Loader2Icon } from 'lucide-react';
+import { ChevronRightIcon, Loader2Icon, PinIcon, PinOffIcon } from 'lucide-react';
 
 import { FlowViewer, type FlowViewerHandle } from '@/features/flow-viewer';
 import {
@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 
 import type { FlowData } from '@/lib/adapters';
 import type { FlowGraph } from '@/lib/analyzer';
+import { cn } from '@/lib/utils';
 
 import { useCloudFlow } from '../hooks/useCloudFlow';
 import { CloudToolbar } from './CloudToolbar';
@@ -273,32 +274,143 @@ export function HomePage({ isCloudMode }: Props) {
   const isLoading = state.status === 'loading';
   const hasFlow = state.status === 'success';
 
+  const [panelPinned, setPanelPinned] = useState(false);
+  const [panelHovered, setPanelHovered] = useState(false);
+  const [panelFocused, setPanelFocused] = useState(false);
+  const panelExpanded = panelPinned || panelHovered || panelFocused;
+
   return (
     <div className="flex h-screen flex-col bg-background">
       <AppHeader isCloudMode={isCloudMode} />
-      <div className="flex items-center gap-4 border-b border-border px-6 py-4">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          className="hidden"
-          onChange={handleImportFile}
-        />
-        <ProjectInput
-          ref={projectInputRef}
-          onAnalyze={handleAnalyze}
-          isLoading={isLoading}
-          onImport={() => fileInputRef.current?.click()}
-          onExport={handleExport}
-          canExport={hasFlow}
-        />
 
-        {isCloudMode && (
-          <CloudToolbar hasFlow={hasFlow} state={cloudState} actions={cloudActions} />
-        )}
+      <div className="flex flex-1 overflow-hidden">
+        {/* 좌측 사이드 패널 */}
+        <aside
+          className={cn(
+            'relative shrink-0 overflow-hidden border-r border-border transition-[width] duration-normal',
+            panelExpanded ? 'w-80' : 'w-10',
+          )}
+          onMouseEnter={() => setPanelHovered(true)}
+          onMouseLeave={() => setPanelHovered(false)}
+          onFocusCapture={() => setPanelFocused(true)}
+          onBlurCapture={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as globalThis.Node | null))
+              setPanelFocused(false);
+          }}
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setPanelPinned((p) => !p)}
+            className="absolute top-2 right-1 z-10 h-7 w-7 text-muted-foreground"
+          >
+            {panelPinned ? (
+              <PinOffIcon size={13} />
+            ) : panelExpanded ? (
+              <PinIcon size={13} />
+            ) : (
+              <ChevronRightIcon size={14} />
+            )}
+          </Button>
+
+          <div
+            className={cn(
+              'flex h-full flex-col gap-4 overflow-y-auto p-4 pt-10',
+              panelExpanded
+                ? 'opacity-100 transition-opacity delay-normal duration-150'
+                : 'pointer-events-none opacity-0 transition-none',
+            )}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+            <ProjectInput
+              ref={projectInputRef}
+              onAnalyze={handleAnalyze}
+              isLoading={isLoading}
+              onImport={() => fileInputRef.current?.click()}
+              onExport={handleExport}
+              canExport={hasFlow}
+            />
+
+            {isCloudMode && (
+              <CloudToolbar hasFlow={hasFlow} state={cloudState} actions={cloudActions} />
+            )}
+          </div>
+        </aside>
+
+        {/* 메인 콘텐츠 */}
+        <main className="flex flex-1 flex-col items-center justify-center overflow-hidden">
+          {state.status === 'idle' && (
+            <p className="text-sm text-muted-foreground">
+              프로젝트 경로를 입력하고 분석 버튼을 눌러보세요.
+            </p>
+          )}
+
+          {state.status === 'loading' && (
+            <div className="flex flex-col items-center gap-3">
+              {!overlayError && (
+                <>
+                  <Loader2Icon size={36} className="animate-spin text-brand-primary" />
+                  <p className="text-sm text-muted-foreground">분석 중...</p>
+                </>
+              )}
+
+              {overlayError ? (
+                <div className="flex flex-col items-center gap-2 rounded-lg border border-destructive bg-destructive/10 px-5 py-3 text-sm">
+                  <p className="font-medium text-destructive">{overlayError}</p>
+                  <Button size="sm" variant="outline" onClick={handleOverlayErrorDismiss}>
+                    확인
+                  </Button>
+                </div>
+              ) : slowWarning ? (
+                <div className="flex flex-col items-center gap-2 rounded-lg border border-warning bg-warning/10 px-5 py-3 text-sm">
+                  <p className="font-medium text-warning">
+                    서버 응답이 늦고 있습니다. 계속 기다리시겠습니까?
+                  </p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={handleKeepWaiting}>
+                      계속 기다리기
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={handleCancel}>
+                      취소
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleCancel}
+                  className="text-muted-foreground"
+                >
+                  취소
+                </Button>
+              )}
+            </div>
+          )}
+
+          {state.status === 'error' && <p className="text-sm text-destructive">{state.message}</p>}
+
+          {state.status === 'success' && (
+            <FlowViewer
+              key={graphKey}
+              ref={viewerRef}
+              graph={state.graph}
+              screenshotOptions={screenshotOptions}
+              savedRfNodes={state.snapshot?.rfNodes}
+              savedRfEdges={state.snapshot?.rfEdges}
+              onValidateForCapture={() =>
+                projectInputRef.current?.validateForCapture() ?? Promise.resolve()
+              }
+            />
+          )}
+        </main>
       </div>
-
-      {/* 저장 이름 입력 / 내 플로우 다이얼로그는 CloudToolbar 내부에서 렌더링 */}
 
       {pendingImport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -318,73 +430,6 @@ export function HomePage({ isCloudMode }: Props) {
           </div>
         </div>
       )}
-
-      <main className="flex flex-1 flex-col items-center justify-center overflow-hidden">
-        {state.status === 'idle' && (
-          <p className="text-sm text-muted-foreground">
-            프로젝트 경로를 입력하고 분석 버튼을 눌러보세요.
-          </p>
-        )}
-
-        {state.status === 'loading' && (
-          <div className="flex flex-col items-center gap-3">
-            {!overlayError && (
-              <>
-                <Loader2Icon size={36} className="animate-spin text-brand-primary" />
-                <p className="text-sm text-muted-foreground">분석 중...</p>
-              </>
-            )}
-
-            {overlayError ? (
-              <div className="flex flex-col items-center gap-2 rounded-lg border border-destructive bg-destructive/10 px-5 py-3 text-sm">
-                <p className="font-medium text-destructive">{overlayError}</p>
-                <Button size="sm" variant="outline" onClick={handleOverlayErrorDismiss}>
-                  확인
-                </Button>
-              </div>
-            ) : slowWarning ? (
-              <div className="flex flex-col items-center gap-2 rounded-lg border border-warning bg-warning/10 px-5 py-3 text-sm">
-                <p className="font-medium text-warning">
-                  서버 응답이 늦고 있습니다. 계속 기다리시겠습니까?
-                </p>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={handleKeepWaiting}>
-                    계속 기다리기
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={handleCancel}>
-                    취소
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleCancel}
-                className="text-muted-foreground"
-              >
-                취소
-              </Button>
-            )}
-          </div>
-        )}
-
-        {state.status === 'error' && <p className="text-sm text-destructive">{state.message}</p>}
-
-        {state.status === 'success' && (
-          <FlowViewer
-            key={graphKey}
-            ref={viewerRef}
-            graph={state.graph}
-            screenshotOptions={screenshotOptions}
-            savedRfNodes={state.snapshot?.rfNodes}
-            savedRfEdges={state.snapshot?.rfEdges}
-            onValidateForCapture={() =>
-              projectInputRef.current?.validateForCapture() ?? Promise.resolve()
-            }
-          />
-        )}
-      </main>
     </div>
   );
 }
