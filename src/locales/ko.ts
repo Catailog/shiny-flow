@@ -5,6 +5,8 @@ export const ko: Translations = {
   header: {
     logout: '로그아웃',
     login: 'GitHub 로그인',
+    switchToDark: '다크 모드로 전환',
+    switchToLight: '라이트 모드로 전환',
   },
 
   // Home page

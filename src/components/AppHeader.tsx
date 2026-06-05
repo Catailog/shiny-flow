@@ -15,7 +15,8 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { useT } from '@/hooks/useT';
-import { useUIStore, type Locale } from '@/store/uiStore';
+
+import { type Locale, useUIStore } from '@/store/uiStore';
 
 const LANGUAGES: { code: Locale; flag: string; label: string }[] = [
   { code: 'en', flag: 'us', label: 'English' },
@@ -66,9 +67,22 @@ export function AppHeader({ isCloudMode }: Props) {
         </DropdownMenu>
 
         {/* 다크모드 토글 */}
-        <Button variant="ghost" size="icon" onClick={() => setTheme(isDark ? 'light' : 'dark')}>
-          {isDark ? <SunIcon size={15} /> : <MoonIcon size={15} />}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span className="inline-flex">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setTheme(isDark ? 'light' : 'dark')}
+                >
+                  {isDark ? <SunIcon size={15} /> : <MoonIcon size={15} />}
+                </Button>
+              </span>
+            }
+          />
+          <TooltipContent>{isDark ? t.header.switchToLight : t.header.switchToDark}</TooltipContent>
+        </Tooltip>
 
         {isCloudMode && (
           <>

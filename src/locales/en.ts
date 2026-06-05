@@ -3,6 +3,8 @@ export const en = {
   header: {
     logout: 'Sign out',
     login: 'Sign in with GitHub',
+    switchToDark: 'Switch to dark mode',
+    switchToLight: 'Switch to light mode',
   },
 
   // Home page
