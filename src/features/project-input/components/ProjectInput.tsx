@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, useImperativeHandle } from 'react';
+import { forwardRef, useImperativeHandle, useMemo } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,7 +13,9 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/in
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-import { type AnalyzeFormValues, analyzeSchema } from '../schema/analyze.schema';
+import { useT } from '@/hooks/useT';
+
+import { type AnalyzeFormValues, makeAnalyzeSchema } from '../schema/analyze.schema';
 
 export type CookiesAuthInput = {
   type: 'cookies';
@@ -105,15 +107,17 @@ function ExampleFill({
   label,
   onClick,
   tooltip,
+  eg,
 }: {
   label: string;
   onClick: () => void;
   tooltip?: string;
+  eg: string;
 }) {
   return (
     <InputGroupAddon align="inline-end">
       <ActionButton type="button" variant="ghost" size="xs" onClick={onClick} tooltip={tooltip}>
-        (예: <span className="underline">{label}</span>)
+        ({eg}: <span className="underline">{label}</span>)
       </ActionButton>
     </InputGroupAddon>
   );
@@ -123,6 +127,20 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
   { onAnalyze, isLoading, onImport, onExport, canExport },
   ref,
 ) {
+  const t = useT();
+
+  const schema = useMemo(
+    () =>
+      makeAnalyzeSchema({
+        pathRequired: t.input.pathRequired,
+        serverUrlRequired: t.input.serverUrlRequired,
+        cookiesRequired: t.input.cookiesRequired,
+        scriptRequired: t.input.scriptRequired,
+        scriptExtension: t.input.scriptExtension,
+      }),
+    [t],
+  );
+
   const {
     register: _register,
     handleSubmit,
@@ -134,7 +152,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
     clearErrors,
     formState: { errors },
   } = useForm<AnalyzeFormValues>({
-    resolver: zodResolver(analyzeSchema),
+    resolver: zodResolver(schema),
     reValidateMode: 'onSubmit',
     defaultValues: {
       path: '',
@@ -190,16 +208,16 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
     });
   });
 
-  const loadingTip = isLoading ? '분석 중입니다.' : undefined;
+  const loadingTip = isLoading ? t.home.analyzeDisabled : undefined;
 
   return (
     <form onSubmit={submitHandler} className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <span className="text-xs text-muted-foreground">프로젝트 경로</span>
+        <span className="text-xs text-muted-foreground">{t.input.projectPath}</span>
         <div className="flex items-center gap-2">
           <Input
             {...register('path')}
-            placeholder="Next.js 프로젝트 절대 경로"
+            placeholder={t.input.projectPathPlaceholder}
             aria-invalid={!!errors.path}
             className="flex-1"
           />
@@ -210,7 +228,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
               size="icon"
               onClick={onImport}
               tooltip={loadingTip}
-              label="JSON 불러오기"
+              label={t.input.importJson}
             >
               <UploadIcon size={16} />
             </ActionButton>
@@ -221,10 +239,8 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
               variant="outline"
               size="icon"
               onClick={onExport}
-              tooltip={
-                !canExport ? '분석된 그래프가 없어 JSON 내보내기가 불가능합니다.' : undefined
-              }
-              label="JSON 내보내기"
+              tooltip={!canExport ? t.input.exportDisabled : undefined}
+              label={t.input.exportJson}
             >
               <DownloadIcon size={16} />
             </ActionButton>
@@ -242,17 +258,17 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
               <Checkbox checked={field.value} onCheckedChange={field.onChange} />
             )}
           />
-          <span className="text-muted-foreground">스크린샷 캡처</span>
+          <span className="text-muted-foreground">{t.input.screenshot}</span>
         </label>
 
         {screenshot && (
           <>
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">서버 URL</span>
+              <span className="text-xs text-muted-foreground">{t.input.serverUrl}</span>
               <InputGroup className="w-full">
                 <InputGroupInput
                   {...register('baseUrl')}
-                  placeholder="대상 서버 URL"
+                  placeholder={t.input.serverUrlPlaceholder}
                   aria-invalid={!!errors.baseUrl}
                   className="text-sm"
                 />
@@ -263,6 +279,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
                       setValue('baseUrl', 'http://localhost:3000', { shouldValidate: true })
                     }
                     tooltip={loadingTip}
+                    eg={t.input.eg}
                   />
                 )}
               </InputGroup>
@@ -271,27 +288,29 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
 
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">인증:</span>
-                {(['none', 'cookies', 'script'] as const).map((t) => (
+                <span className="text-xs text-muted-foreground">{t.input.auth}</span>
+                {(['none', 'cookies', 'script'] as const).map((at) => (
                   <ActionButton
-                    key={t}
+                    key={at}
                     type="button"
-                    variant={authType === t ? 'default' : 'outline'}
+                    variant={authType === at ? 'default' : 'outline'}
                     size="sm"
                     className="h-6 px-2 text-xs"
-                    onClick={() => setValue('authType', t)}
+                    onClick={() => setValue('authType', at)}
                     tooltip={loadingTip}
                   >
-                    {t === 'none' ? '없음' : t === 'cookies' ? '쿠키 주입' : '스크립트'}
+                    {at === 'none'
+                      ? t.input.authNone
+                      : at === 'cookies'
+                        ? t.input.authCookies
+                        : t.input.authScript}
                   </ActionButton>
                 ))}
               </div>
 
               {authType === 'script' && (
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">
-                    스크립트 경로 <span className="opacity-60">(프로젝트 루트 기준 상대 경로)</span>
-                  </span>
+                  <span className="text-xs text-muted-foreground">{t.input.scriptPath}</span>
                   <InputGroup className="w-full">
                     <InputGroupInput
                       {...register('scriptPath')}
@@ -306,22 +325,20 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
                           setValue('scriptPath', 'shiny-flow.auth.js', { shouldValidate: true })
                         }
                         tooltip={loadingTip}
+                        eg={t.input.eg}
                       />
                     )}
                   </InputGroup>
                   <FieldError message={errors.scriptPath?.message} />
                   <p className="text-xs text-muted-foreground opacity-60">
-                    파일이 없으면 npx shiny-flow init 으로 생성하세요.
+                    {t.input.scriptPathHint}
                   </p>
                 </div>
               )}
 
               {authType === 'cookies' && (
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">
-                    쿠키 JSON{' '}
-                    <span className="opacity-60">(DevTools › Application › Cookies에서 복사)</span>
-                  </span>
+                  <span className="text-xs text-muted-foreground">{t.input.cookiesJson}</span>
                   <Textarea
                     {...register('cookiesJson')}
                     placeholder='[{"name":"session","value":"abc123","domain":"localhost"}]'
@@ -338,7 +355,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
 
       <ActionButton type="submit" tooltip={loadingTip} className="w-full">
         {isLoading && <Loader2Icon className="animate-spin" />}
-        {isLoading ? '분석 중...' : '분석'}
+        {isLoading ? t.input.analyzing : t.input.analyze}
       </ActionButton>
     </form>
   );

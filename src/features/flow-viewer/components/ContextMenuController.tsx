@@ -21,6 +21,8 @@ import {
 
 import { cn } from '@/lib/utils';
 
+import { useT } from '@/hooks/useT';
+
 import { useCollapseContext } from '../collapseContext';
 import { STATUS_COLORS, getNodeColorStyle } from '../lib/nodeColors';
 import { getAbsolutePosition, recomputeGroupZIndexes } from '../lib/nodeUtils';
@@ -61,30 +63,37 @@ function ColorSubMenu({
   onClose: () => void;
 }) {
   const { setNodes } = useReactFlow();
+  const t = useT();
   return (
     <div className="absolute top-0 left-full min-w-[8rem] rounded-md border bg-popover p-1 shadow-md">
-      {STATUS_COLORS.map(({ label, value }) => (
-        <div
-          key={label}
-          role="menuitem"
-          className={ITEM}
-          onClick={() => {
-            setNodes((prev) =>
-              prev.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, color: value } } : n)),
-            );
-            onClose();
-          }}
-        >
-          <span
-            className={cn(
-              'inline-block size-2.5 rounded-full border',
-              getNodeColorStyle(value)?.dot ?? 'border-gray-300 bg-transparent',
-            )}
-          />
-          {label}
-          {nodeColor === value && <span className="ml-auto text-xs">✓</span>}
-        </div>
-      ))}
+      {STATUS_COLORS.map(({ value }) => {
+        const statusKey = (value ?? 'default') as keyof typeof t.nodeColors.status;
+        const label = t.nodeColors.status[statusKey] ?? value;
+        return (
+          <div
+            key={value ?? 'default'}
+            role="menuitem"
+            className={ITEM}
+            onClick={() => {
+              setNodes((prev) =>
+                prev.map((n) =>
+                  n.id === nodeId ? { ...n, data: { ...n.data, color: value } } : n,
+                ),
+              );
+              onClose();
+            }}
+          >
+            <span
+              className={cn(
+                'inline-block size-2.5 rounded-full border',
+                getNodeColorStyle(value)?.dot ?? 'border-gray-300 bg-transparent',
+              )}
+            />
+            {label}
+            {nodeColor === value && <span className="ml-auto text-xs">✓</span>}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -98,6 +107,7 @@ type Props = {
 export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
   const { setNodes, setEdges, deleteElements, getNode, getEdge, screenToFlowPosition } =
     useReactFlow();
+  const t = useT();
   const { collapsedIds, toggleCollapse, hasChildren } = useCollapseContext();
   const selectedNodes = useStore((s) =>
     s.nodes.filter((n) => n.selected && (n.type === 'flowNode' || n.type === 'groupNode')),
@@ -148,7 +158,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
       }}
     >
       <MessageSquarePlusIcon className={ICON} />
-      댓글 생성
+      {t.menu.addComment}
     </div>
   );
 
@@ -168,7 +178,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           }}
         >
           <BoxSelectIcon className={ICON} />
-          그룹 생성
+          {t.menu.createGroup}
         </div>,
       ],
       [addCommentItem],
@@ -189,7 +199,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           }}
         >
           <PlusIcon className={ICON} />
-          노드 생성
+          {t.menu.createNode}
         </div>,
       ],
       [addCommentItem],
@@ -207,7 +217,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           }}
         >
           <PencilIcon className={ICON} />
-          수정
+          {t.menu.edit}
         </div>,
         <div
           key="delete"
@@ -219,7 +229,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           }}
         >
           <Trash2Icon className={ICON} />
-          삭제
+          {t.menu.delete}
         </div>,
       ],
       [addCommentItem],
@@ -250,7 +260,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             ) : (
               <ChevronRightIcon className={ICON} />
             )}
-            {isCollapsed ? '펼치기' : '접기'}
+            {isCollapsed ? t.menu.expand : t.menu.collapse}
           </div>
         ) : null,
       ],
@@ -266,7 +276,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           }}
         >
           <StickyNoteIcon className={ICON} />
-          {hasMemo ? '메모 수정' : '메모 추가'}
+          {hasMemo ? t.menu.editMemo : t.menu.addMemo}
         </div>,
         hasMemo ? (
           <div
@@ -283,7 +293,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             }}
           >
             <Trash2Icon className={ICON} />
-            메모 삭제
+            {t.menu.deleteMemo}
           </div>
         ) : null,
         <div
@@ -294,7 +304,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           onMouseLeave={() => setColorSubOpen(false)}
         >
           <PaletteIcon className={ICON} />
-          색상 태그
+          {t.menu.colorTag}
           <ChevronRightIcon size={14} className="ml-auto" />
           {colorSubOpen && (
             <ColorSubMenu nodeId={target.nodeId} nodeColor={nodeData?.color} onClose={close} />
@@ -315,7 +325,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             }}
           >
             <MaximizeIcon className={ICON} />
-            크게 보기
+            {t.menu.viewLarge}
           </div>
         ) : null,
       ],
@@ -340,7 +350,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             }}
           >
             <PencilIcon className={ICON} />
-            그룹 수정
+            {t.menu.editGroup}
           </div>
         ) : null,
         !otherNodesSelected ? (
@@ -368,7 +378,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             }}
           >
             <UngroupIcon className={ICON} />
-            그룹 해제
+            {t.menu.ungroup}
           </div>
         ) : null,
       ],
@@ -391,7 +401,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           }}
         >
           <MessageSquareIcon className={ICON} />
-          코멘트 편집
+          {t.menu.editEdgeComment}
         </div>,
         hasComment ? (
           <div
@@ -408,7 +418,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             }}
           >
             <Trash2Icon className={ICON} />
-            코멘트 삭제
+            {t.menu.deleteEdgeComment}
           </div>
         ) : null,
         <div
@@ -421,7 +431,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           }}
         >
           <Trash2Icon className={ICON} />
-          엣지 삭제
+          {t.menu.deleteEdge}
         </div>,
       ],
       [addCommentItem],

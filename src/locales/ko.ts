@@ -22,6 +22,8 @@ export const ko: Translations = {
     load: '불러오기',
     invalidJson: '유효한 shiny-flow JSON 파일이 아닙니다.',
     jsonParseFailed: 'JSON 파싱 실패',
+    analyzeFailed: '분석 실패',
+    unknownError: '알 수 없는 오류',
   },
 
   // Cloud toolbar
@@ -64,6 +66,12 @@ export const ko: Translations = {
     cookiesJson: '쿠키 JSON (DevTools › Application › Cookies에서 복사)',
     analyze: '분석',
     analyzing: '분석 중...',
+    eg: '예',
+    pathRequired: '프로젝트 경로를 입력해주세요.',
+    serverUrlRequired: '서버 URL을 입력해주세요.',
+    cookiesRequired: '쿠키 JSON을 입력해주세요.',
+    scriptRequired: '스크립트 경로를 입력해주세요.',
+    scriptExtension: '.js 파일 경로를 입력해주세요.',
   },
 
   // Context menu
@@ -147,6 +155,45 @@ export const ko: Translations = {
     hiddenNodes: (n: number) => `${n}개 노드 숨김`,
     collapsed: '접힘',
   },
+
+  // Share viewer
+  shareViewer: {
+    readOnly: '읽기 전용',
+  },
+
+  // Flow viewer
+  flowViewer: {
+    groupButtonDisabled: '2개 이상 노드를 선택하세요',
+    groupButton: (n: number) => `${n}개 노드 그룹화`,
+  },
+
+  // Flow edge
+  flowEdge: {
+    dragConnectionPoint: '드래그: 연결점 이동 / 더블클릭: 자동 위치 복원',
+    dragCurve: '드래그: 곡선 조정 / 더블클릭: 직선으로 복원',
+  },
+
+  // Node colors
+  nodeColors: {
+    status: {
+      default: '기본',
+      green: '완료',
+      blue: '작업 중',
+      yellow: '검토 필요',
+      red: '중요',
+    },
+    group: {
+      gray: '회색',
+      green: '초록',
+      blue: '파랑',
+      yellow: '노랑',
+      red: '빨강',
+      purple: '보라',
+    },
+  },
+
+  // Date locale string
+  dateLocale: 'ko-KR',
 
   // Memo editor
   memoEditor: {

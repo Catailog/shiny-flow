@@ -20,6 +20,8 @@ export const en = {
     load: 'Load',
     invalidJson: 'Not a valid shiny-flow JSON file.',
     jsonParseFailed: 'JSON parse failed',
+    analyzeFailed: 'Analysis failed',
+    unknownError: 'Unknown error',
   },
 
   // Cloud toolbar
@@ -62,6 +64,12 @@ export const en = {
     cookiesJson: 'Cookie JSON (copy from DevTools › Application › Cookies)',
     analyze: 'Analyze',
     analyzing: 'Analyzing...',
+    eg: 'e.g.',
+    pathRequired: 'Enter the project path.',
+    serverUrlRequired: 'Enter the server URL.',
+    cookiesRequired: 'Enter the cookie JSON.',
+    scriptRequired: 'Enter the script path.',
+    scriptExtension: 'Enter a .js file path.',
   },
 
   // Context menu
@@ -145,6 +153,45 @@ export const en = {
     hiddenNodes: (n: number) => `${n} node${n === 1 ? '' : 's'} hidden`,
     collapsed: 'Collapsed',
   },
+
+  // Share viewer
+  shareViewer: {
+    readOnly: 'Read-only',
+  },
+
+  // Flow viewer
+  flowViewer: {
+    groupButtonDisabled: 'Select 2+ nodes to group',
+    groupButton: (n: number) => `Group ${n} nodes`,
+  },
+
+  // Flow edge
+  flowEdge: {
+    dragConnectionPoint: 'Drag: move connection / Double-click: restore',
+    dragCurve: 'Drag: adjust curve / Double-click: restore straight',
+  },
+
+  // Node colors
+  nodeColors: {
+    status: {
+      default: 'Default',
+      green: 'Done',
+      blue: 'In progress',
+      yellow: 'Needs review',
+      red: 'Important',
+    },
+    group: {
+      gray: 'Gray',
+      green: 'Green',
+      blue: 'Blue',
+      yellow: 'Yellow',
+      red: 'Red',
+      purple: 'Purple',
+    },
+  },
+
+  // Date locale string
+  dateLocale: 'en-US',
 
   // Memo editor
   memoEditor: {

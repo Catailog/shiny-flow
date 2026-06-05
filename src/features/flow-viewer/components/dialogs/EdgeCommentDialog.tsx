@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
+import { useT } from '@/hooks/useT';
+
 import { BaseDialog } from './BaseDialog';
 
 export function EdgeCommentDialog({
@@ -25,6 +27,7 @@ export function EdgeCommentDialog({
   const [value, setValue] = useState(
     (edge?.data as { comment?: string } | undefined)?.comment ?? '',
   );
+  const t = useT();
 
   const save = () => {
     const trimmed = value.trim();
@@ -38,22 +41,22 @@ export function EdgeCommentDialog({
     <BaseDialog onClose={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>엣지 코멘트</DialogTitle>
+          <DialogTitle>{t.dialog.edgeComment.title}</DialogTitle>
         </DialogHeader>
         <Input
           autoFocus
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="코멘트..."
+          placeholder={t.dialog.edgeComment.placeholder}
           onKeyDown={(e) => {
             if (e.key === 'Enter') save();
           }}
         />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            취소
+            {t.dialog.cancel}
           </Button>
-          <Button onClick={save}>저장</Button>
+          <Button onClick={save}>{t.dialog.save}</Button>
         </DialogFooter>
       </DialogContent>
     </BaseDialog>

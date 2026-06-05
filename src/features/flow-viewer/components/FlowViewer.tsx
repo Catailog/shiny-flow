@@ -34,6 +34,8 @@ import type { AuthInput } from '@/features/project-input';
 
 import type { FlowGraph } from '@/lib/analyzer';
 
+import { useT } from '@/hooks/useT';
+
 import { FlowActionsProvider } from '../actionsContext';
 import { CollapseContext } from '../collapseContext';
 import { useDragIntoGroup } from '../hooks/useDragIntoGroup';
@@ -91,11 +93,14 @@ function GroupButton({ onOpenDialog }: { onOpenDialog: (req: DialogRequest) => v
     s.nodes.filter((n) => n.selected && (n.type === 'flowNode' || n.type === 'groupNode')),
   );
   const disabled = selected.length < 2;
+  const t = useT();
 
   return (
     <ControlButton
       onClick={() => !disabled && onOpenDialog({ type: 'groupCreate', nodes: selected })}
-      title={disabled ? '2개 이상 노드를 선택하세요' : `${selected.length}개 노드 그룹화`}
+      title={
+        disabled ? t.flowViewer.groupButtonDisabled : t.flowViewer.groupButton(selected.length)
+      }
       style={{ opacity: disabled ? 0.35 : 1 }}
     >
       <BoxSelectIcon size={12} style={{ fill: 'none' }} />

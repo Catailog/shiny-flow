@@ -21,6 +21,10 @@ import type { FlowData } from '@/lib/adapters';
 import type { FlowGraph } from '@/lib/analyzer';
 import { cn } from '@/lib/utils';
 
+import { useT } from '@/hooks/useT';
+
+import { useUIStore } from '@/store/uiStore';
+
 import { useCloudFlow } from '../hooks/useCloudFlow';
 import { CloudToolbar } from './CloudToolbar';
 
@@ -55,6 +59,9 @@ export function HomePage({ isCloudMode }: Props) {
     auth?: AuthInput;
     projectPath: string;
   } | null>(null);
+
+  const t = useT();
+  const setLocale = useUIStore((s) => s.setLocale);
 
   const abortRef = useRef<AbortController | null>(null);
   const viewerRef = useRef<FlowViewerHandle>(null);
@@ -142,7 +149,7 @@ export function HomePage({ isCloudMode }: Props) {
         } else if (Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
           graph = parsed as FlowGraph;
         } else {
-          throw new Error('유효한 shiny-flow JSON 파일이 아닙니다.');
+          throw new Error(t.home.invalidJson);
         }
 
         setScreenshotOptions(null);
@@ -156,7 +163,7 @@ export function HomePage({ isCloudMode }: Props) {
       } catch (err) {
         setState({
           status: 'error',
-          message: err instanceof Error ? err.message : 'JSON 파싱 실패',
+          message: err instanceof Error ? err.message : t.home.jsonParseFailed,
         });
       }
     };
@@ -190,13 +197,13 @@ export function HomePage({ isCloudMode }: Props) {
       const data = await res.json();
       if (controller.signal.aborted) return;
 
-      if (!res.ok) throw new Error(data.error ?? '분석 실패');
+      if (!res.ok) throw new Error(data.error ?? t.home.analyzeFailed);
       setState({ status: 'success', graph: data });
       setGraphKey((k) => k + 1);
     } catch (err) {
       if (controller.signal.aborted) return;
       clearTimers();
-      const message = err instanceof Error ? err.message : '알 수 없는 오류';
+      const message = err instanceof Error ? err.message : t.home.unknownError;
 
       if (slowWarningRef.current) {
         setSlowWarningSync(false);
@@ -224,6 +231,10 @@ export function HomePage({ isCloudMode }: Props) {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+
+    const cliLang = params.get('lang');
+    if (cliLang === 'ko' || cliLang === 'en') setLocale(cliLang);
+
     const cliPath = params.get('path');
     if (!cliPath) return;
 
@@ -346,9 +357,7 @@ export function HomePage({ isCloudMode }: Props) {
         {/* 메인 콘텐츠 */}
         <main className="flex flex-1 flex-col items-center justify-center overflow-hidden">
           {state.status === 'idle' && (
-            <p className="text-sm text-muted-foreground">
-              프로젝트 경로를 입력하고 분석 버튼을 눌러보세요.
-            </p>
+            <p className="text-sm text-muted-foreground">{t.home.idle}</p>
           )}
 
           {state.status === 'loading' && (
@@ -356,7 +365,7 @@ export function HomePage({ isCloudMode }: Props) {
               {!overlayError && (
                 <>
                   <Loader2Icon size={36} className="animate-spin text-brand-primary" />
-                  <p className="text-sm text-muted-foreground">분석 중...</p>
+                  <p className="text-sm text-muted-foreground">{t.home.analyzing}</p>
                 </>
               )}
 
@@ -364,20 +373,18 @@ export function HomePage({ isCloudMode }: Props) {
                 <div className="flex flex-col items-center gap-2 rounded-lg border border-destructive bg-destructive/10 px-5 py-3 text-sm">
                   <p className="font-medium text-destructive">{overlayError}</p>
                   <Button size="sm" variant="outline" onClick={handleOverlayErrorDismiss}>
-                    확인
+                    {t.home.confirmError}
                   </Button>
                 </div>
               ) : slowWarning ? (
                 <div className="flex flex-col items-center gap-2 rounded-lg border border-warning bg-warning/10 px-5 py-3 text-sm">
-                  <p className="font-medium text-warning">
-                    서버 응답이 늦고 있습니다. 계속 기다리시겠습니까?
-                  </p>
+                  <p className="font-medium text-warning">{t.home.slowWarning}</p>
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={handleKeepWaiting}>
-                      계속 기다리기
+                      {t.home.keepWaiting}
                     </Button>
                     <Button size="sm" variant="destructive" onClick={handleCancel}>
-                      취소
+                      {t.home.cancel}
                     </Button>
                   </div>
                 </div>
@@ -388,7 +395,7 @@ export function HomePage({ isCloudMode }: Props) {
                   onClick={handleCancel}
                   className="text-muted-foreground"
                 >
-                  취소
+                  {t.home.cancel}
                 </Button>
               )}
             </div>
@@ -415,16 +422,14 @@ export function HomePage({ isCloudMode }: Props) {
       {pendingImport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="flex w-80 flex-col gap-4 rounded-xl border bg-popover p-5 shadow-lg">
-            <p className="text-sm font-medium">분석 설정도 불러올까요?</p>
-            <p className="text-xs text-muted-foreground">
-              프로젝트 경로, 서버 URL, 인증 정보 등 분석 설정을 함께 복원합니다.
-            </p>
+            <p className="text-sm font-medium">{t.home.importConfigPrompt}</p>
+            <p className="text-xs text-muted-foreground">{t.home.importConfigDesc}</p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => applyPendingImport(false)}>
-                건너뛰기
+                {t.home.skip}
               </Button>
               <Button size="sm" onClick={() => applyPendingImport(true)}>
-                불러오기
+                {t.home.load}
               </Button>
             </div>
           </div>

@@ -22,6 +22,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
+import { useT } from '@/hooks/useT';
+
 import type { CloudFlowActions, CloudFlowState } from '../hooks/useCloudFlow';
 
 type Props = {
@@ -61,25 +63,26 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
   } = actions;
 
   const isLoggedIn = !!session?.user;
+  const t = useT();
 
   const saveDisabledTip = !hasFlow
-    ? '분석된 그래프가 없습니다.'
+    ? t.cloud.noGraph
     : !isLoggedIn
-      ? '로그인이 필요합니다.'
+      ? t.cloud.loginRequired
       : undefined;
 
-  const myFlowsDisabledTip = !isLoggedIn ? '로그인이 필요합니다.' : undefined;
+  const myFlowsDisabledTip = !isLoggedIn ? t.cloud.loginRequired : undefined;
 
   const shareDisabledTip = !isLoggedIn
-    ? '로그인이 필요합니다.'
+    ? t.cloud.loginRequired
     : !cloudFlowId
-      ? '먼저 저장해야 공유할 수 있습니다.'
+      ? t.cloud.saveFirst
       : undefined;
 
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        {/* 저장 */}
+        {/* save */}
         <Tooltip>
           <TooltipTrigger
             render={
@@ -95,7 +98,7 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
                   ) : (
                     <CloudUploadIcon size={14} />
                   )}
-                  저장
+                  {t.cloud.save}
                 </Button>
               </span>
             }
@@ -103,7 +106,7 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
           {saveDisabledTip && <TooltipContent>{saveDisabledTip}</TooltipContent>}
         </Tooltip>
 
-        {/* 내 플로우 */}
+        {/* my flows */}
         <Tooltip>
           <TooltipTrigger
             render={
@@ -121,7 +124,7 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
                   ) : (
                     <FolderOpenIcon size={14} />
                   )}
-                  내 플로우
+                  {t.cloud.myFlows}
                 </Button>
               </span>
             }
@@ -129,7 +132,7 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
           {myFlowsDisabledTip && <TooltipContent>{myFlowsDisabledTip}</TooltipContent>}
         </Tooltip>
 
-        {/* 공유 */}
+        {/* share */}
         <Tooltip>
           <TooltipTrigger
             render={
@@ -147,34 +150,37 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
                   ) : (
                     <Share2Icon size={14} />
                   )}
-                  {busyAction === 'share' ? '생성 중...' : shareCopied ? '복사됨' : '공유'}
+                  {busyAction === 'share'
+                    ? t.cloud.generating
+                    : shareCopied
+                      ? t.cloud.copied
+                      : t.cloud.share}
                 </Button>
               </span>
             }
           />
           <TooltipContent>
-            {shareDisabledTip ??
-              (busyAction === 'share' ? '공유 링크를 서버에 저장하는 중입니다.' : '링크 복사')}
+            {shareDisabledTip ?? (busyAction === 'share' ? t.cloud.serverSaving : t.cloud.copyLink)}
           </TooltipContent>
         </Tooltip>
       </div>
 
-      {/* 저장 이름 입력 다이얼로그 */}
+      {/* save name dialog */}
       <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>플로우 저장</DialogTitle>
+            <DialogTitle>{t.cloud.saveFlow}</DialogTitle>
           </DialogHeader>
           <Input
             value={saveNameInput}
             onChange={(e) => setSaveNameInput(e.target.value)}
-            placeholder="플로우 이름"
+            placeholder={t.cloud.flowName}
             onKeyDown={(e) => e.key === 'Enter' && handleSaveConfirm()}
             autoFocus
           />
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setSaveDialogOpen(false)}>
-              취소
+              {t.cloud.cancel}
             </Button>
             <Button
               size="sm"
@@ -182,13 +188,13 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
               onClick={handleSaveConfirm}
             >
               {busyAction === 'save' && <Loader2Icon size={14} className="animate-spin" />}
-              저장
+              {t.cloud.save}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* 내 플로우 목록 다이얼로그 */}
+      {/* my flows dialog */}
       <Dialog
         open={myFlowsOpen}
         onOpenChange={(open) => {
@@ -198,12 +204,10 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>내 플로우</DialogTitle>
+            <DialogTitle>{t.cloud.myFlows}</DialogTitle>
           </DialogHeader>
           {flowsList.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              저장된 플로우가 없습니다.
-            </p>
+            <p className="py-4 text-center text-sm text-muted-foreground">{t.cloud.noFlows}</p>
           ) : (
             <ul className="flex flex-col gap-1">
               {flowsList.map((f) => {
@@ -220,7 +224,7 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
                     >
                       <span>{f.name}</span>
                       <span className="text-xs text-muted-foreground">
-                        {new Date(f.updatedAt).toLocaleString('ko-KR', {
+                        {new Date(f.updatedAt).toLocaleString(t.dateLocale, {
                           dateStyle: 'short',
                           timeStyle: 'medium',
                           hour12: false,
@@ -230,17 +234,21 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
 
                     {isConfirming ? (
                       <>
-                        <span className="text-xs text-destructive">삭제할까요?</span>
+                        <span className="text-xs text-destructive">{t.cloud.confirmDelete}</span>
                         <Button
                           variant="destructive"
                           size="xs"
                           disabled={isRowBusy}
                           onClick={() => handleDeleteFlow(f.id)}
                         >
-                          {isRowBusy ? <Loader2Icon size={12} className="animate-spin" /> : '삭제'}
+                          {isRowBusy ? (
+                            <Loader2Icon size={12} className="animate-spin" />
+                          ) : (
+                            t.cloud.delete
+                          )}
                         </Button>
                         <Button variant="ghost" size="xs" onClick={() => setConfirmDeleteId(null)}>
-                          취소
+                          {t.cloud.cancel}
                         </Button>
                       </>
                     ) : (
@@ -268,10 +276,10 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
                           />
                           <TooltipContent>
                             {isRowBusy && rowBusy?.action === 'share'
-                              ? '공유 링크를 서버에 저장하는 중입니다.'
+                              ? t.cloud.serverSaving
                               : isCopied
-                                ? '복사됨'
-                                : '공유 링크 복사'}
+                                ? t.cloud.copied
+                                : t.cloud.copyShareLink}
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -290,7 +298,7 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
                               </span>
                             }
                           />
-                          <TooltipContent>삭제</TooltipContent>
+                          <TooltipContent>{t.cloud.delete}</TooltipContent>
                         </Tooltip>
                       </>
                     )}

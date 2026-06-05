@@ -2,10 +2,13 @@
 
 import { useState } from 'react';
 
+import type { Translations } from '@/locales/en';
 import { Handle, type Node, type NodeProps, Position, useReactFlow, useStore } from '@xyflow/react';
 import { MessageCircleIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+
+import { useT } from '@/hooks/useT';
 
 import { useFlowActions } from '../actionsContext';
 
@@ -16,25 +19,26 @@ export type CommentNodeData = {
   updatedAt?: string;
 };
 
-function relativeTime(isoString: string): string {
+function relativeTime(isoString: string, tn: Translations['commentNode']): string {
   const diff = Date.now() - new Date(isoString).getTime();
   const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return `${seconds}초 전`;
+  if (seconds < 60) return tn.secondsAgo(seconds);
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}분 전`;
+  if (minutes < 60) return tn.minutesAgo(minutes);
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}시간 전`;
+  if (hours < 24) return tn.hoursAgo(hours);
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}일 전`;
+  if (days < 30) return tn.daysAgo(days);
   const months = Math.floor(days / 30);
-  if (months < 12) return `${months}개월 전`;
-  return `${Math.floor(months / 12)}년 전`;
+  if (months < 12) return tn.monthsAgo(months);
+  return tn.yearsAgo(Math.floor(months / 12));
 }
 
 type Props = NodeProps<Node<CommentNodeData>>;
 
 export function FlowCommentNode({ id, data }: Props) {
   const { openDialog } = useFlowActions();
+  const t = useT();
   const { setNodes } = useReactFlow();
   const [hovered, setHovered] = useState(false);
   const hasContent = !!data.content;
@@ -86,8 +90,8 @@ export function FlowCommentNode({ id, data }: Props) {
                   <p className="text-xs text-muted-foreground">
                     {data.author}
                     {data.author && timeRef && ' · '}
-                    {timeRef && relativeTime(timeRef)}
-                    {data.updatedAt && ' (수정됨)'}
+                    {timeRef && relativeTime(timeRef, t.commentNode)}
+                    {data.updatedAt && ' ' + t.commentNode.edited}
                   </p>
                   <div className="-mx-3 my-2 h-px bg-border" />
                 </>
@@ -96,7 +100,7 @@ export function FlowCommentNode({ id, data }: Props) {
                 <p className="whitespace-pre-wrap text-foreground">{data.content}</p>
               ) : (
                 <p className="text-xs whitespace-nowrap text-muted-foreground">
-                  클릭하여 댓글 추가
+                  {t.commentNode.clickToAdd}
                 </p>
               )}
             </div>

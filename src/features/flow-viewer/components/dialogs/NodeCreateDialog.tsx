@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
+import { useT } from '@/hooks/useT';
+
 import { BaseDialog } from './BaseDialog';
 
 export function NodeCreateDialog({
@@ -20,9 +22,10 @@ export function NodeCreateDialog({
   onClose: () => void;
 }) {
   const [label, setLabel] = useState('');
+  const t = useT();
 
   const confirm = () => {
-    const trimmed = label.trim() || '새 페이지';
+    const trimmed = label.trim() || t.dialog.nodeCreate.defaultName;
     setNodes((prev) => [
       ...prev,
       {
@@ -39,11 +42,11 @@ export function NodeCreateDialog({
     <BaseDialog onClose={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>노드 생성</DialogTitle>
+          <DialogTitle>{t.dialog.nodeCreate.title}</DialogTitle>
         </DialogHeader>
         <Input
           autoFocus
-          placeholder="페이지 이름"
+          placeholder={t.dialog.nodeCreate.namePlaceholder}
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           onKeyDown={(e) => {
@@ -52,9 +55,9 @@ export function NodeCreateDialog({
         />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            취소
+            {t.dialog.cancel}
           </Button>
-          <Button onClick={confirm}>만들기</Button>
+          <Button onClick={confirm}>{t.dialog.nodeCreate.confirm}</Button>
         </DialogFooter>
       </DialogContent>
     </BaseDialog>

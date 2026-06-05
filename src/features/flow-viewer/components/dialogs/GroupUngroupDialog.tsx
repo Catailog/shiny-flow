@@ -5,6 +5,8 @@ import type { Node } from '@xyflow/react';
 import { Button } from '@/components/ui/button';
 import { DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
+import { useT } from '@/hooks/useT';
+
 import { getAbsolutePosition, recomputeGroupZIndexes } from '../../lib/nodeUtils';
 import { BaseDialog } from './BaseDialog';
 
@@ -21,6 +23,7 @@ export function GroupUngroupDialog({
 }) {
   const group = nodes.find((n) => n.id === nodeId);
   const parentGroupId = group?.parentId ?? null;
+  const t = useT();
 
   const ungroup = (keepInParent: boolean) => {
     setNodes((prev) => {
@@ -50,18 +53,16 @@ export function GroupUngroupDialog({
     <BaseDialog onClose={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>그룹 해제</DialogTitle>
+          <DialogTitle>{t.dialog.groupUngroup.title}</DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          해제된 그룹의 자식 노드들을 어떻게 처리할까요?
-        </p>
+        <p className="text-sm text-muted-foreground">{t.dialog.groupUngroup.description}</p>
         <DialogFooter className="flex-col gap-2 sm:flex-col">
-          <Button onClick={() => ungroup(true)}>부모 그룹에 남기기</Button>
+          <Button onClick={() => ungroup(true)}>{t.dialog.groupUngroup.keepInParent}</Button>
           <Button variant="outline" onClick={() => ungroup(false)}>
-            그룹 바깥으로 이동
+            {t.dialog.groupUngroup.moveOut}
           </Button>
           <Button variant="ghost" onClick={onClose}>
-            취소
+            {t.dialog.cancel}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -8,10 +8,12 @@ import { Button } from '@/components/ui/button';
 import { DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 
+import { useT } from '@/hooks/useT';
+
 import { BaseDialog } from './BaseDialog';
 
-function formatExact(isoString: string): string {
-  return new Date(isoString).toLocaleString('ko-KR', {
+function formatExact(isoString: string, dateLocale: string): string {
+  return new Date(isoString).toLocaleString(dateLocale, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -37,6 +39,7 @@ export function CommentNodeDialog({
     | { content?: string; author?: string; createdAt?: string; updatedAt?: string }
     | undefined;
   const [value, setValue] = useState(existing?.content ?? '');
+  const t = useT();
 
   const timeRef = existing?.updatedAt ?? existing?.createdAt;
 
@@ -63,13 +66,13 @@ export function CommentNodeDialog({
     <BaseDialog onClose={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>댓글</DialogTitle>
+          <DialogTitle>{t.dialog.comment.title}</DialogTitle>
           {(existing?.author || timeRef) && (
             <p className="text-xs text-muted-foreground">
               {existing?.author}
               {existing?.author && timeRef && ' · '}
-              {timeRef && formatExact(timeRef)}
-              {existing?.updatedAt && ' (수정됨)'}
+              {timeRef && formatExact(timeRef, t.dateLocale)}
+              {existing?.updatedAt && ' ' + t.dialog.comment.edited}
             </p>
           )}
         </DialogHeader>
@@ -77,14 +80,14 @@ export function CommentNodeDialog({
           autoFocus
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="댓글을 입력하세요..."
+          placeholder={t.dialog.comment.placeholder}
           className="min-h-24 resize-none"
         />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            취소
+            {t.dialog.cancel}
           </Button>
-          <Button onClick={save}>저장</Button>
+          <Button onClick={save}>{t.dialog.save}</Button>
         </DialogFooter>
       </DialogContent>
     </BaseDialog>

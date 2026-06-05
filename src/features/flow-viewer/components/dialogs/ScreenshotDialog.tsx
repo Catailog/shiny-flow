@@ -4,6 +4,8 @@ import Image from 'next/image';
 
 import { DialogContent, DialogTitle } from '@/components/ui/dialog';
 
+import { useT } from '@/hooks/useT';
+
 import { BaseDialog } from './BaseDialog';
 
 export function ScreenshotDialog({
@@ -15,13 +17,14 @@ export function ScreenshotDialog({
   label: string;
   onClose: () => void;
 }) {
+  const t = useT();
   return (
     <BaseDialog onClose={onClose}>
       <DialogContent
         className="max-h-[90vh] w-auto max-w-[90vw] gap-0 overflow-hidden p-0 sm:max-w-[90vw]"
         showCloseButton={false}
       >
-        <DialogTitle className="sr-only">{label} 스크린샷</DialogTitle>
+        <DialogTitle className="sr-only">{t.dialog.screenshot(label)}</DialogTitle>
         <Image
           src={src}
           alt={label}

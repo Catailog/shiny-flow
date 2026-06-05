@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 
 import { cn } from '@/lib/utils';
 
+import { useT } from '@/hooks/useT';
+
 import { GROUP_COLORS, GROUP_COLOR_STYLES } from '../../lib/nodeColors';
 import type { GroupNodeData } from '../../types';
 import { BaseDialog } from './BaseDialog';
@@ -29,6 +31,7 @@ export function GroupEditDialog({
   const data = node?.data as GroupNodeData | undefined;
   const [label, setLabel] = useState(data?.label ?? '');
   const [color, setColor] = useState(data?.color ?? 'gray');
+  const t = useT();
 
   const save = () => {
     const trimmed = label.trim();
@@ -43,7 +46,7 @@ export function GroupEditDialog({
     <BaseDialog onClose={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>그룹 수정</DialogTitle>
+          <DialogTitle>{t.dialog.groupEdit.title}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <Input
@@ -55,7 +58,9 @@ export function GroupEditDialog({
             }}
           />
           <div className="flex gap-2">
-            {GROUP_COLORS.map(({ label: colorLabel, value: colorValue }) => {
+            {GROUP_COLORS.map(({ value: colorValue }) => {
+              const colorKey = colorValue as keyof typeof t.nodeColors.group;
+              const colorLabel = t.nodeColors.group[colorKey] ?? colorValue;
               const s = GROUP_COLOR_STYLES[colorValue];
               return (
                 <Button
@@ -76,9 +81,9 @@ export function GroupEditDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            취소
+            {t.dialog.cancel}
           </Button>
-          <Button onClick={save}>저장</Button>
+          <Button onClick={save}>{t.dialog.save}</Button>
         </DialogFooter>
       </DialogContent>
     </BaseDialog>

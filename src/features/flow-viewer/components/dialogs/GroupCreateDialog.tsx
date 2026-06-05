@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 
 import { cn } from '@/lib/utils';
 
+import { useT } from '@/hooks/useT';
+
 import { GROUP_Z_INDEX } from '../../lib/layout';
 import { GROUP_COLORS, GROUP_COLOR_STYLES } from '../../lib/nodeColors';
 import {
@@ -33,9 +35,10 @@ export function GroupCreateDialog({
 }) {
   const [label, setLabel] = useState('');
   const [color, setColor] = useState('gray');
+  const t = useT();
 
   const confirm = () => {
-    const trimmed = label.trim() || '그룹';
+    const trimmed = label.trim() || t.dialog.groupCreate.defaultName;
     const { x: absX, y: absY, width, height } = computeGroupBounds(pendingNodes, nodes);
     const groupId = `group-${Date.now()}`;
     const pendingIds = new Set(pendingNodes.map((n) => n.id));
@@ -95,12 +98,12 @@ export function GroupCreateDialog({
     <BaseDialog onClose={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>그룹 만들기</DialogTitle>
+          <DialogTitle>{t.dialog.groupCreate.title}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <Input
             autoFocus
-            placeholder="그룹 이름"
+            placeholder={t.dialog.groupCreate.namePlaceholder}
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             onKeyDown={(e) => {
@@ -108,7 +111,9 @@ export function GroupCreateDialog({
             }}
           />
           <div className="flex gap-2">
-            {GROUP_COLORS.map(({ label: colorLabel, value: colorValue }) => {
+            {GROUP_COLORS.map(({ value: colorValue }) => {
+              const colorKey = colorValue as keyof typeof t.nodeColors.group;
+              const colorLabel = t.nodeColors.group[colorKey] ?? colorValue;
               const s = GROUP_COLOR_STYLES[colorValue];
               return (
                 <Button
@@ -129,9 +134,9 @@ export function GroupCreateDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            취소
+            {t.dialog.cancel}
           </Button>
-          <Button onClick={confirm}>만들기</Button>
+          <Button onClick={confirm}>{t.dialog.groupCreate.confirm}</Button>
         </DialogFooter>
       </DialogContent>
     </BaseDialog>

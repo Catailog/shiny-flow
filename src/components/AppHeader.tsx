@@ -14,12 +14,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-const LANGUAGES = [
+import { useT } from '@/hooks/useT';
+import { useUIStore, type Locale } from '@/store/uiStore';
+
+const LANGUAGES: { code: Locale; flag: string; label: string }[] = [
   { code: 'en', flag: 'us', label: 'English' },
   { code: 'ko', flag: 'kr', label: '한국어' },
-] as const;
-
-type Lang = (typeof LANGUAGES)[number]['code'];
+];
 
 type Props = {
   isCloudMode: boolean;
@@ -32,15 +33,18 @@ export function AppHeader({ isCloudMode }: Props) {
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
-  const currentLang: Lang = 'en';
-  const current = LANGUAGES.find((l) => l.code === currentLang)!;
+  const locale = useUIStore((s) => s.locale);
+  const setLocale = useUIStore((s) => s.setLocale);
+  const current = LANGUAGES.find((l) => l.code === locale) ?? LANGUAGES[0];
+
+  const t = useT();
 
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-6">
       <span className="text-sm font-semibold tracking-tight">shiny-flow</span>
 
       <div className="flex items-center gap-1">
-        {/* 언어 선택 — i18n 구현 전 자리만 */}
+        {/* 언어 선택 */}
         <DropdownMenu>
           <DropdownMenuTrigger className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
             <span className={`fi fi-${current.flag} text-sm`} />
@@ -49,7 +53,11 @@ export function AppHeader({ isCloudMode }: Props) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {LANGUAGES.map((lang) => (
-              <DropdownMenuItem key={lang.code} className="cursor-pointer gap-2">
+              <DropdownMenuItem
+                key={lang.code}
+                className="cursor-pointer gap-2"
+                onClick={() => setLocale(lang.code)}
+              >
                 <span className={`fi fi-${lang.flag} text-sm`} />
                 {lang.label}
               </DropdownMenuItem>
@@ -78,12 +86,12 @@ export function AppHeader({ isCloudMode }: Props) {
                       </span>
                     }
                   />
-                  <TooltipContent>로그아웃</TooltipContent>
+                  <TooltipContent>{t.header.logout}</TooltipContent>
                 </Tooltip>
               </>
             ) : (
               <Button variant="outline" size="sm" onClick={() => signIn('github')}>
-                GitHub 로그인
+                {t.header.login}
               </Button>
             )}
           </>

@@ -7,6 +7,8 @@ import type { Node } from '@xyflow/react';
 import { Button } from '@/components/ui/button';
 import { DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
+import { useT } from '@/hooks/useT';
+
 import type { FlowNodeData } from '../../types';
 import { MemoEditor } from '../MemoEditor';
 import { BaseDialog } from './BaseDialog';
@@ -24,6 +26,7 @@ export function MemoDialog({
 }) {
   const node = nodes.find((n) => n.id === nodeId);
   const [value, setValue] = useState((node?.data as FlowNodeData | undefined)?.memo ?? '');
+  const t = useT();
 
   const save = () => {
     const isEmpty = value === '' || value === '<p></p>';
@@ -39,14 +42,14 @@ export function MemoDialog({
     <BaseDialog onClose={onClose}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>메모</DialogTitle>
+          <DialogTitle>{t.dialog.memo.title}</DialogTitle>
         </DialogHeader>
         <MemoEditor value={value} onChange={setValue} />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            취소
+            {t.dialog.cancel}
           </Button>
-          <Button onClick={save}>저장</Button>
+          <Button onClick={save}>{t.dialog.save}</Button>
         </DialogFooter>
       </DialogContent>
     </BaseDialog>
