@@ -150,11 +150,7 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
                   ) : (
                     <Share2Icon size={14} />
                   )}
-                  {busyAction === 'share'
-                    ? t.cloud.generating
-                    : shareCopied
-                      ? t.cloud.copied
-                      : t.cloud.share}
+                  {shareCopied ? t.cloud.copied : t.cloud.share}
                 </Button>
               </span>
             }

@@ -29,7 +29,6 @@ export const en = {
     save: 'Save',
     myFlows: 'My Flows',
     share: 'Share',
-    generating: 'Generating...',
     copied: 'Copied',
     noGraph: 'No analyzed graph.',
     loginRequired: 'Login required.',

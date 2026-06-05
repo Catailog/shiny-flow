@@ -31,7 +31,6 @@ export const ko: Translations = {
     save: '저장',
     myFlows: '내 플로우',
     share: '공유',
-    generating: '생성 중...',
     copied: '복사됨',
     noGraph: '분석된 그래프가 없습니다.',
     loginRequired: '로그인이 필요합니다.',
