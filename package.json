@@ -23,6 +23,7 @@
     "@auth/supabase-adapter": "^1.11.2",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.2",
+    "flag-icons": "^7.5.0",
     "get-port": "^7.2.0",
     "next-auth": "^5.0.0-beta.31",
     "open": "^11.0.0",
