@@ -42,7 +42,7 @@ export function AppHeader({ isCloudMode }: Props) {
       <div className="flex items-center gap-1">
         {/* 언어 선택 — i18n 구현 전 자리만 */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md px-2.5 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground">
+          <DropdownMenuTrigger className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
             <span className={`fi fi-${current.flag} text-sm`} />
             {current.code.toUpperCase()}
             <ChevronDownIcon size={12} />
