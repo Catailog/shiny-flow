@@ -51,6 +51,44 @@ function MenuGroups({ sections }: { sections: MenuSection[] }) {
   );
 }
 
+function ColorSubMenu({
+  nodeId,
+  nodeColor,
+  onClose,
+}: {
+  nodeId: string;
+  nodeColor?: string;
+  onClose: () => void;
+}) {
+  const { setNodes } = useReactFlow();
+  return (
+    <div className="absolute top-0 left-full min-w-[8rem] rounded-md border bg-popover p-1 shadow-md">
+      {STATUS_COLORS.map(({ label, value }) => (
+        <div
+          key={label}
+          role="menuitem"
+          className={ITEM}
+          onClick={() => {
+            setNodes((prev) =>
+              prev.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, color: value } } : n)),
+            );
+            onClose();
+          }}
+        >
+          <span
+            className={cn(
+              'inline-block size-2.5 rounded-full border',
+              getNodeColorStyle(value)?.dot ?? 'border-gray-300 bg-transparent',
+            )}
+          />
+          {label}
+          {nodeColor === value && <span className="ml-auto text-xs">✓</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 type Props = {
   state: ContextMenuState;
   onClose: () => void;
@@ -259,32 +297,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           색상 태그
           <ChevronRightIcon size={14} className="ml-auto" />
           {colorSubOpen && (
-            <div className="absolute top-0 left-full min-w-[8rem] rounded-md border bg-popover p-1 shadow-md">
-              {STATUS_COLORS.map(({ label, value }) => (
-                <div
-                  key={label}
-                  role="menuitem"
-                  className={ITEM}
-                  onClick={() => {
-                    setNodes((prev) =>
-                      prev.map((n) =>
-                        n.id === target.nodeId ? { ...n, data: { ...n.data, color: value } } : n,
-                      ),
-                    );
-                    close();
-                  }}
-                >
-                  <span
-                    className={cn(
-                      'inline-block size-2.5 rounded-full border',
-                      getNodeColorStyle(value)?.dot ?? 'border-gray-300 bg-transparent',
-                    )}
-                  />
-                  {label}
-                  {nodeData?.color === value && <span className="ml-auto text-xs">✓</span>}
-                </div>
-              ))}
-            </div>
+            <ColorSubMenu nodeId={target.nodeId} nodeColor={nodeData?.color} onClose={close} />
           )}
         </div>,
         hasSrc ? (
