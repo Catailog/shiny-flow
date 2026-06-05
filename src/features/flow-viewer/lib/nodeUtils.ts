@@ -1,6 +1,6 @@
 import type { Node } from '@xyflow/react';
 
-import { GROUP_Z_INDEX } from './layout';
+import { GROUP_Z_INDEX, NODE_WIDTH } from './layout';
 
 export function getAbsolutePosition(node: Node, allNodes: Node[]): { x: number; y: number } {
   if (!node.parentId) return node.position;
@@ -37,6 +37,18 @@ export function placeAfterParent(nodes: Node[], nodeId: string, parentId: string
   const without = [...nodes.slice(0, nodeIdx), ...nodes.slice(nodeIdx + 1)];
   const newParentIdx = without.findIndex((n) => n.id === parentId);
   return [...without.slice(0, newParentIdx + 1), node, ...without.slice(newParentIdx + 1)];
+}
+
+export function computeGroupBounds(selected: Node[], allNodes: Node[], padding = 48) {
+  const absPositions = selected.map((n) => getAbsolutePosition(n, allNodes));
+  const minX = Math.min(...absPositions.map((p) => p.x)) - padding;
+  const minY = Math.min(...absPositions.map((p) => p.y)) - padding;
+  const maxX =
+    Math.max(...selected.map((n, i) => absPositions[i].x + (n.measured?.width ?? NODE_WIDTH))) +
+    padding;
+  const maxY =
+    Math.max(...selected.map((n, i) => absPositions[i].y + (n.measured?.height ?? 100))) + padding;
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 
 export function recomputeGroupZIndexes(nodes: Node[]): Node[] {
