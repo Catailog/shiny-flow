@@ -30,7 +30,8 @@ if (hasFlag(['--version', '-v'])) {
 
 // ─── 언어 감지 (전체 공통) ───────────────────────────────────────────────────
 
-const lang = flagValue(['--lang', '-l']) ?? 'en';
+const cliLang = flagValue(['--lang', '-l']);
+const lang = cliLang ?? 'en';
 
 // ─── 메시지 ──────────────────────────────────────────────────────────────────
 
@@ -274,6 +275,7 @@ else {
       query.set('authType', authType);
       query.set('scriptPath', scriptPath);
     }
+    if (cliLang) query.set('lang', cliLang);
     const queryString = query.toString() ? `?${query.toString()}` : '';
 
     process.env.PORT = String(port);
