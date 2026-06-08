@@ -207,15 +207,19 @@
   z-index: 9999 !important;
 }
 
-/* ── Input background — bg-transparent 오버라이드, 페이지 배경과 구분 ── */
-input[data-slot='input'],
-div[data-slot='input-group'] {
+/* ── Input/Textarea background — bg-transparent 오버라이드, 페이지 배경과 구분 ──
+   :root prefix로 특이성을 (0,2,1)로 높여 Tailwind dark: 변형(0,2,0)을 확실히 이김 */
+:root input[data-slot='input'],
+:root div[data-slot='input-group'],
+:root textarea[data-slot='textarea'] {
   background-color: var(--input-background);
 }
 
-/* ── Input placeholder — Tailwind의 placeholder:text-muted-foreground 재정의 ── */
-[data-slot='input']::placeholder,
-[data-slot='input-group-control']::placeholder {
+/* ── Input/Textarea placeholder — Tailwind placeholder: 유틸리티 재정의 ──
+   같은 특이성(0,1,0)이면 Tailwind가 뒤에 주입돼 이기므로 :root로 (0,2,0)까지 올림 */
+:root [data-slot='input']::placeholder,
+:root [data-slot='input-group-control']::placeholder,
+:root [data-slot='textarea']::placeholder {
   color: var(--placeholder-foreground);
   opacity: 1;
 }

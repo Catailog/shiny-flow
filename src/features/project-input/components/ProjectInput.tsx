@@ -263,7 +263,6 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
               <InputGroup className="w-full">
                 <InputGroupInput
                   {...register('baseUrl')}
-                  placeholder={t.input.serverUrlPlaceholder}
                   aria-invalid={!!errors.baseUrl}
                   className="text-sm"
                 />
@@ -309,7 +308,6 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
                   <InputGroup className="w-full">
                     <InputGroupInput
                       {...register('scriptPath')}
-                      placeholder="shiny-flow.auth.js"
                       aria-invalid={!!errors.scriptPath}
                       className="text-sm"
                     />
