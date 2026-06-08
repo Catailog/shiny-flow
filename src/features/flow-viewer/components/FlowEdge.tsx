@@ -256,7 +256,7 @@ export function FlowEdge({
             className="nodrag nopan absolute"
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) scale(${1 / zoom})`,
-              zIndex: 10,
+              zIndex: 1,
               pointerEvents: 'all',
               cursor: 'grab',
             }}

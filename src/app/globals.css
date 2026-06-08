@@ -200,6 +200,13 @@
   }
 }
 
+/* ── React Flow: 엣지 라벨 컨테이너를 노드/엣지 레이어 위로 올림 ──
+   그룹 노드 소속 엣지는 z-index 1001+ (positive) 로 올라가 edgelabel-renderer를 덮음.
+   9999로 설정해 선택된 노드(1000)와 그룹 엣지(1001+) 모두 위에 위치하도록 보장. */
+.react-flow__edgelabel-renderer {
+  z-index: 9999 !important;
+}
+
 /* ── Input background — bg-transparent 오버라이드, 페이지 배경과 구분 ── */
 input[data-slot='input'],
 div[data-slot='input-group'] {
