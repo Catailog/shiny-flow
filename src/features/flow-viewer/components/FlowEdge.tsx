@@ -265,7 +265,7 @@ export function FlowEdge({
             title={t.flowEdge.dragCurve}
             {...badgeDragHandlers}
           >
-            <div className="rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground shadow-sm">
+            <div className="rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground shadow-sm dark:border-foreground/20">
               {comment}
             </div>
           </div>

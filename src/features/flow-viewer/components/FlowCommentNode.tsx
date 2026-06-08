@@ -77,7 +77,9 @@ export function FlowCommentNode({ id, data }: Props) {
             <div
               className={cn(
                 'flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 bg-background shadow-md transition-colors',
-                hasContent ? 'border-blue-400 bg-blue-50 dark:bg-blue-950' : 'border-border',
+                hasContent
+                  ? 'border-blue-400 bg-blue-50 dark:bg-blue-950'
+                  : 'border-border dark:border-foreground/30',
               )}
             >
               <MessageCircleIcon

@@ -86,7 +86,7 @@ function ColorSubMenu({
             <span
               className={cn(
                 'inline-block size-2.5 rounded-full border',
-                getNodeColorStyle(value)?.dot ?? 'border-gray-300 bg-transparent',
+                getNodeColorStyle(value)?.dot ?? 'border-border bg-transparent',
               )}
             />
             {label}

@@ -61,7 +61,7 @@ export function FlowNode({ id, data, selected }: Props) {
   return (
     <>
       <NodeToolbar position={Position.Top} align="start" isVisible offset={6}>
-        <span className="flex cursor-default items-center gap-1 text-sm font-medium text-brand-dark select-none">
+        <span className="flex cursor-default items-center gap-1 text-sm font-medium text-brand-dark select-none dark:text-foreground">
           {(data.redirected || redirectedSrc) && (
             <Button
               type="button"
@@ -87,7 +87,9 @@ export function FlowNode({ id, data, selected }: Props) {
           'group flex w-70 cursor-pointer flex-col overflow-hidden rounded-lg shadow-sm',
           colorStyle
             ? `border-2 ${colorStyle.border} ${colorStyle.bg}`
-            : `border ${data.isDeadEnd ? 'border-brand-accent/60 bg-brand-accent/10' : 'border-brand-secondary bg-brand-light'}`,
+            : data.isDeadEnd
+              ? 'border border-brand-accent/60 bg-brand-accent/10'
+              : 'border border-brand-secondary bg-brand-light dark:bg-card',
           selected && 'ring-2 ring-brand-primary ring-offset-1',
         )}
       >

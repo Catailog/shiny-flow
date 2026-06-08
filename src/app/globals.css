@@ -200,6 +200,14 @@
   }
 }
 
+/* ── React Flow: 다크모드 엣지 색상 ──
+   React Flow는 .react-flow { --xy-edge-stroke-default } 로 설정(특이도 0,1,0).
+   .dark { } 만으로는 덮어쓰이므로 .dark .react-flow (특이도 0,2,0)로 재정의 */
+.dark .react-flow {
+  --xy-edge-stroke-default: #4a5e53;
+  --xy-edge-stroke-selected-default: #a3b5a3;
+}
+
 /* ── React Flow: 엣지 라벨 컨테이너를 노드/엣지 레이어 위로 올림 ──
    그룹 노드 소속 엣지는 z-index 1001+ (positive) 로 올라가 edgelabel-renderer를 덮음.
    Z_INDEX.commentNodeHover(9999) 와 동일한 값 — src/constants/zIndex.ts 참조 */
