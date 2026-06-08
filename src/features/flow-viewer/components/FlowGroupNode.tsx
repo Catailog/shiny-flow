@@ -4,6 +4,8 @@ import { type Node, type NodeProps, NodeResizer, NodeToolbar, Position } from '@
 
 import { cn } from '@/lib/utils';
 
+import { Z_INDEX } from '@/constants/zIndex';
+
 import { useCollapseContext } from '../collapseContext';
 import { getGroupColorStyle } from '../lib/nodeColors';
 import type { GroupNodeData } from '../types';
@@ -19,7 +21,13 @@ export function FlowGroupNode({ id, data, width, height, selected }: Props) {
 
   return (
     <>
-      <NodeToolbar position={Position.Top} align="start" isVisible offset={6} style={{ zIndex: 1 }}>
+      <NodeToolbar
+        position={Position.Top}
+        align="start"
+        isVisible
+        offset={6}
+        style={{ zIndex: Z_INDEX.groupToolbar }}
+      >
         <span className={cn('cursor-default text-xs font-semibold select-none', colorStyle.text)}>
           {data.label}
         </span>

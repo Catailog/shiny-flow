@@ -1,11 +1,13 @@
 import type { Edge, Node } from '@xyflow/react';
 import dagre from 'dagre';
 
+import { Z_INDEX } from '@/constants/zIndex';
+
 import type { GroupNodeData } from '../types';
 
 export const NODE_WIDTH = 280;
 export const NODE_HEIGHT = 600; // 측정 전 초기 추정값
-export const GROUP_Z_INDEX = -1001;
+export const GROUP_Z_INDEX = Z_INDEX.groupNode;
 
 const GROUP_PADDING = 40;
 const GRID_COL_GAP = 80;

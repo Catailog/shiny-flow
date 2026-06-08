@@ -14,6 +14,8 @@ import {
 
 import { useT } from '@/hooks/useT';
 
+import { Z_INDEX } from '@/constants/zIndex';
+
 import {
   type Face,
   buildSelfLoopPath,
@@ -53,7 +55,7 @@ function EdgeHandle({
       style={{
         transform: `translate(-50%, -50%) translate(${x}px, ${y}px) scale(${1 / zoom})`,
         cursor: 'grab',
-        zIndex: 20,
+        zIndex: Z_INDEX.edgeHandle,
         pointerEvents: 'all',
       }}
       title={title}
@@ -256,7 +258,7 @@ export function FlowEdge({
             className="nodrag nopan absolute"
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) scale(${1 / zoom})`,
-              zIndex: 1,
+              zIndex: Z_INDEX.edgeLabel,
               pointerEvents: 'all',
               cursor: 'grab',
             }}

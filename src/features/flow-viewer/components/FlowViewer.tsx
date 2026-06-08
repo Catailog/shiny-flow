@@ -36,6 +36,8 @@ import type { FlowGraph } from '@/lib/analyzer';
 
 import { useT } from '@/hooks/useT';
 
+import { Z_INDEX } from '@/constants/zIndex';
+
 import { FlowActionsProvider } from '../actionsContext';
 import { CollapseContext } from '../collapseContext';
 import { useDragIntoGroup } from '../hooks/useDragIntoGroup';
@@ -59,7 +61,7 @@ const nodeTypes = {
 const edgeTypes = { flowEdge: FlowEdge };
 const defaultEdgeOptions = {
   markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-  zIndex: 1,
+  zIndex: Z_INDEX.edge,
 };
 
 function AutoLayout({

@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 
 import { useT } from '@/hooks/useT';
 
+import { Z_INDEX } from '@/constants/zIndex';
+
 import { useFlowActions } from '../actionsContext';
 
 export type CommentNodeData = {
@@ -48,12 +50,14 @@ export function FlowCommentNode({ id, data }: Props) {
 
   const handleMouseEnter = () => {
     setHovered(true);
-    setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, zIndex: 9999 } : n)));
+    setNodes((nds) =>
+      nds.map((n) => (n.id === id ? { ...n, zIndex: Z_INDEX.commentNodeHover } : n)),
+    );
   };
 
   const handleMouseLeave = () => {
     setHovered(false);
-    setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, zIndex: 0 } : n)));
+    setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, zIndex: Z_INDEX.nodeBase } : n)));
   };
 
   return (
