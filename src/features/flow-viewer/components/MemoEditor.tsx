@@ -221,21 +221,26 @@ export function MemoEditor({ value, onChange }: Props) {
 
         {/* 폰트 크기 */}
         {FONT_SIZES.map(({ label, size }) => (
-          <Button
-            key={label}
-            type="button"
-            variant={currentFontSize === size ? 'secondary' : 'ghost'}
-            size="icon-sm"
-            onClick={() =>
-              currentFontSize === size
-                ? editor.chain().focus().unsetFontSize().run()
-                : editor.chain().focus().setFontSize(size).run()
-            }
-            className="w-7 text-xs"
-            title={t.memoEditor.fontSize(label)}
-          >
-            {label}
-          </Button>
+          <Tooltip key={label}>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  variant={currentFontSize === size ? 'secondary' : 'ghost'}
+                  size="icon-sm"
+                  onClick={() =>
+                    currentFontSize === size
+                      ? editor.chain().focus().unsetFontSize().run()
+                      : editor.chain().focus().setFontSize(size).run()
+                  }
+                  className="w-7 text-xs"
+                >
+                  {label}
+                </Button>
+              }
+            />
+            <TooltipContent>{t.memoEditor.fontSize(label)}</TooltipContent>
+          </Tooltip>
         ))}
 
         <div className="mx-1 h-4 w-px bg-border" />
@@ -248,32 +253,37 @@ export function MemoEditor({ value, onChange }: Props) {
                 ? !storedColor
                 : storedColor === color || storedColor === hexToRgb(color);
             return (
-              <Button
-                key={label}
-                type="button"
-                variant="ghost"
-                title={label}
-                onClick={() =>
-                  color === 'inherit'
-                    ? editor.chain().focus().setMark('textStyle', { color: null }).run()
-                    : editor.chain().focus().setColor(color).run()
-                }
-                className={cn(
-                  'size-4 min-h-0 min-w-0 rounded-full border p-0 transition-transform hover:scale-110 hover:bg-transparent',
-                  isActive
-                    ? 'scale-110 ring-2 ring-foreground ring-offset-1 ring-offset-background'
-                    : 'border-transparent',
-                  color === 'inherit' && 'border-border',
-                )}
-                style={
-                  color === 'inherit'
-                    ? {
-                        background:
-                          'linear-gradient(to bottom right, #fff 40%, #ef4444 40%, #ef4444 60%, #fff 60%)',
+              <Tooltip key={label}>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() =>
+                        color === 'inherit'
+                          ? editor.chain().focus().setMark('textStyle', { color: null }).run()
+                          : editor.chain().focus().setColor(color).run()
                       }
-                    : { backgroundColor: color }
-                }
-              />
+                      className={cn(
+                        'size-4 min-h-0 min-w-0 rounded-full border p-0 transition-transform hover:scale-110 hover:bg-transparent',
+                        isActive
+                          ? 'scale-110 ring-2 ring-foreground ring-offset-1 ring-offset-background'
+                          : 'border-transparent',
+                        color === 'inherit' && 'border-border',
+                      )}
+                      style={
+                        color === 'inherit'
+                          ? {
+                              background:
+                                'linear-gradient(to bottom right, #fff 40%, #ef4444 40%, #ef4444 60%, #fff 60%)',
+                            }
+                          : { backgroundColor: color }
+                      }
+                    />
+                  }
+                />
+                <TooltipContent>{label}</TooltipContent>
+              </Tooltip>
             );
           })}
         </div>
