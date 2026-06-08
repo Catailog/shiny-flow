@@ -12,6 +12,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { BoldIcon, ItalicIcon, ListIcon, ListOrderedIcon, UnderlineIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { cn } from '@/lib/utils';
 
@@ -102,16 +103,19 @@ function ToolbarButton({
   children: React.ReactNode;
   title?: string;
 }) {
-  return (
-    <Button
-      type="button"
-      variant={active ? 'secondary' : 'ghost'}
-      size="icon-sm"
-      onClick={onClick}
-      title={title}
-    >
+  const button = (
+    <Button type="button" variant={active ? 'secondary' : 'ghost'} size="icon-sm" onClick={onClick}>
       {children}
     </Button>
+  );
+
+  if (!title) return button;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={button} />
+      <TooltipContent>{title}</TooltipContent>
+    </Tooltip>
   );
 }
 

@@ -215,12 +215,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
       <div className="flex flex-col gap-1">
         <span className="text-xs text-muted-foreground">{t.input.projectPath}</span>
         <div className="flex items-center gap-2">
-          <Input
-            {...register('path')}
-            placeholder={t.input.projectPathPlaceholder}
-            aria-invalid={!!errors.path}
-            className="flex-1"
-          />
+          <Input {...register('path')} aria-invalid={!!errors.path} className="flex-1" />
           {onImport && (
             <ActionButton
               type="button"
