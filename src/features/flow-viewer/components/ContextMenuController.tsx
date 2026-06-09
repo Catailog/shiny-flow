@@ -232,7 +232,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             id: `comment-${Date.now()}`,
             type: 'commentNode',
             position: pos,
-            data: { content: '', author: 'localhost', createdAt: new Date().toISOString() },
+            data: { content: '' },
           },
         ]);
         close();

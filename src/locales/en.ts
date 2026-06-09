@@ -108,6 +108,12 @@ export const en = {
       title: 'Comment',
       placeholder: 'Enter a comment...',
       edited: '(edited)',
+      authorPick: 'Choose author name',
+      authorHint: 'Set once, used for all comments.',
+      authorUsername: 'Username',
+      authorDevice: 'Device name',
+      authorCustom: 'Custom',
+      authorCustomPlaceholder: 'Enter a name...',
     },
     edgeComment: {
       title: 'Edge label',

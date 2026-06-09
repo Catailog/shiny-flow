@@ -17,6 +17,8 @@ import { useFlowActions } from '../actionsContext';
 export type CommentNodeData = {
   content: string;
   author?: string;
+  authorId?: string;
+  isLocal?: true;
   createdAt?: string;
   updatedAt?: string;
 };

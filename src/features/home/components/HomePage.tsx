@@ -235,6 +235,11 @@ export function HomePage({ isCloudMode }: Props) {
     const cliLang = params.get('lang');
     if (cliLang === 'ko' || cliLang === 'en') setLocale(cliLang);
 
+    const cliAuthor = params.get('author');
+    const cliDevice = params.get('device');
+    if (cliAuthor) localStorage.setItem('sf_cli_author', cliAuthor);
+    if (cliDevice) localStorage.setItem('sf_cli_device', cliDevice);
+
     const cliPath = params.get('path');
     if (!cliPath) return;
 

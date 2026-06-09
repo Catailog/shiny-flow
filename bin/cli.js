@@ -276,6 +276,13 @@ else {
       query.set('scriptPath', scriptPath);
     }
     if (cliLang) query.set('lang', cliLang);
+    try {
+      const os = require('os');
+      const username = os.userInfo().username;
+      if (username) query.set('author', username);
+      const hostname = os.hostname();
+      if (hostname) query.set('device', hostname);
+    } catch {}
     const queryString = query.toString() ? `?${query.toString()}` : '';
 
     process.env.PORT = String(port);
