@@ -264,7 +264,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           </div>
         ) : null,
       ],
-      // 그룹 2: 노드 속성 (메모, 색상 태그, 스크린샷)
+      // 그룹 2: 노드 속성 (메모, 상태 태그, 스크린샷)
       [
         <div
           key="memo"
