@@ -28,13 +28,11 @@ import {
   useStore,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { BoxSelectIcon, LockIcon, UnlockIcon } from 'lucide-react';
+import { LockIcon, UnlockIcon } from 'lucide-react';
 
 import type { AuthInput } from '@/features/project-input';
 
 import type { FlowGraph } from '@/lib/analyzer';
-
-import { useT } from '@/hooks/useT';
 
 import { Z_INDEX } from '@/constants/zIndex';
 
@@ -88,26 +86,6 @@ function AutoLayout({
   }, [nodesInitialized, edges, onLayout, getNodes, fitView, skipLayout]);
 
   return null;
-}
-
-function GroupButton({ onOpenDialog }: { onOpenDialog: (req: DialogRequest) => void }) {
-  const selected = useStore((s) =>
-    s.nodes.filter((n) => n.selected && (n.type === 'flowNode' || n.type === 'groupNode')),
-  );
-  const disabled = selected.length < 2;
-  const t = useT();
-
-  return (
-    <ControlButton
-      onClick={() => !disabled && onOpenDialog({ type: 'groupCreate', nodes: selected })}
-      title={
-        disabled ? t.flowViewer.groupButtonDisabled : t.flowViewer.groupButton(selected.length)
-      }
-      style={{ opacity: disabled ? 0.35 : 1 }}
-    >
-      <BoxSelectIcon size={12} style={{ fill: 'none' }} />
-    </ControlButton>
-  );
 }
 
 // --- Main component ---
@@ -348,7 +326,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
             >
               <AutoLayout edges={initialEdges} onLayout={setNodes} skipLayout={!!savedRfNodes} />
               <Background />
-              <Controls style={{ bottom: 48 }} showInteractive={false}>
+              <Controls showInteractive={false}>
                 <ControlButton
                   onClick={() => {
                     setIsLocked((v) => !v);
@@ -362,7 +340,6 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
                     <LockIcon size={12} style={{ fill: 'none' }} />
                   )}
                 </ControlButton>
-                <GroupButton onOpenDialog={setDialogRequest} />
               </Controls>
               <MiniMap
                 nodeColor={(node) =>
