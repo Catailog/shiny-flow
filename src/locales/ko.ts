@@ -93,6 +93,7 @@ export const ko: Translations = {
     editEdgeComment: '라벨 편집',
     deleteEdgeComment: '라벨 삭제',
     deleteEdge: '엣지 삭제',
+    deleteConfirm: '정말 삭제할까요?',
     createGroup: '그룹 생성',
     edgeLineStyle: '선 스타일',
   },
