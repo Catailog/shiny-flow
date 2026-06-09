@@ -114,6 +114,7 @@ export async function setupBrowserSession({
       if (typeof authFn !== 'function') {
         throw new Error('shiny-flow.auth.js가 함수를 export하지 않습니다.');
       }
+      page.setDefaultTimeout(0);
       await authFn(page, baseUrl);
     }
 
