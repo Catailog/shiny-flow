@@ -160,7 +160,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
       baseUrl: '',
       authType: 'none',
       cookiesJson: '',
-      scriptPath: 'shiny-flow.auth.js',
+      scriptPath: '',
     },
   });
 
