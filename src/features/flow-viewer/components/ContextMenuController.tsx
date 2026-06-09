@@ -298,7 +298,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           }}
         >
           <PencilIcon className={ICON} />
-          {t.menu.edit}
+          {t.menu.editComment}
         </div>,
       ],
       [addCommentItem],
