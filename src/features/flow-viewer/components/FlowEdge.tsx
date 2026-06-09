@@ -297,6 +297,16 @@ export function FlowEdge({
               title={t.flowEdge.dragConnectionPoint}
               {...makeDragHandlers('target', targetNode)}
             />
+            {!comment && (
+              <EdgeHandle
+                x={labelX}
+                y={labelY}
+                zoom={zoom}
+                title={t.flowEdge.dragCurve}
+                onMouseDown={badgeDragHandlers.onMouseDown}
+                onDoubleClick={badgeDragHandlers.onDoubleClick}
+              />
+            )}
           </div>
         )}
       </EdgeLabelRenderer>
