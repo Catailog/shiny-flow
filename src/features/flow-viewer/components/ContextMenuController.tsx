@@ -14,6 +14,7 @@ import {
   PaletteIcon,
   PencilIcon,
   PlusIcon,
+  SlidersHorizontalIcon,
   StickyNoteIcon,
   Trash2Icon,
   UngroupIcon,
@@ -27,7 +28,7 @@ import { useCollapseContext } from '../collapseContext';
 import { STATUS_COLORS, getNodeColorStyle } from '../lib/nodeColors';
 import { getAbsolutePosition, recomputeGroupZIndexes } from '../lib/nodeUtils';
 import type { ContextMenuState, DialogRequest } from '../types';
-import type { FlowEdgeData } from './FlowEdge';
+import type { EdgeLineStyle, FlowEdgeData } from './FlowEdge';
 import type { FlowNodeData } from './FlowNode';
 
 const ITEM =
@@ -98,6 +99,49 @@ function ColorSubMenu({
   );
 }
 
+const EDGE_LINE_STYLES: { value: EdgeLineStyle; dotClass: string }[] = [
+  { value: 'solid', dotClass: 'h-px w-5 bg-foreground' },
+  { value: 'dashed', dotClass: 'w-5 border-t-2 border-dashed border-foreground' },
+];
+
+function EdgeLineStyleSubMenu({
+  edgeId,
+  currentStyle,
+  onClose,
+}: {
+  edgeId: string;
+  currentStyle?: EdgeLineStyle;
+  onClose: () => void;
+}) {
+  const { setEdges } = useReactFlow();
+  const t = useT();
+  return (
+    <div className="absolute top-0 left-full min-w-[8rem] rounded-md border bg-popover p-1 shadow-md">
+      {EDGE_LINE_STYLES.map(({ value, dotClass }) => (
+        <div
+          key={value}
+          role="menuitem"
+          className={ITEM}
+          onClick={() => {
+            setEdges((prev) =>
+              prev.map((e) =>
+                e.id === edgeId
+                  ? { ...e, animated: value === 'dashed', data: { ...e.data, lineStyle: value } }
+                  : e,
+              ),
+            );
+            onClose();
+          }}
+        >
+          <span className={cn('inline-block shrink-0', dotClass)} />
+          {t.edgeLineStyles[value]}
+          {(currentStyle ?? 'solid') === value && <span className="ml-auto text-xs">✓</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 type Props = {
   state: ContextMenuState;
   onClose: () => void;
@@ -115,6 +159,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
   const parentIdSet = new Set(selectedNodes.map((n) => n.parentId ?? null));
   const canGroupSelected = selectedNodes.length >= 2 && parentIdSet.size === 1;
   const [colorSubOpen, setColorSubOpen] = useState(false);
+  const [edgeStyleSubOpen, setEdgeStyleSubOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -135,6 +180,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
 
   const close = () => {
     setColorSubOpen(false);
+    setEdgeStyleSubOpen(false);
     onClose();
   };
 
@@ -422,6 +468,24 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             {t.menu.deleteEdgeComment}
           </div>
         ) : null,
+        <div
+          key="edgeLineStyle"
+          role="menuitem"
+          className={cn(ITEM, 'relative')}
+          onMouseEnter={() => setEdgeStyleSubOpen(true)}
+          onMouseLeave={() => setEdgeStyleSubOpen(false)}
+        >
+          <SlidersHorizontalIcon className={ICON} />
+          {t.menu.edgeLineStyle}
+          <ChevronRightIcon size={14} className="ml-auto" />
+          {edgeStyleSubOpen && (
+            <EdgeLineStyleSubMenu
+              edgeId={target.edgeId}
+              currentStyle={edgeData?.lineStyle}
+              onClose={close}
+            />
+          )}
+        </div>,
         <div
           key="edgeDelete"
           role="menuitem"

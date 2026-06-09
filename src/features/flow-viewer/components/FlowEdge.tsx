@@ -25,8 +25,14 @@ import {
   getRectIntersectionFromDir,
 } from '../lib/edgeGeometry';
 
+// 엣지 스트로크 스타일 상수 — 변경 시 이 곳만 편집
+const STROKE_WIDTH = 1.5;
+
+export type EdgeLineStyle = 'solid' | 'dashed';
+
 export type FlowEdgeData = {
   comment?: string;
+  lineStyle?: EdgeLineStyle;
   sourceDir?: { dx: number; dy: number };
   targetDir?: { dx: number; dy: number };
   cp?: { x: number; y: number };
@@ -250,7 +256,7 @@ export function FlowEdge({
           path={edgePath}
           markerEnd={markerEnd}
           markerStart={markerStart}
-          style={{ ...style, strokeWidth: 1.5 / zoom }}
+          style={{ ...style, strokeWidth: STROKE_WIDTH / zoom }}
           interactionWidth={20 / zoom}
         />
       </g>

@@ -94,6 +94,12 @@ export const ko: Translations = {
     deleteEdgeComment: '라벨 삭제',
     deleteEdge: '엣지 삭제',
     createGroup: '그룹 생성',
+    edgeLineStyle: '선 스타일',
+  },
+
+  edgeLineStyles: {
+    solid: '실선',
+    dashed: '점선',
   },
 
   // Dialogs

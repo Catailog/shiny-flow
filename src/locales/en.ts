@@ -92,6 +92,12 @@ export const en = {
     deleteEdgeComment: 'Delete label',
     deleteEdge: 'Delete edge',
     createGroup: 'Create group',
+    edgeLineStyle: 'Line style',
+  },
+
+  edgeLineStyles: {
+    solid: 'Solid',
+    dashed: 'Dashed',
   },
 
   // Dialogs
