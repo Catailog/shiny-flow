@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { Node } from '@xyflow/react';
 
@@ -47,39 +47,67 @@ export function CommentNodeDialog({
         updatedAt?: string;
       }
     | undefined;
+
   const [value, setValue] = useState(existing?.content ?? '');
   const t = useT();
 
-  const { authorId, authorName, options, needsPick, pick, pickCustom, dismiss } =
-    useAuthorPreference();
-  const [localAuthor, setLocalAuthor] = useState<string | null>(null);
-  const [customInput, setCustomInput] = useState('');
+  const { authorId, authorName, options, setName } = useAuthorPreference();
 
-  const effectiveAuthor = localAuthor ?? authorName;
-  const showPicker = needsPick && !localAuthor;
+  // 이 다이얼로그 세션에서 변경된 이름 (저장 시 일괄 업데이트 여부 판단용)
+  const [pendingName, setPendingName] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  const displayName = pendingName ?? authorName;
+
+  useEffect(() => {
+    if (editing) nameInputRef.current?.focus();
+  }, [editing]);
+
+  const startEditing = () => {
+    setNameInput(displayName ?? '');
+    setEditing(true);
+  };
+
+  const confirmName = () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed) return;
+    setPendingName(trimmed);
+    setName(trimmed);
+    setEditing(false);
+  };
+
+  const cancelEditing = () => {
+    setEditing(false);
+  };
+
+  const pickSuggestion = (name: string) => {
+    setNameInput(name);
+    setPendingName(name);
+    setName(name);
+    setEditing(false);
+  };
 
   const timeRef = existing?.updatedAt ?? existing?.createdAt;
-
-  const handlePick = (choice: 'author' | 'device') => {
-    const name = choice === 'author' ? options.author : options.device;
-    if (name) setLocalAuthor(name);
-    pick(choice);
-  };
-
-  const handleCustomPick = () => {
-    const name = customInput.trim();
-    if (!name) return;
-    setLocalAuthor(name);
-    pickCustom(name);
-  };
 
   const save = () => {
     const now = new Date().toISOString();
     const wasNonEmpty = !!existing?.content?.trim();
-    if (showPicker) dismiss();
+    const nameChanged = !!pendingName;
+
     setNodes((prev) =>
       prev.map((n) => {
+        // 이름이 변경됐으면 같은 authorId를 가진 모든 댓글 일괄 업데이트
+        if (nameChanged && pendingName && n.type === 'commentNode') {
+          const d = n.data as { authorId?: string; author?: string };
+          if (d.authorId && d.authorId === authorId) {
+            n = { ...n, data: { ...n.data, author: pendingName } };
+          }
+        }
+
         if (n.id !== nodeId) return n;
+
         const isFirstWrite = !wasNonEmpty && !!value.trim();
         return {
           ...n,
@@ -87,7 +115,7 @@ export function CommentNodeDialog({
             ...n.data,
             content: value,
             ...(isFirstWrite && {
-              author: effectiveAuthor ?? undefined,
+              author: displayName ?? undefined,
               authorId: authorId || undefined,
               isLocal: true as const,
               createdAt: now,
@@ -100,72 +128,101 @@ export function CommentNodeDialog({
     onClose();
   };
 
+  const showSuggestions = editing && (options.author || options.device);
+
   return (
     <BaseDialog onClose={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>{t.dialog.comment.title}</DialogTitle>
-          {(existing?.author || timeRef) && (
+          {timeRef && (
             <p className="text-xs text-muted-foreground">
-              {existing?.author}
-              {existing?.author && timeRef && ' · '}
-              {timeRef && formatExact(timeRef, t.dateLocale)}
+              {formatExact(timeRef, t.dateLocale)}
               {existing?.updatedAt && ' ' + t.dialog.comment.edited}
             </p>
           )}
         </DialogHeader>
-        {showPicker && (
-          <div className="rounded-md border border-border bg-muted/40 p-3">
-            <p className="mb-1 text-sm font-medium">{t.dialog.comment.authorPick}</p>
-            <p className="mb-2.5 text-xs text-muted-foreground">{t.dialog.comment.authorHint}</p>
-            <div className="flex flex-wrap gap-2">
-              {options.author && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-auto flex-1 flex-col items-start gap-0 py-1.5"
-                  onClick={() => handlePick('author')}
-                >
-                  <span className="text-xs text-muted-foreground">
-                    {t.dialog.comment.authorUsername}
-                  </span>
-                  <span>{options.author}</span>
-                </Button>
-              )}
-              {options.device && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-auto flex-1 flex-col items-start gap-0 py-1.5"
-                  onClick={() => handlePick('device')}
-                >
-                  <span className="text-xs text-muted-foreground">
-                    {t.dialog.comment.authorDevice}
-                  </span>
-                  <span>{options.device}</span>
-                </Button>
-              )}
-            </div>
-            <div className="mt-2 flex gap-1.5">
-              <Input
-                value={customInput}
-                onChange={(e) => setCustomInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCustomPick()}
-                placeholder={t.dialog.comment.authorCustomPlaceholder}
-                className="h-8 text-sm"
-              />
+
+        {/* 작성자 영역 */}
+        <div className="space-y-1.5">
+          {!editing ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">{t.dialog.comment.authorLabel}</span>
+              <span
+                className={displayName ? 'text-sm font-medium' : 'text-sm text-muted-foreground'}
+              >
+                {displayName ?? t.dialog.comment.authorUnset}
+              </span>
               <Button
                 size="sm"
-                variant="outline"
-                className="h-8 shrink-0"
-                onClick={handleCustomPick}
-                disabled={!customInput.trim()}
+                variant="ghost"
+                className="ml-auto h-6 px-2 text-xs"
+                onClick={startEditing}
               >
-                {t.dialog.comment.authorCustom}
+                {t.dialog.comment.authorChange}
               </Button>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="space-y-1.5">
+              <div className="flex gap-1.5">
+                <Input
+                  ref={nameInputRef}
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') confirmName();
+                    if (e.key === 'Escape') cancelEditing();
+                  }}
+                  placeholder={t.dialog.comment.authorCustomPlaceholder}
+                  className="h-8 text-sm"
+                />
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="h-8 shrink-0"
+                  onClick={confirmName}
+                  disabled={!nameInput.trim()}
+                >
+                  {t.dialog.comment.authorConfirm}
+                </Button>
+                <Button size="sm" variant="ghost" className="h-8 shrink-0" onClick={cancelEditing}>
+                  {t.dialog.cancel}
+                </Button>
+              </div>
+              {showSuggestions && (
+                <div className="flex gap-1.5">
+                  {options.author && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-auto flex-1 flex-col items-start gap-0 py-1"
+                      onClick={() => pickSuggestion(options.author!)}
+                    >
+                      <span className="text-xs text-muted-foreground">
+                        {t.dialog.comment.authorUsername}
+                      </span>
+                      <span className="text-sm">{options.author}</span>
+                    </Button>
+                  )}
+                  {options.device && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-auto flex-1 flex-col items-start gap-0 py-1"
+                      onClick={() => pickSuggestion(options.device!)}
+                    >
+                      <span className="text-xs text-muted-foreground">
+                        {t.dialog.comment.authorDevice}
+                      </span>
+                      <span className="text-sm">{options.device}</span>
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         <Textarea
           autoFocus
           value={value}
