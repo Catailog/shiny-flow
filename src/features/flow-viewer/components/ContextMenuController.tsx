@@ -34,7 +34,7 @@ import type { EdgeLineStyle, FlowEdgeData } from './FlowEdge';
 import type { FlowNodeData } from './FlowNode';
 
 const ITEM =
-  'relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground';
+  'relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground';
 const ICON = 'size-3.5 shrink-0';
 const ITEM_DESTRUCTIVE = cn(ITEM, 'text-destructive hover:text-destructive focus:text-destructive');
 const SEPARATOR = '-mx-1 my-1 h-px bg-border';
@@ -300,6 +300,9 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           <PencilIcon className={ICON} />
           {t.menu.edit}
         </div>,
+      ],
+      [addCommentItem],
+      [
         <DeleteConfirmItem
           key="delete"
           label={t.menu.delete}
@@ -309,7 +312,6 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           }}
         />,
       ],
-      [addCommentItem],
     ];
   } else if (target.type === 'flowNode') {
     const node = getNode(target.nodeId);
@@ -408,6 +410,17 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
       ],
       // 그룹 3: 댓글 생성
       [addCommentItem],
+      // 그룹 4: 삭제
+      [
+        <DeleteConfirmItem
+          key="nodeDelete"
+          label={t.menu.delete}
+          onConfirm={() => {
+            deleteElements({ nodes: [{ id: target.nodeId }] });
+            close();
+          }}
+        />,
+      ],
     ];
   } else if (target.type === 'groupNode') {
     const group = getNode(target.nodeId);
@@ -460,6 +473,17 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
         ) : null,
       ],
       [addCommentItem],
+      // 그룹 2: 삭제
+      [
+        <DeleteConfirmItem
+          key="groupDelete"
+          label={t.menu.delete}
+          onConfirm={() => {
+            deleteElements({ nodes: [{ id: target.nodeId }] });
+            close();
+          }}
+        />,
+      ],
     ];
   } else if (target.type === 'edge') {
     const edge = getEdge(target.edgeId);
@@ -481,24 +505,6 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           <MessageSquareIcon className={ICON} />
           {t.menu.editEdgeComment}
         </div>,
-        hasVisibleLabel ? (
-          <div
-            key="edgeCommentDelete"
-            role="menuitem"
-            className={ITEM_DESTRUCTIVE}
-            onClick={() => {
-              setEdges((prev) =>
-                prev.map((e) =>
-                  e.id === target.edgeId ? { ...e, data: { ...e.data, comment: '' } } : e,
-                ),
-              );
-              close();
-            }}
-          >
-            <Trash2Icon className={ICON} />
-            {t.menu.deleteEdgeComment}
-          </div>
-        ) : null,
         <div
           key="edgeLineStyle"
           role="menuitem"
@@ -517,6 +523,23 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             />
           )}
         </div>,
+      ],
+      [addCommentItem],
+      [
+        hasVisibleLabel ? (
+          <DeleteConfirmItem
+            key="edgeCommentDelete"
+            label={t.menu.deleteEdgeComment}
+            onConfirm={() => {
+              setEdges((prev) =>
+                prev.map((e) =>
+                  e.id === target.edgeId ? { ...e, data: { ...e.data, comment: '' } } : e,
+                ),
+              );
+              close();
+            }}
+          />
+        ) : null,
         <DeleteConfirmItem
           key="edgeDelete"
           label={t.menu.deleteEdge}
@@ -526,7 +549,6 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           }}
         />,
       ],
-      [addCommentItem],
     ];
   } else {
     sections = [[addCommentItem]];
