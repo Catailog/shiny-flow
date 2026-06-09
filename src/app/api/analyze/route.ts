@@ -20,6 +20,8 @@ type RequestBody = {
   auth?: AuthBody;
 };
 
+export const maxDuration = 3600;
+
 export async function POST(req: NextRequest) {
   let body: RequestBody;
   try {

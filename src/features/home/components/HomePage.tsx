@@ -67,12 +67,12 @@ export function HomePage({ isCloudMode }: Props) {
   const viewerRef = useRef<FlowViewerHandle>(null);
   const projectInputRef = useRef<ProjectInputHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const slowTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const slowWarningRef = useRef(false);
 
   const clearTimers = () => {
     if (slowTimerRef.current) {
-      clearTimeout(slowTimerRef.current);
+      clearInterval(slowTimerRef.current);
       slowTimerRef.current = null;
     }
   };
@@ -84,7 +84,7 @@ export function HomePage({ isCloudMode }: Props) {
 
   const startSlowTimer = () => {
     clearTimers();
-    slowTimerRef.current = setTimeout(() => {
+    slowTimerRef.current = setInterval(() => {
       slowWarningRef.current = true;
       setSlowWarning(true);
     }, SLOW_TIMEOUT_MS);
@@ -101,7 +101,7 @@ export function HomePage({ isCloudMode }: Props) {
 
   const handleKeepWaiting = () => {
     setSlowWarningSync(false);
-    startSlowTimer();
+    // interval이 계속 돌고 있으므로 재시작 불필요
   };
 
   const handleOverlayErrorDismiss = () => {
