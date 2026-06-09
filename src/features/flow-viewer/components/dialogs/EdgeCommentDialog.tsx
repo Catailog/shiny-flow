@@ -24,15 +24,17 @@ export function EdgeCommentDialog({
   onClose: () => void;
 }) {
   const edge = edges.find((e) => e.id === edgeId);
+  const edgeComment = (edge?.data as { comment?: string } | undefined)?.comment;
   const [value, setValue] = useState(
-    (edge?.data as { comment?: string } | undefined)?.comment ?? '',
+    // comment가 명시적으로 설정된 경우 그 값을, 없으면 원본 label을 기본값으로 표시
+    edgeComment !== undefined ? edgeComment : edge?.label ? String(edge.label) : '',
   );
   const t = useT();
 
   const save = () => {
     const trimmed = value.trim();
     setEdges((prev) =>
-      prev.map((e) => (e.id === edgeId ? { ...e, data: { comment: trimmed || undefined } } : e)),
+      prev.map((e) => (e.id === edgeId ? { ...e, data: { ...e.data, comment: trimmed } } : e)),
     );
     onClose();
   };

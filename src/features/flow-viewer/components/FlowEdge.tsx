@@ -111,7 +111,9 @@ export function FlowEdge({
   if (!sourceNode || !targetNode) return null;
 
   const isSelfLoop = source === target;
-  const comment = data?.comment ?? (label ? String(label) : undefined);
+  // comment가 명시적으로 설정된 경우(''포함) 우선 사용. ''는 원본 label 억제 sentinel.
+  const comment =
+    data?.comment !== undefined ? data.comment || undefined : label ? String(label) : undefined;
 
   let edgePath: string;
   let labelX: number;

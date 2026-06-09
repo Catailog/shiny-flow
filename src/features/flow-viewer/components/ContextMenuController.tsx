@@ -387,7 +387,8 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
   } else if (target.type === 'edge') {
     const edge = getEdge(target.edgeId);
     const edgeData = edge?.data as FlowEdgeData | undefined;
-    const hasComment = !!edgeData?.comment;
+    const edgeComment = edgeData?.comment;
+    const hasVisibleLabel = edgeComment !== undefined ? edgeComment !== '' : !!edge?.label;
 
     sections = [
       [
@@ -403,7 +404,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           <MessageSquareIcon className={ICON} />
           {t.menu.editEdgeComment}
         </div>,
-        hasComment ? (
+        hasVisibleLabel ? (
           <div
             key="edgeCommentDelete"
             role="menuitem"
@@ -411,7 +412,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             onClick={() => {
               setEdges((prev) =>
                 prev.map((e) =>
-                  e.id === target.edgeId ? { ...e, data: { comment: undefined } } : e,
+                  e.id === target.edgeId ? { ...e, data: { ...e.data, comment: '' } } : e,
                 ),
               );
               close();
