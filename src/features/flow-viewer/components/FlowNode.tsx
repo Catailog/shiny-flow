@@ -5,7 +5,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 
 import { Handle, type Node, type NodeProps, NodeToolbar, Position } from '@xyflow/react';
-import { CameraIcon, ChevronRightIcon, LoaderIcon, LogInIcon } from 'lucide-react';
+import { CameraIcon, LoaderIcon, LogInIcon, SquareStackIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -84,6 +84,13 @@ export function FlowNode({ id, data, selected }: Props) {
 
       {/* 핸들이 overflow-hidden에 잘리지 않도록 외부 div와 내부 content wrapper를 분리 */}
       <div className="group relative w-70 cursor-pointer">
+        {/* 접힘 스택 그림자: 메인 카드 뒤에 쌓인 카드처럼 보이도록 offset된 레이어 */}
+        {isCollapsed && (
+          <>
+            <div className="absolute inset-x-2 top-2 bottom-[-10px] rounded-lg border border-brand-secondary bg-brand-light dark:bg-card" />
+            <div className="absolute inset-x-1 top-1 bottom-[-5px] rounded-lg border border-brand-secondary bg-brand-light dark:bg-card" />
+          </>
+        )}
         <div
           className={cn(
             'relative flex flex-col overflow-hidden rounded-lg shadow-sm',
@@ -181,8 +188,8 @@ export function FlowNode({ id, data, selected }: Props) {
           )}
 
           {isCollapsed && (
-            <div className="flex items-center gap-1 border-t border-inherit px-3 py-1.5 text-xs text-muted-foreground">
-              <ChevronRightIcon size={11} />
+            <div className="flex items-center gap-1.5 border-t border-inherit px-3 py-1.5 text-xs text-muted-foreground">
+              <SquareStackIcon size={11} />
               {hiddenChildCount > 0
                 ? t.flowNode.hiddenNodes(hiddenChildCount)
                 : t.flowNode.collapsed}
