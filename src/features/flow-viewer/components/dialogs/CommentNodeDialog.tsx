@@ -53,7 +53,6 @@ export function CommentNodeDialog({
 
   const { authorId, authorName, options, setName } = useAuthorPreference();
 
-  // 이 다이얼로그 세션에서 변경된 이름 (저장 시 일괄 업데이트 여부 판단용)
   const [pendingName, setPendingName] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [nameInput, setNameInput] = useState('');
@@ -94,18 +93,9 @@ export function CommentNodeDialog({
   const save = () => {
     const now = new Date().toISOString();
     const wasNonEmpty = !!existing?.content?.trim();
-    const nameChanged = !!pendingName;
 
     setNodes((prev) =>
       prev.map((n) => {
-        // 이름이 변경됐으면 같은 authorId를 가진 모든 댓글 일괄 업데이트
-        if (nameChanged && pendingName && n.type === 'commentNode') {
-          const d = n.data as { authorId?: string; author?: string };
-          if (d.authorId && d.authorId === authorId) {
-            n = { ...n, data: { ...n.data, author: pendingName } };
-          }
-        }
-
         if (n.id !== nodeId) return n;
 
         const isFirstWrite = !wasNonEmpty && !!value.trim();
@@ -120,6 +110,8 @@ export function CommentNodeDialog({
               isLocal: true as const,
               createdAt: now,
             }),
+            // 편집 시 이름을 변경했으면 이 댓글의 author만 갱신
+            ...(wasNonEmpty && pendingName && { author: pendingName }),
             updatedAt: wasNonEmpty ? now : undefined,
           },
         };
@@ -149,7 +141,12 @@ export function CommentNodeDialog({
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-muted-foreground">{t.dialog.comment.authorLabel}</span>
               <span
-                className={displayName ? 'text-sm font-medium' : 'text-sm text-muted-foreground'}
+                title={authorId || undefined}
+                className={
+                  displayName
+                    ? 'cursor-default text-sm font-medium'
+                    : 'text-sm text-muted-foreground'
+                }
               >
                 {displayName ?? t.dialog.comment.authorUnset}
               </span>

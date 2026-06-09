@@ -96,7 +96,13 @@ export function FlowCommentNode({ id, data }: Props) {
               {(data.author || timeRef) && (
                 <>
                   <p className="text-xs text-muted-foreground">
-                    {data.author}
+                    {data.authorId ? (
+                      <span className="cursor-default" title={data.authorId}>
+                        {data.author}
+                      </span>
+                    ) : (
+                      data.author
+                    )}
                     {data.author && timeRef && ' · '}
                     {timeRef && relativeTime(timeRef, t.commentNode)}
                     {data.updatedAt && ' ' + t.commentNode.edited}
