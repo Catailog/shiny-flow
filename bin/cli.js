@@ -164,8 +164,44 @@ module.exports = async function authenticate(page, baseUrl) {
   const authFile = nodePath.join(shinyFlowDir, 'auth.js');
   const paramsFile = nodePath.join(shinyFlowDir, 'params.json');
 
+  function scanDynamicRoutes(projectPath) {
+    const appDirs = [nodePath.join(projectPath, 'app'), nodePath.join(projectPath, 'src', 'app')];
+    const appDir = appDirs.find((d) => fs.existsSync(d));
+    if (!appDir) return null;
+
+    const result = {};
+
+    function walk(dir, segments) {
+      let entries;
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          if (entry.name.startsWith('@') || entry.name.startsWith('_')) continue;
+          const segment = entry.name.startsWith('(') ? null : entry.name;
+          walk(nodePath.join(dir, entry.name), segment ? [...segments, segment] : segments);
+        } else if (entry.isFile() && /^page\.(tsx?|jsx?)$/.test(entry.name)) {
+          const params = segments
+            .filter((s) => s.startsWith('[') && s.endsWith(']'))
+            .map((s) => s.slice(1, -1).replace(/^\.\.\./, ''));
+          if (params.length > 0) {
+            const route = '/' + segments.join('/');
+            result[route] = Object.fromEntries(params.map((p) => [p, '']));
+          }
+        }
+      }
+    }
+
+    walk(appDir, []);
+    return Object.keys(result).length > 0 ? result : null;
+  }
+
+  const scanned = scanDynamicRoutes(process.cwd());
   const paramsSnippet = JSON.stringify(
-    { '/[dynamic]/[route]': { dynamic: 'value1', route: 'value2' } },
+    scanned ?? { '/[dynamic]/[route]': { dynamic: '', route: '' } },
     null,
     2,
   );
