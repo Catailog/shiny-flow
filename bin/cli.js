@@ -217,6 +217,30 @@ module.exports = async function authenticate(page, baseUrl) {
     console.log(msg.init.paramsCreated);
   }
 
+  function askKey(question, defaultYes, callback) {
+    process.stdout.write(question);
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(true);
+    }
+    process.stdin.resume();
+    process.stdin.setEncoding('utf8');
+    process.stdin.once('data', (key) => {
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(false);
+      }
+      process.stdin.pause();
+      if (key === '') {
+        process.stdout.write('\n');
+        process.exit(1);
+      }
+      const ch = key[0].toLowerCase();
+      process.stdout.write(key[0] + '\n');
+      if (ch === 'y') callback(true);
+      else if (ch === 'n') callback(false);
+      else callback(defaultYes);
+    });
+  }
+
   function promptGitignore() {
     const gitignoreFile = nodePath.join(process.cwd(), '.gitignore');
     const entry = '.shiny-flow/auth.js';
@@ -228,13 +252,8 @@ module.exports = async function authenticate(page, baseUrl) {
       process.exit(0);
     }
 
-    const rl = require('readline').createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-    rl.question(msg.init.gitignorePrompt, (answer) => {
-      rl.close();
-      if (answer.trim().toLowerCase() === 'n') {
+    askKey(msg.init.gitignorePrompt, true, (yes) => {
+      if (!yes) {
         console.log(msg.init.gitignoreSkipped);
         process.exit(0);
       }
@@ -249,13 +268,8 @@ module.exports = async function authenticate(page, baseUrl) {
   }
 
   if (fs.existsSync(authFile)) {
-    const rl = require('readline').createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-    rl.question(msg.init.overwritePrompt, (answer) => {
-      rl.close();
-      if (answer.trim().toLowerCase() === 'y') {
+    askKey(msg.init.overwritePrompt, false, (yes) => {
+      if (yes) {
         fs.writeFileSync(authFile, authSnippet);
         console.log(msg.init.overwritten);
       } else {
