@@ -16,6 +16,7 @@ export function graphToFlow(graph: FlowGraph): { nodes: Node[]; edges: Edge[] } 
       screenshot: n.redirected ? undefined : n.screenshot,
       redirected: n.redirected,
       redirectedScreenshot: n.redirected ? n.screenshot : undefined,
+      paramValues: graph.defaultParams?.[n.id],
     },
   }));
 

@@ -27,4 +27,5 @@ export type FlowGraph = {
   edges: FlowEdge[];
   analyzedAt: string;
   projectPath: string;
+  defaultParams?: Record<string, Record<string, string>>;
 };
