@@ -112,7 +112,7 @@ export async function setupBrowserSession({
       const mod = await import(/* webpackIgnore: true */ pathToFileURL(auth.scriptPath).href);
       const authFn: unknown = mod.default ?? mod;
       if (typeof authFn !== 'function') {
-        throw new Error('shiny-flow.auth.js가 함수를 export하지 않습니다.');
+        throw new Error('.shiny-flow/auth.js가 함수를 export하지 않습니다.');
       }
       page.setDefaultTimeout(0);
       await authFn(page, baseUrl);

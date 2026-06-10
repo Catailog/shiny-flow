@@ -339,7 +339,7 @@ export function HomePage({ isCloudMode }: Props) {
     const cliScreenshot = params.get('screenshot') === 'true';
     const cliUrl = params.get('url') ?? '';
     const cliAuthType = (params.get('authType') ?? 'none') as 'none' | 'cookies' | 'script';
-    const cliScriptPath = params.get('scriptPath') ?? 'shiny-flow.auth.js';
+    const cliScriptPath = params.get('scriptPath') ?? '.shiny-flow/auth.js';
 
     window.history.replaceState({}, '', '/');
 

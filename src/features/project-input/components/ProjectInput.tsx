@@ -198,7 +198,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
       if (values.authType === 'cookies')
         auth = { type: 'cookies', cookiesJson: values.cookiesJson };
       else if (values.authType === 'script')
-        auth = { type: 'script', scriptPath: values.scriptPath.trim() || 'shiny-flow.auth.js' };
+        auth = { type: 'script', scriptPath: values.scriptPath.trim() || '.shiny-flow/auth.js' };
     }
     onAnalyze({
       path: values.path.trim(),
@@ -313,9 +313,9 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
                     />
                     {!scriptPath && (
                       <ExampleFill
-                        label="shiny-flow.auth.js"
+                        label=".shiny-flow/auth.js"
                         onClick={() =>
-                          setValue('scriptPath', 'shiny-flow.auth.js', { shouldValidate: true })
+                          setValue('scriptPath', '.shiny-flow/auth.js', { shouldValidate: true })
                         }
                         tooltip={loadingTip}
                         eg={t.input.eg}

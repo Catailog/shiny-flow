@@ -38,44 +38,48 @@ const lang = cliLang ?? 'en';
 const MESSAGES = {
   en: {
     init: {
-      overwritePrompt: 'shiny-flow.auth.js already exists. Overwrite? (y/N) ',
+      overwritePrompt: '.shiny-flow/auth.js already exists. Overwrite? (y/N) ',
       overwriteSkipped: 'Skipped.',
-      overwritten: 'Overwritten shiny-flow.auth.js',
-      created: 'Created shiny-flow.auth.js',
-      gitignoreAlready: '.gitignore already includes shiny-flow.auth.js, skipping.',
-      gitignorePrompt: 'Add shiny-flow.auth.js to .gitignore? (Y/n) ',
+      overwritten: 'Overwritten .shiny-flow/auth.js',
+      created: 'Created .shiny-flow/auth.js',
+      paramsCreated: 'Created .shiny-flow/params.json',
+      paramsSkipped: '.shiny-flow/params.json already exists, skipping.',
+      gitignoreAlready: '.gitignore already includes .shiny-flow/auth.js, skipping.',
+      gitignorePrompt: 'Add .shiny-flow/auth.js to .gitignore? (Y/n) ',
       gitignoreSkipped: 'Skipped.',
-      gitignoreAdded: 'Added shiny-flow.auth.js to .gitignore',
+      gitignoreAdded: 'Added .shiny-flow/auth.js to .gitignore',
     },
     server: {
       portInUse: (p, a) => `Port ${p} is in use, using ${a} instead.`,
-      authNotFound: (path) => `\n[shiny-flow] shiny-flow.auth.js not found in ${path}`,
+      authNotFound: (path) => `\n[shiny-flow] .shiny-flow/auth.js not found in ${path}`,
       noAuth: '[shiny-flow] Continuing without authentication.\n',
       authSetup: '[shiny-flow] To set up script authentication:',
       authStep1: '[shiny-flow]   1. Run `npx shiny-flow init` in your project directory',
-      authStep2: '[shiny-flow]   2. Edit shiny-flow.auth.js with your login logic',
+      authStep2: '[shiny-flow]   2. Edit .shiny-flow/auth.js with your login logic',
       authStep3: '[shiny-flow]   3. Re-run `npx shiny-flow .`\n',
       authManual: '[shiny-flow] Or open the app and set a custom script path in Auth settings.\n',
     },
   },
   ko: {
     init: {
-      overwritePrompt: 'shiny-flow.auth.js가 이미 존재합니다. 덮어쓸까요? (y/N) ',
+      overwritePrompt: '.shiny-flow/auth.js가 이미 존재합니다. 덮어쓸까요? (y/N) ',
       overwriteSkipped: '건너뜁니다.',
-      overwritten: 'shiny-flow.auth.js를 덮어썼습니다.',
-      created: 'shiny-flow.auth.js를 생성했습니다.',
-      gitignoreAlready: '.gitignore에 shiny-flow.auth.js가 이미 포함되어 있습니다. 건너뜁니다.',
-      gitignorePrompt: '.gitignore에 shiny-flow.auth.js를 추가할까요? (Y/n) ',
+      overwritten: '.shiny-flow/auth.js를 덮어썼습니다.',
+      created: '.shiny-flow/auth.js를 생성했습니다.',
+      paramsCreated: '.shiny-flow/params.json을 생성했습니다.',
+      paramsSkipped: '.shiny-flow/params.json이 이미 존재합니다. 건너뜁니다.',
+      gitignoreAlready: '.gitignore에 .shiny-flow/auth.js가 이미 포함되어 있습니다. 건너뜁니다.',
+      gitignorePrompt: '.gitignore에 .shiny-flow/auth.js를 추가할까요? (Y/n) ',
       gitignoreSkipped: '건너뜁니다.',
-      gitignoreAdded: '.gitignore에 shiny-flow.auth.js를 추가했습니다.',
+      gitignoreAdded: '.gitignore에 .shiny-flow/auth.js를 추가했습니다.',
     },
     server: {
       portInUse: (p, a) => `포트 ${p}이(가) 사용 중입니다. ${a} 포트를 사용합니다.`,
-      authNotFound: (path) => `\n[shiny-flow] ${path}에서 shiny-flow.auth.js를 찾을 수 없습니다.`,
+      authNotFound: (path) => `\n[shiny-flow] ${path}에서 .shiny-flow/auth.js를 찾을 수 없습니다.`,
       noAuth: '[shiny-flow] 인증 없이 계속합니다.\n',
       authSetup: '[shiny-flow] 스크립트 인증을 설정하려면:',
       authStep1: '[shiny-flow]   1. 프로젝트 디렉토리에서 `npx shiny-flow init --lang ko` 실행',
-      authStep2: '[shiny-flow]   2. shiny-flow.auth.js에 로그인 로직 작성',
+      authStep2: '[shiny-flow]   2. .shiny-flow/auth.js에 로그인 로직 작성',
       authStep3: '[shiny-flow]   3. `npx shiny-flow .` 다시 실행\n',
       authManual: '[shiny-flow] 또는 앱을 열어 인증 설정에서 스크립트 경로를 직접 입력하세요.\n',
     },
@@ -88,7 +92,7 @@ const msg = MESSAGES[lang] ?? MESSAGES.en;
 
 if (args[0] === 'init') {
   const snippets = {
-    en: `// shiny-flow.auth.js
+    en: `// .shiny-flow/auth.js
 // Edit this file to handle authentication for your project.
 // It is automatically loaded when running: npx shiny-flow .
 
@@ -120,7 +124,7 @@ module.exports = async function authenticate(page, baseUrl) {
   await page.waitForURL('**/dashboard');
 };
 `,
-    ko: `// shiny-flow.auth.js
+    ko: `// .shiny-flow/auth.js
 // 이 파일을 수정해서 프로젝트의 인증(로그인) 로직을 작성하세요.
 // npx shiny-flow . 실행 시 자동으로 불러옵니다.
 
@@ -156,11 +160,30 @@ module.exports = async function authenticate(page, baseUrl) {
 
   const authSnippet = snippets[lang] ?? snippets.en;
 
-  const authFile = nodePath.join(process.cwd(), 'shiny-flow.auth.js');
+  const shinyFlowDir = nodePath.join(process.cwd(), '.shiny-flow');
+  const authFile = nodePath.join(shinyFlowDir, 'auth.js');
+  const paramsFile = nodePath.join(shinyFlowDir, 'params.json');
+
+  const paramsSnippet = JSON.stringify(
+    { '/[dynamic]/[route]': { dynamic: 'value1', route: 'value2' } },
+    null,
+    2,
+  );
+
+  if (!fs.existsSync(shinyFlowDir)) {
+    fs.mkdirSync(shinyFlowDir);
+  }
+
+  if (fs.existsSync(paramsFile)) {
+    console.log(msg.init.paramsSkipped);
+  } else {
+    fs.writeFileSync(paramsFile, paramsSnippet + '\n');
+    console.log(msg.init.paramsCreated);
+  }
 
   function promptGitignore() {
     const gitignoreFile = nodePath.join(process.cwd(), '.gitignore');
-    const entry = 'shiny-flow.auth.js';
+    const entry = '.shiny-flow/auth.js';
     const alreadyIgnored =
       fs.existsSync(gitignoreFile) && fs.readFileSync(gitignoreFile, 'utf8').includes(entry);
 
@@ -239,9 +262,9 @@ else {
 
   // auth 자동 감지
   let authType = 'none';
-  const scriptPath = 'shiny-flow.auth.js';
+  const scriptPath = '.shiny-flow/auth.js';
   if (projectPath && screenshot) {
-    const authFile = nodePath.join(projectPath, 'shiny-flow.auth.js');
+    const authFile = nodePath.join(projectPath, '.shiny-flow', 'auth.js');
     if (fs.existsSync(authFile)) {
       authType = 'script';
     } else {

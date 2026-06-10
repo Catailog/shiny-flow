@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import fs from 'fs/promises';
 import path from 'path';
 
 import { type FlowEdge, analyzeProject } from '@/lib/analyzer';
@@ -96,6 +97,16 @@ export async function POST(req: NextRequest) {
       } finally {
         await session.browser.close();
       }
+    }
+
+    try {
+      const paramsFile = await fs.readFile(
+        path.join(normalizedPath, '.shiny-flow', 'params.json'),
+        'utf-8',
+      );
+      graph.defaultParams = JSON.parse(paramsFile) as Record<string, Record<string, string>>;
+    } catch {
+      // 파일 없거나 파싱 실패 시 무시
     }
 
     return NextResponse.json(graph);
