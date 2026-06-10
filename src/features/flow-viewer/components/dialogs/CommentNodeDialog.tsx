@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
 import { useAuthorPreference } from '@/hooks/useAuthorPreference';
+import { useCloudAuthorName } from '@/hooks/useCloudAuthorName';
 import { useT } from '@/hooks/useT';
 
 import type { CommentNodeData } from '../FlowCommentNode';
@@ -50,7 +51,12 @@ export function CommentNodeDialog({
 
   const isCloudMode = !!session?.user;
   const isCloudComment = !!existing?.accountId;
-  const cloudAuthorName = session?.user?.name ?? session?.user?.email ?? '';
+  const sessionAuthorName = session?.user?.name ?? session?.user?.email ?? '';
+  const fetchedAuthorName = useCloudAuthorName(existing?.accountId);
+  // 클라우드 댓글: 서버에서 최신 이름 조회. 로딩 중에는 스냅샷 표시
+  const cloudAuthorName = isCloudComment
+    ? (fetchedAuthorName ?? existing?.author ?? sessionAuthorName)
+    : sessionAuthorName;
 
   const [pendingName, setPendingName] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);

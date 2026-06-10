@@ -8,6 +8,7 @@ import { MessageCircleIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
+import { useCloudAuthorName } from '@/hooks/useCloudAuthorName';
 import { useT } from '@/hooks/useT';
 
 import { Z_INDEX } from '@/constants/zIndex';
@@ -46,6 +47,7 @@ export function FlowCommentNode({ id, data }: Props) {
   const t = useT();
   const { setNodes } = useReactFlow();
   const [hovered, setHovered] = useState(false);
+  const cloudAuthorName = useCloudAuthorName(data.accountId);
   const hasContent = !!data.content;
   const zoom = useStore((s) => s.transform[2]);
 
@@ -94,10 +96,12 @@ export function FlowCommentNode({ id, data }: Props) {
 
           {hovered && (
             <div className="absolute top-0 left-14 z-50 w-max max-w-52 rounded-lg border border-border bg-popover px-3 py-2 text-sm shadow-lg">
-              {(data.author || timeRef) && (
+              {(data.author || cloudAuthorName || timeRef) && (
                 <>
                   <p className="text-xs text-muted-foreground">
-                    {data.authorId ? (
+                    {data.accountId ? (
+                      (cloudAuthorName ?? data.author)
+                    ) : data.authorId ? (
                       <span className="cursor-default" title={data.authorId}>
                         {data.author}
                       </span>
