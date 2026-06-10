@@ -361,6 +361,22 @@ else {
     process.env.PORT = String(port);
     process.env.HOSTNAME = hostname;
     process.env.NODE_ENV = 'production';
+    process.env.AUTH_URL = `http://localhost:${port}`;
+    process.env.NEXTAUTH_URL = `http://localhost:${port}`;
+
+    if (!process.env.AUTH_SECRET) {
+      const packageRoot = nodePath.join(__dirname, '..');
+      for (const envFile of ['.env.local', '.env']) {
+        try {
+          const content = fs.readFileSync(nodePath.join(packageRoot, envFile), 'utf-8');
+          const match = content.match(/^AUTH_SECRET=(.+)$/m);
+          if (match) {
+            process.env.AUTH_SECRET = match[1].trim();
+            break;
+          }
+        } catch {}
+      }
+    }
 
     const serverPath = nodePath.join(__dirname, '..', '.next', 'standalone', 'server.js');
 
