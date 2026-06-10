@@ -44,6 +44,7 @@ export const en = {
     confirmDelete: 'Delete?',
     delete: 'Delete',
     copyShareLink: 'Copy share link',
+    rename: 'Rename',
   },
 
   // Project input

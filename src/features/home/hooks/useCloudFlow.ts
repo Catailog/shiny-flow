@@ -18,9 +18,11 @@ export type CloudFlowState = {
   flowsList: FlowMeta[];
   busyAction: 'save' | 'myFlows' | 'share' | null;
   shareCopied: boolean;
-  rowBusy: { id: string; action: 'share' | 'delete' } | null;
+  rowBusy: { id: string; action: 'share' | 'delete' | 'rename' } | null;
   copiedFlowId: string | null;
   confirmDeleteId: string | null;
+  editingNameId: string | null;
+  editingNameValue: string;
 };
 
 export type CloudFlowActions = {
@@ -28,6 +30,8 @@ export type CloudFlowActions = {
   setSaveNameInput: (name: string) => void;
   setMyFlowsOpen: (open: boolean) => void;
   setConfirmDeleteId: (id: string | null) => void;
+  setEditingNameId: (id: string | null) => void;
+  setEditingNameValue: (value: string) => void;
   handleCloudSave: () => void;
   handleSaveConfirm: () => Promise<void>;
   handleOpenMyFlows: () => Promise<void>;
@@ -35,6 +39,8 @@ export type CloudFlowActions = {
   handleShare: () => Promise<void>;
   handleShareFlow: (id: string) => Promise<void>;
   handleDeleteFlow: (id: string) => Promise<void>;
+  handleStartRename: (id: string, currentName: string) => void;
+  handleRenameConfirm: (id: string) => Promise<void>;
 };
 
 type Deps = {
@@ -61,9 +67,14 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
   const [flowsList, setFlowsList] = useState<FlowMeta[]>([]);
   const [busyAction, setBusyAction] = useState<'save' | 'myFlows' | 'share' | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
-  const [rowBusy, setRowBusy] = useState<{ id: string; action: 'share' | 'delete' } | null>(null);
+  const [rowBusy, setRowBusy] = useState<{
+    id: string;
+    action: 'share' | 'delete' | 'rename';
+  } | null>(null);
   const [copiedFlowId, setCopiedFlowId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState('');
 
   const handleCloudSave = () => {
     const data = getCurrentFlowData();
@@ -149,6 +160,34 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
     }
   };
 
+  const handleStartRename = (id: string, currentName: string) => {
+    setEditingNameId(id);
+    setEditingNameValue(currentName);
+  };
+
+  const handleRenameConfirm = async (id: string) => {
+    const name = editingNameValue.trim();
+    if (!name) return;
+    const current = flowsList.find((f) => f.id === id);
+    if (current?.name === name) {
+      setEditingNameId(null);
+      return;
+    }
+    try {
+      setRowBusy({ id, action: 'rename' });
+      const { updatedAt } = await cloudFlowAdapter.rename(id, name);
+      setFlowsList((prev) =>
+        prev
+          .map((f) => (f.id === id ? { ...f, name, updatedAt } : f))
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
+      );
+      setEditingNameId(null);
+      if (cloudFlowId === id) setCloudFlowName(name);
+    } finally {
+      setRowBusy(null);
+    }
+  };
+
   const handleDeleteFlow = async (id: string) => {
     try {
       setRowBusy({ id, action: 'delete' });
@@ -177,12 +216,16 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
       rowBusy,
       copiedFlowId,
       confirmDeleteId,
+      editingNameId,
+      editingNameValue,
     },
     actions: {
       setSaveDialogOpen,
       setSaveNameInput,
       setMyFlowsOpen,
       setConfirmDeleteId,
+      setEditingNameId,
+      setEditingNameValue,
       handleCloudSave,
       handleSaveConfirm,
       handleOpenMyFlows,
@@ -190,6 +233,8 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
       handleShare,
       handleShareFlow,
       handleDeleteFlow,
+      handleStartRename,
+      handleRenameConfirm,
     },
   };
 }

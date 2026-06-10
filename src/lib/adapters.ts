@@ -20,6 +20,7 @@ export type FlowMeta = {
 export interface FlowAdapter {
   create(name: string, data: FlowData): Promise<string>;
   save(id: string, data: FlowData, name?: string): Promise<void>;
+  rename(id: string, name: string): Promise<{ updatedAt: string }>;
   load(id: string): Promise<FlowData | null>;
   list(): Promise<FlowMeta[]>;
   share(id: string): Promise<string>;
@@ -45,6 +46,17 @@ export const cloudFlowAdapter: FlowAdapter = {
       body: JSON.stringify({ data, ...(name !== undefined ? { name } : {}) }),
     });
     if (!res.ok) throw new Error('Failed to update flow');
+  },
+
+  async rename(id, name) {
+    const res = await fetch(`/api/flows/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) throw new Error('Failed to rename flow');
+    const json = await res.json();
+    return { updatedAt: json.updated_at as string };
   },
 
   async load(id) {

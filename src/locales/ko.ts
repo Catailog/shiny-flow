@@ -46,6 +46,7 @@ export const ko: Translations = {
     confirmDelete: '삭제할까요?',
     delete: '삭제',
     copyShareLink: '공유 링크 복사',
+    rename: '이름 변경',
   },
 
   // Project input
