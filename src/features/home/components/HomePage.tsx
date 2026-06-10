@@ -2,10 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { useSession } from 'next-auth/react';
+
 import type { Edge, Node } from '@xyflow/react';
 import { ChevronRightIcon, Loader2Icon, PinIcon, PinOffIcon } from 'lucide-react';
 
 import { FlowViewer, type FlowViewerHandle } from '@/features/flow-viewer';
+import type { CommentNodeData } from '@/features/flow-viewer/components/FlowCommentNode';
 import {
   type AnalyzeFormValues,
   type AnalyzeOptions,
@@ -16,6 +19,7 @@ import {
 
 import { AppHeader } from '@/components/AppHeader';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 
 import type { FlowData } from '@/lib/adapters';
 import type { FlowGraph } from '@/lib/analyzer';
@@ -44,6 +48,19 @@ type PendingImport = {
   analyzeConfig: AnalyzeFormValues;
 };
 
+type UuidEntry = {
+  authorId: string;
+  names: string[];
+  count: number;
+};
+
+type PendingConvert = {
+  graph: FlowGraph;
+  snapshot: RfSnapshot;
+  analyzeConfig?: AnalyzeFormValues;
+  uuidEntries: UuidEntry[];
+};
+
 type Props = {
   isCloudMode: boolean;
 };
@@ -54,6 +71,9 @@ export function HomePage({ isCloudMode }: Props) {
   const [slowWarning, setSlowWarning] = useState(false);
   const [overlayError, setOverlayError] = useState<string | null>(null);
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const [pendingConvert, setPendingConvert] = useState<PendingConvert | null>(null);
+  const [convertSelectedUuids, setConvertSelectedUuids] = useState<string[]>([]);
+  const { data: session } = useSession();
   const [screenshotOptions, setScreenshotOptions] = useState<{
     baseUrl: string;
     auth?: AuthInput;
@@ -154,6 +174,36 @@ export function HomePage({ isCloudMode }: Props) {
 
         setScreenshotOptions(null);
 
+        // 로그인 상태이고 authorId 가진 로컬 댓글이 있으면 UUID 목록 보여주고 변환 여부 확인
+        if (isCloudMode && session?.user && snapshot) {
+          const uuidMap = new Map<string, { names: Set<string>; count: number }>();
+          for (const n of snapshot.rfNodes) {
+            if (n.type !== 'commentNode') continue;
+            const data = n.data as CommentNodeData;
+            if (!data.authorId) continue;
+            if (!uuidMap.has(data.authorId))
+              uuidMap.set(data.authorId, { names: new Set(), count: 0 });
+            const entry = uuidMap.get(data.authorId)!;
+            entry.count++;
+            if (data.author) entry.names.add(data.author);
+          }
+          if (uuidMap.size > 0) {
+            const uuidEntries: UuidEntry[] = [...uuidMap.entries()].map(
+              ([authorId, { names, count }]) => ({
+                authorId,
+                names: [...names],
+                count,
+              }),
+            );
+            const localAuthorId = localStorage.getItem('sf_author_id');
+            setPendingConvert({ graph, snapshot, analyzeConfig, uuidEntries });
+            setConvertSelectedUuids(
+              localAuthorId && uuidMap.has(localAuthorId) ? [localAuthorId] : [],
+            );
+            return;
+          }
+        }
+
         if (analyzeConfig) {
           setPendingImport({ graph, snapshot, analyzeConfig });
         } else {
@@ -222,6 +272,49 @@ export function HomePage({ isCloudMode }: Props) {
     setState({ status: 'success', graph, snapshot });
     setGraphKey((k) => k + 1);
     setPendingImport(null);
+  };
+
+  const toggleUuid = (authorId: string) => {
+    setConvertSelectedUuids((prev) =>
+      prev.includes(authorId) ? prev.filter((id) => id !== authorId) : [...prev, authorId],
+    );
+  };
+
+  const applyConvert = (convert: boolean) => {
+    if (!pendingConvert) return;
+    const { graph, snapshot, analyzeConfig } = pendingConvert;
+
+    let finalSnapshot = snapshot;
+    if (convert && convertSelectedUuids.length > 0 && session?.user) {
+      const accountName = session.user.name ?? session.user.email ?? '';
+      const accountId = session.user.id;
+      const selectedSet = new Set(convertSelectedUuids);
+      const convertedNodes = snapshot.rfNodes.map((n) => {
+        if (n.type !== 'commentNode') return n;
+        const data = n.data as CommentNodeData;
+        if (!data.authorId || !selectedSet.has(data.authorId)) return n;
+        return {
+          ...n,
+          data: {
+            ...data,
+            author: accountName,
+            accountId,
+            authorId: undefined,
+            isLocal: undefined,
+          },
+        };
+      });
+      finalSnapshot = { ...snapshot, rfNodes: convertedNodes };
+    }
+
+    setPendingConvert(null);
+    setConvertSelectedUuids([]);
+    if (analyzeConfig) {
+      setPendingImport({ graph, snapshot: finalSnapshot, analyzeConfig });
+    } else {
+      setState({ status: 'success', graph, snapshot: finalSnapshot });
+      setGraphKey((k) => k + 1);
+    }
   };
 
   const handleAnalyzeRef = useRef(handleAnalyze);
@@ -423,6 +516,60 @@ export function HomePage({ isCloudMode }: Props) {
           )}
         </main>
       </div>
+
+      {pendingConvert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="flex w-96 flex-col gap-4 rounded-xl border bg-popover p-5 shadow-lg">
+            <div>
+              <p className="text-sm font-medium">{t.home.convertAuthorPrompt}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t.home.convertAuthorDesc}</p>
+            </div>
+            <div className="max-h-64 overflow-y-auto rounded-md border border-border">
+              {pendingConvert.uuidEntries.map((entry) => {
+                const checked = convertSelectedUuids.includes(entry.authorId);
+                const id = `uuid-${entry.authorId}`;
+                return (
+                  <label
+                    key={entry.authorId}
+                    htmlFor={id}
+                    className="flex cursor-pointer items-start gap-3 border-b border-border px-3 py-2.5 last:border-b-0 hover:bg-accent/40"
+                  >
+                    <Checkbox
+                      id={id}
+                      checked={checked}
+                      onCheckedChange={() => toggleUuid(entry.authorId)}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-mono text-xs text-muted-foreground">
+                        {entry.authorId}
+                      </p>
+                      <p className="mt-0.5 text-sm">
+                        {entry.names.length > 0 ? entry.names.join(', ') : t.home.convertAuthorNone}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t.home.convertAuthorComments(entry.count)}
+                      </p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => applyConvert(false)}>
+                {t.home.skip}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => applyConvert(true)}
+                disabled={convertSelectedUuids.length === 0}
+              >
+                {t.home.convertAuthorConfirm}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {pendingImport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">

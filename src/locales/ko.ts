@@ -26,6 +26,12 @@ export const ko: Translations = {
     jsonParseFailed: 'JSON 파싱 실패',
     analyzeFailed: '분석 실패',
     unknownError: '알 수 없는 오류',
+    convertAuthorPrompt: '댓글 작성자를 변환할까요?',
+    convertAuthorDesc:
+      '변환할 UUID를 선택하세요. 변환된 댓글의 작성자는 계정명으로 변경되며 이후 수정이 불가능해집니다.',
+    convertAuthorConfirm: '변환',
+    convertAuthorNone: '(이름 없음)',
+    convertAuthorComments: (n: number) => `댓글 ${n}개`,
   },
 
   // Cloud toolbar

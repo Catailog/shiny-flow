@@ -24,6 +24,12 @@ export const en = {
     jsonParseFailed: 'JSON parse failed',
     analyzeFailed: 'Analysis failed',
     unknownError: 'Unknown error',
+    convertAuthorPrompt: 'Convert comment authors?',
+    convertAuthorDesc:
+      'Select UUIDs to convert. Converted comments will be assigned to your account name and cannot be edited afterwards.',
+    convertAuthorConfirm: 'Convert',
+    convertAuthorNone: '(no name)',
+    convertAuthorComments: (n: number) => `${n} comment${n === 1 ? '' : 's'}`,
   },
 
   // Cloud toolbar
