@@ -55,20 +55,40 @@ export async function POST(req: NextRequest) {
       parsedAuth = parseAuth(auth);
     }
 
-    // analyzeProject와 브라우저 세션 셋업(서버 확인 + 실행 + 인증)을 병렬로 실행
-    const [graph, session] = await Promise.all([
+    // analyzeProject, 브라우저 세션 셋업, params.json 로드를 병렬로 실행
+    const [graph, session, defaultParams] = await Promise.all([
       analyzeProject(normalizedPath),
       screenshot && baseUrl
         ? setupBrowserSession({ baseUrl, auth: parsedAuth })
         : Promise.resolve(null),
+      fs
+        .readFile(path.join(normalizedPath, '.shiny-flow', 'params.json'), 'utf-8')
+        .then((raw) => JSON.parse(raw) as Record<string, Record<string, string>>)
+        .catch(() => undefined),
     ]);
+
+    if (defaultParams) graph.defaultParams = defaultParams;
 
     if (screenshot && baseUrl && session) {
       try {
-        const routes = graph.nodes.map((n) => n.id);
+        // 동적 라우트를 defaultParams로 치환, 역매핑 보관
+        const resolvedToOriginal = new Map<string, string>();
+        const routes = graph.nodes.map((n) => {
+          const params = defaultParams?.[n.id];
+          if (!params) return n.id;
+          const resolved = n.id.replace(/\[([^\]]+)\]/g, (_, p) => {
+            const key = p.replace(/^\.\.\./, '');
+            return params[key] || `[${p}]`;
+          });
+          if (resolved !== n.id) resolvedToOriginal.set(resolved, n.id);
+          return resolved;
+        });
+
         const screenshots = await captureRoutesOnPage(session.page, routes, baseUrl);
 
-        const screenshotMap = new Map(screenshots.map((s) => [s.route, s]));
+        const screenshotMap = new Map(
+          screenshots.map((s) => [resolvedToOriginal.get(s.route) ?? s.route, s]),
+        );
         graph.nodes = graph.nodes.map((node) => {
           const s = screenshotMap.get(node.id);
           return { ...node, screenshot: s?.imageBase64, redirected: s?.redirected };
@@ -79,13 +99,14 @@ export async function POST(req: NextRequest) {
         const redirectEdges: FlowEdge[] = [];
         for (const s of screenshots) {
           if (!s.redirectedTo) continue;
+          const source = resolvedToOriginal.get(s.route) ?? s.route;
           const target = s.redirectedTo;
-          if (!nodeIds.has(target)) continue;
-          const pair = `${s.route}→${target}`;
+          if (!nodeIds.has(source) || !nodeIds.has(target)) continue;
+          const pair = `${source}→${target}`;
           if (existingPairs.has(pair)) continue;
           redirectEdges.push({
-            id: `redirect:${s.route}→${target}`,
-            source: s.route,
+            id: `redirect:${source}→${target}`,
+            source,
             target,
             trigger: 'redirect',
             sourceFile: '',
@@ -97,16 +118,6 @@ export async function POST(req: NextRequest) {
       } finally {
         await session.browser.close();
       }
-    }
-
-    try {
-      const paramsFile = await fs.readFile(
-        path.join(normalizedPath, '.shiny-flow', 'params.json'),
-        'utf-8',
-      );
-      graph.defaultParams = JSON.parse(paramsFile) as Record<string, Record<string, string>>;
-    } catch {
-      // 파일 없거나 파싱 실패 시 무시
     }
 
     return NextResponse.json(graph);
