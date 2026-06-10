@@ -82,6 +82,7 @@ export const ko: Translations = {
     createNode: '노드 생성',
     edit: '수정',
     editComment: '댓글 수정',
+    deleteComment: '댓글 삭제',
     delete: '삭제',
     expand: '펼치기',
     collapse: '접기',

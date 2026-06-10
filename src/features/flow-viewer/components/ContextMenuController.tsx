@@ -305,7 +305,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
       [
         <DeleteConfirmItem
           key="delete"
-          label={t.menu.delete}
+          label={t.menu.deleteComment}
           onConfirm={() => {
             deleteElements({ nodes: [{ id: target.nodeId }] });
             close();

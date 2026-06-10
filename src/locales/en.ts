@@ -80,6 +80,7 @@ export const en = {
     createNode: 'Create node',
     edit: 'Edit',
     editComment: 'Edit comment',
+    deleteComment: 'Delete comment',
     delete: 'Delete',
     expand: 'Expand',
     collapse: 'Collapse',
