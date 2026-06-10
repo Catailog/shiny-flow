@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { useSession } from 'next-auth/react';
+
 import type { Node } from '@xyflow/react';
 
 import { Button } from '@/components/ui/button';
@@ -12,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuthorPreference } from '@/hooks/useAuthorPreference';
 import { useT } from '@/hooks/useT';
 
+import type { CommentNodeData } from '../FlowCommentNode';
 import { BaseDialog } from './BaseDialog';
 
 function formatExact(isoString: string, dateLocale: string): string {
@@ -37,28 +40,31 @@ export function CommentNodeDialog({
   onClose: () => void;
 }) {
   const node = nodes.find((n) => n.id === nodeId);
-  const existing = node?.data as
-    | {
-        content?: string;
-        author?: string;
-        authorId?: string;
-        isLocal?: true;
-        createdAt?: string;
-        updatedAt?: string;
-      }
-    | undefined;
+  const existing = node?.data as CommentNodeData | undefined;
 
   const [value, setValue] = useState(existing?.content ?? '');
   const t = useT();
+  const { data: session } = useSession();
 
   const { authorId, authorName, options, setName } = useAuthorPreference();
+
+  const isCloudMode = !!session?.user;
+  const isCloudComment = !!existing?.accountId;
+  const cloudAuthorName = session?.user?.name ?? session?.user?.email ?? '';
 
   const [pendingName, setPendingName] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  const displayName = pendingName ?? authorName;
+  // 클라우드 댓글: 저장된 author 그대로 표시
+  // 로컬 댓글(또는 신규): pendingName > 저장된 author > 로컬 기본값(or 클라우드 계정명)
+  const displayName = isCloudComment
+    ? (existing?.author ?? cloudAuthorName)
+    : (pendingName ?? existing?.author ?? (isCloudMode ? cloudAuthorName : authorName));
+
+  // 클라우드 댓글(accountId 있음)은 수정 불가, 로컬 댓글은 클라우드 모드에서도 수정 가능
+  const canEditAuthor = !isCloudComment && (!isCloudMode || !!existing?.content?.trim());
 
   useEffect(() => {
     if (editing) nameInputRef.current?.focus();
@@ -104,14 +110,21 @@ export function CommentNodeDialog({
           data: {
             ...n.data,
             content: value,
-            ...(isFirstWrite && {
-              author: displayName ?? undefined,
-              authorId: authorId || undefined,
-              isLocal: true as const,
-              createdAt: now,
-            }),
-            // 편집 시 이름을 변경했으면 이 댓글의 author만 갱신
-            ...(wasNonEmpty && pendingName && { author: pendingName }),
+            ...(isFirstWrite &&
+              isCloudMode && {
+                author: cloudAuthorName,
+                accountId: session?.user?.id,
+                createdAt: now,
+              }),
+            ...(isFirstWrite &&
+              !isCloudMode && {
+                author: displayName ?? undefined,
+                authorId: authorId || undefined,
+                isLocal: true as const,
+                createdAt: now,
+              }),
+            // 로컬 댓글 편집 시 이름을 변경했으면 이 댓글의 author만 갱신
+            ...(wasNonEmpty && !isCloudComment && pendingName && { author: pendingName }),
             updatedAt: wasNonEmpty ? now : undefined,
           },
         };
@@ -120,7 +133,8 @@ export function CommentNodeDialog({
     onClose();
   };
 
-  const showSuggestions = editing && (options.author || options.device);
+  // 클라우드 모드에서는 로컬 사용자명/기기명 제안 숨김
+  const showSuggestions = editing && !isCloudMode && (options.author || options.device);
 
   return (
     <BaseDialog onClose={onClose}>
@@ -141,7 +155,7 @@ export function CommentNodeDialog({
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-muted-foreground">{t.dialog.comment.authorLabel}</span>
               <span
-                title={authorId || undefined}
+                title={!isCloudComment ? authorId || undefined : undefined}
                 className={
                   displayName
                     ? 'cursor-default text-sm font-medium'
@@ -150,14 +164,16 @@ export function CommentNodeDialog({
               >
                 {displayName ?? t.dialog.comment.authorUnset}
               </span>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="ml-auto h-6 px-2 text-xs"
-                onClick={startEditing}
-              >
-                {t.dialog.comment.authorChange}
-              </Button>
+              {canEditAuthor && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="ml-auto h-6 px-2 text-xs"
+                  onClick={startEditing}
+                >
+                  {t.dialog.comment.authorChange}
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-1.5">

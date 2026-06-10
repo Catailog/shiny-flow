@@ -18,6 +18,7 @@ export type CommentNodeData = {
   content: string;
   author?: string;
   authorId?: string;
+  accountId?: string;
   isLocal?: true;
   createdAt?: string;
   updatedAt?: string;
