@@ -15,7 +15,7 @@ export const ko: Translations = {
     analyzing: '분석 중...',
     analyzeDisabled: '분석 중입니다.',
     confirmError: '확인',
-    slowWarning: '서버 응답이 늦고 있습니다. 계속 기다리시겠습니까?',
+    slowWarning: '처리가 늦고 있습니다. 계속 기다리시겠습니까?',
     keepWaiting: '계속 기다리기',
     cancel: '취소',
     importConfigPrompt: '분석 설정도 불러올까요?',

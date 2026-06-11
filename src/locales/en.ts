@@ -13,7 +13,7 @@ export const en = {
     analyzing: 'Analyzing...',
     analyzeDisabled: 'Analysis in progress.',
     confirmError: 'Confirm',
-    slowWarning: 'Server is taking too long. Keep waiting?',
+    slowWarning: 'Processing is taking too long. Keep waiting?',
     keepWaiting: 'Keep waiting',
     cancel: 'Cancel',
     importConfigPrompt: 'Restore analysis settings?',
