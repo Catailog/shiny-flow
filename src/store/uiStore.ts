@@ -10,6 +10,8 @@ const SUPPORTED_LOCALES: Locale[] = ['en', 'ko'];
 type UIStore = {
   locale: Locale;
   setLocale: (locale: Locale) => void;
+  showNodeLabels: boolean;
+  toggleNodeLabels: () => void;
 };
 
 export const useUIStore = create<UIStore>()(
@@ -17,6 +19,8 @@ export const useUIStore = create<UIStore>()(
     (set) => ({
       locale: 'en',
       setLocale: (locale) => set({ locale }),
+      showNodeLabels: true,
+      toggleNodeLabels: () => set((s) => ({ showNodeLabels: !s.showNodeLabels })),
     }),
     {
       name: 'shiny-flow-ui',

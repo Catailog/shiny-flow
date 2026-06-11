@@ -103,6 +103,9 @@ export const en = {
     deleteConfirm: 'Delete?',
     createGroup: 'Create group',
     edgeLineStyle: 'Line style',
+    editNodeLabel: 'Edit label',
+    editNodeRoute: 'Edit route',
+    toggleNodeLabels: 'Toggle node labels',
   },
 
   edgeLineStyles: {
@@ -152,6 +155,14 @@ export const en = {
       namePlaceholder: 'Page name',
       defaultName: 'New page',
       confirm: 'Create',
+    },
+    labelEdit: {
+      title: 'Edit node label',
+      placeholder: 'Node name',
+    },
+    routeEdit: {
+      title: 'Edit route',
+      placeholder: '/path/to/page',
     },
     save: 'Save',
     cancel: 'Cancel',

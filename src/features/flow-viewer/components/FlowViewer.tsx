@@ -28,11 +28,15 @@ import {
   useStore,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { LockIcon, UnlockIcon } from 'lucide-react';
+import { LockIcon, TagIcon, UnlockIcon } from 'lucide-react';
 
 import type { AuthInput } from '@/features/project-input';
 
 import type { FlowGraph } from '@/lib/analyzer';
+
+import { useT } from '@/hooks/useT';
+
+import { useUIStore } from '@/store/uiStore';
 
 import { Z_INDEX } from '@/constants/zIndex';
 
@@ -107,6 +111,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   { graph, screenshotOptions, savedRfNodes, savedRfEdges, onValidateForCapture },
   ref,
 ) {
+  const t = useT();
   const { nodes: initialNodes, edges: initialEdges } = graphToFlow(graph);
   const layoutedNodes = applyDagreLayout(initialNodes, initialEdges);
 
@@ -284,6 +289,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
 
   const flowActionsValue = useMemo(() => ({ openDialog: setDialogRequest }), []);
   const nodesDraggable = !isLocked && !spacebarLocked;
+  const { showNodeLabels, toggleNodeLabels } = useUIStore();
 
   return (
     <FlowActionsProvider value={flowActionsValue}>
@@ -339,6 +345,13 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
                   ) : (
                     <LockIcon size={12} style={{ fill: 'none' }} />
                   )}
+                </ControlButton>
+                <ControlButton
+                  onClick={toggleNodeLabels}
+                  title={t.menu.toggleNodeLabels}
+                  style={{ opacity: showNodeLabels ? 1 : 0.4 }}
+                >
+                  <TagIcon size={12} style={{ fill: 'none' }} />
                 </ControlButton>
               </Controls>
               <MiniMap

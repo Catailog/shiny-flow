@@ -40,4 +40,6 @@ export type DialogRequest =
   | { type: 'groupUngroup'; nodeId: string }
   | { type: 'edgeComment'; edgeId: string }
   | { type: 'groupCreate'; nodes: Node[] }
-  | { type: 'nodeCreate'; pos: { x: number; y: number } };
+  | { type: 'nodeCreate'; pos: { x: number; y: number } }
+  | { type: 'labelEdit'; nodeId: string }
+  | { type: 'routeEdit'; nodeId: string };

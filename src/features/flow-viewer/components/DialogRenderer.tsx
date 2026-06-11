@@ -8,8 +8,10 @@ import { EdgeCommentDialog } from './dialogs/EdgeCommentDialog';
 import { GroupCreateDialog } from './dialogs/GroupCreateDialog';
 import { GroupEditDialog } from './dialogs/GroupEditDialog';
 import { GroupUngroupDialog } from './dialogs/GroupUngroupDialog';
+import { LabelEditDialog } from './dialogs/LabelEditDialog';
 import { MemoDialog } from './dialogs/MemoDialog';
 import { NodeCreateDialog } from './dialogs/NodeCreateDialog';
+import { RouteEditDialog } from './dialogs/RouteEditDialog';
 import { ScreenshotDialog } from './dialogs/ScreenshotDialog';
 
 type Props = {
@@ -92,5 +94,23 @@ export function DialogRenderer({
       );
     case 'nodeCreate':
       return <NodeCreateDialog pos={dialogRequest.pos} setNodes={setNodes} onClose={onClose} />;
+    case 'labelEdit':
+      return (
+        <LabelEditDialog
+          nodeId={dialogRequest.nodeId}
+          nodes={nodes}
+          setNodes={setNodes}
+          onClose={onClose}
+        />
+      );
+    case 'routeEdit':
+      return (
+        <RouteEditDialog
+          nodeId={dialogRequest.nodeId}
+          nodes={nodes}
+          setNodes={setNodes}
+          onClose={onClose}
+        />
+      );
   }
 }

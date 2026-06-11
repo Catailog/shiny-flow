@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 
 import { useT } from '@/hooks/useT';
 
+import { useUIStore } from '@/store/uiStore';
+
 import { useFlowActions } from '../actionsContext';
 import { useCollapseContext } from '../collapseContext';
 import { getNodeColorStyle } from '../lib/nodeColors';
@@ -31,6 +33,7 @@ function extractParams(route: string): string[] {
 export function FlowNode({ id, data, selected }: Props) {
   const { openDialog } = useFlowActions();
   const t = useT();
+  const showNodeLabels = useUIStore((s) => s.showNodeLabels);
   const { collapsedIds, hiddenCount } = useCollapseContext();
   const { available, captureNode, validateForCapture } = useScreenshotContext();
   const isCollapsed = collapsedIds.has(id);
@@ -60,27 +63,48 @@ export function FlowNode({ id, data, selected }: Props) {
 
   return (
     <>
-      <NodeToolbar position={Position.Top} align="start" isVisible offset={6}>
-        <span className="flex cursor-default items-center gap-1 text-sm font-medium text-brand-dark select-none dark:text-foreground">
-          {(data.redirected || redirectedSrc) && (
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={!redirectedSrc}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (redirectedSrc)
-                  openDialog({ type: 'screenshot', src: redirectedSrc, label: data.label });
-              }}
-              className="h-auto p-0"
-              title={t.flowNode.viewBeforeRedirect}
-            >
-              <LogInIcon size={13} className="shrink-0 text-warning" />
-            </Button>
-          )}
-          {data.route}
-        </span>
-      </NodeToolbar>
+      {showNodeLabels && (
+        <NodeToolbar
+          className="pointer-events-none"
+          position={Position.Top}
+          align="start"
+          isVisible
+          offset={6}
+        >
+          <span className="flex cursor-default items-center gap-1 select-none">
+            {(data.redirected || redirectedSrc) && (
+              <span className="pointer-events-auto">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={!redirectedSrc}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (redirectedSrc)
+                      openDialog({ type: 'screenshot', src: redirectedSrc, label: data.label });
+                  }}
+                  className="h-auto p-0"
+                  title={t.flowNode.viewBeforeRedirect}
+                >
+                  <LogInIcon size={13} className="shrink-0 text-warning" />
+                </Button>
+              </span>
+            )}
+            {data.label !== data.route ? (
+              <span className="flex flex-col">
+                <span className="text-sm font-medium text-brand-dark dark:text-foreground">
+                  {data.label}
+                </span>
+                <span className="text-xs text-muted-foreground">{data.route}</span>
+              </span>
+            ) : (
+              <span className="text-sm font-medium text-brand-dark dark:text-foreground">
+                {data.route}
+              </span>
+            )}
+          </span>
+        </NodeToolbar>
+      )}
 
       {/* 핸들이 overflow-hidden에 잘리지 않도록 외부 div와 내부 content wrapper를 분리 */}
       <div className="group relative w-70 cursor-pointer">

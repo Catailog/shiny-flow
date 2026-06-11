@@ -343,8 +343,32 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           </div>
         ) : null,
       ],
-      // 그룹 2: 노드 속성 (메모, 상태 태그, 스크린샷)
+      // 그룹 2: 노드 속성 (라벨, 메모, 상태 태그, 스크린샷)
       [
+        <div
+          key="labelEdit"
+          role="menuitem"
+          className={ITEM}
+          onClick={() => {
+            onOpenDialog({ type: 'labelEdit', nodeId: target.nodeId });
+            close();
+          }}
+        >
+          <PencilIcon className={ICON} />
+          {t.menu.editNodeLabel}
+        </div>,
+        <div
+          key="routeEdit"
+          role="menuitem"
+          className={ITEM}
+          onClick={() => {
+            onOpenDialog({ type: 'routeEdit', nodeId: target.nodeId });
+            close();
+          }}
+        >
+          <PencilIcon className={ICON} />
+          {t.menu.editNodeRoute}
+        </div>,
         <div
           key="memo"
           role="menuitem"

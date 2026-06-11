@@ -105,6 +105,9 @@ export const ko: Translations = {
     deleteConfirm: '정말 삭제할까요?',
     createGroup: '그룹 생성',
     edgeLineStyle: '선 스타일',
+    editNodeLabel: '라벨 편집',
+    editNodeRoute: '경로 편집',
+    toggleNodeLabels: '노드 라벨 표시 전환',
   },
 
   edgeLineStyles: {
@@ -154,6 +157,14 @@ export const ko: Translations = {
       namePlaceholder: '페이지 이름',
       defaultName: '새 페이지',
       confirm: '만들기',
+    },
+    labelEdit: {
+      title: '노드 라벨 편집',
+      placeholder: '노드 이름',
+    },
+    routeEdit: {
+      title: '경로 편집',
+      placeholder: '/path/to/page',
     },
     save: '저장',
     cancel: '취소',
