@@ -1,5 +1,4 @@
 import type { FlowEdge, FlowGraph, FlowNode } from './types';
-import { routeToLabel } from './utils';
 
 export function buildGraph(
   routes: { route: string; filePath: string }[],
@@ -11,7 +10,7 @@ export function buildGraph(
 
   const nodes: FlowNode[] = routes.map(({ route, filePath }) => ({
     id: route,
-    label: routeToLabel(route),
+    label: route,
     filePath,
     isDeadEnd: false,
     layoutGroupId: layoutGroupMap.get(route)?.id,
@@ -32,7 +31,7 @@ export function buildGraph(
     if (!routeSet.has(target)) {
       nodes.push({
         id: target,
-        label: routeToLabel(target),
+        label: target,
         filePath: '',
         isDeadEnd: true,
       });
