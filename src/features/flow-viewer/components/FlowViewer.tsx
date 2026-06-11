@@ -183,7 +183,15 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     [childrenMap, hiddenIds],
   );
   const displayNodes = useMemo(
-    () => nodes.map((n) => ({ ...n, hidden: hiddenIds.has(n.id) })),
+    () =>
+      nodes.map((n) => ({
+        ...n,
+        hidden: hiddenIds.has(n.id),
+        // flowNode에 'nokey' 추가: Shift+드래그가 리사이즈 핸들에서 시작할 때
+        // ReactFlow 러버밴드 선택을 건너뛰어 비율 고정 리사이즈로 처리되도록 함
+        className:
+          n.type === 'flowNode' ? [n.className, 'nokey'].filter(Boolean).join(' ') : n.className,
+      })),
     [nodes, hiddenIds],
   );
   const displayEdges = useMemo(

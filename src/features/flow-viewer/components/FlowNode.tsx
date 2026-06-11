@@ -4,7 +4,15 @@ import { useState } from 'react';
 
 import Image from 'next/image';
 
-import { Handle, type Node, type NodeProps, NodeToolbar, Position } from '@xyflow/react';
+import {
+  Handle,
+  type Node,
+  type NodeProps,
+  NodeResizer,
+  NodeToolbar,
+  Position,
+  useKeyPress,
+} from '@xyflow/react';
 import { CameraIcon, LoaderIcon, LogInIcon, SquareStackIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -18,6 +26,7 @@ import { useUIStore } from '@/store/uiStore';
 
 import { useFlowActions } from '../actionsContext';
 import { useCollapseContext } from '../collapseContext';
+import { useZoomCompensation } from '../hooks/useZoomCompensation';
 import { getNodeColorStyle } from '../lib/nodeColors';
 import { useScreenshotContext } from '../screenshotContext';
 import type { FlowNodeData } from '../types';
@@ -30,7 +39,7 @@ function extractParams(route: string): string[] {
   return [...route.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]);
 }
 
-export function FlowNode({ id, data, selected }: Props) {
+export function FlowNode({ id, data, selected, width }: Props) {
   const { openDialog } = useFlowActions();
   const t = useT();
   const showNodeLabels = useUIStore((s) => s.showNodeLabels);
@@ -50,6 +59,8 @@ export function FlowNode({ id, data, selected }: Props) {
     () => data.paramValues ?? Object.fromEntries(dynamicParams.map((p) => [p, ''])),
   );
   const [isCapturing, setIsCapturing] = useState(false);
+  const zoomCompensation = useZoomCompensation();
+  const shiftHeld = useKeyPress('Shift');
 
   const handleCapture = async () => {
     const resolvedRoute = data.route.replace(/\[([^\]]+)\]/g, (_, p) => paramValues[p] ?? p);
@@ -106,8 +117,10 @@ export function FlowNode({ id, data, selected }: Props) {
         </NodeToolbar>
       )}
 
+      <NodeResizer minWidth={280} isVisible={selected} keepAspectRatio={shiftHeld} />
+
       {/* 핸들이 overflow-hidden에 잘리지 않도록 외부 div와 내부 content wrapper를 분리 */}
-      <div className="group relative w-70 cursor-pointer">
+      <div className="group relative cursor-pointer" style={{ width: width ?? 280 }}>
         {/* 접힘 스택 그림자: 메인 카드 뒤에 쌓인 카드처럼 보이도록 offset된 레이어 */}
         {isCollapsed && (
           <>
@@ -224,35 +237,41 @@ export function FlowNode({ id, data, selected }: Props) {
         <Handle
           type="target"
           position={Position.Top}
+          style={zoomCompensation}
           className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           position={Position.Bottom}
+          style={zoomCompensation}
           className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="target"
           id="target-left"
           position={Position.Left}
+          style={zoomCompensation}
           className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           id="source-left"
           position={Position.Left}
+          style={zoomCompensation}
           className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="target"
           id="target-right"
           position={Position.Right}
+          style={zoomCompensation}
           className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           id="source-right"
           position={Position.Right}
+          style={zoomCompensation}
           className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
       </div>
