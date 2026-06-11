@@ -181,7 +181,7 @@ export const en = {
 
   // Flow node
   flowNode: {
-    viewBeforeRedirect: 'View before redirect',
+    viewRedirectedScreen: 'View redirected screen',
     enterValue: 'Enter value',
     recapture: 'Recapture',
     hiddenNodes: (n: number) => `${n} node${n === 1 ? '' : 's'} hidden`,

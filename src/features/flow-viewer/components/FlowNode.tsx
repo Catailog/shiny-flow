@@ -15,8 +15,9 @@ import {
 } from '@xyflow/react';
 import { CameraIcon, LoaderIcon, LogInIcon, SquareStackIcon } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { cn } from '@/lib/utils';
 
@@ -85,20 +86,20 @@ export function FlowNode({ id, data, selected, width }: Props) {
           <span className="flex cursor-default items-center gap-1 select-none">
             {(data.redirected || redirectedSrc) && (
               <span className="pointer-events-auto">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={!redirectedSrc}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (redirectedSrc)
-                      openDialog({ type: 'screenshot', src: redirectedSrc, label: data.label });
-                  }}
-                  className="h-auto p-0"
-                  title={t.flowNode.viewBeforeRedirect}
-                >
-                  <LogInIcon size={13} className="shrink-0 text-warning" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger
+                    disabled={!redirectedSrc}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (redirectedSrc)
+                        openDialog({ type: 'screenshot', src: redirectedSrc, label: data.label });
+                    }}
+                    className={cn(buttonVariants({ variant: 'ghost' }), 'h-auto p-0')}
+                  >
+                    <LogInIcon size={13} className="shrink-0 text-warning" />
+                  </TooltipTrigger>
+                  <TooltipContent>{t.flowNode.viewRedirectedScreen}</TooltipContent>
+                </Tooltip>
               </span>
             )}
             {data.label !== data.route ? (

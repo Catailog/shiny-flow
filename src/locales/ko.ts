@@ -183,7 +183,7 @@ export const ko: Translations = {
 
   // Flow node
   flowNode: {
-    viewBeforeRedirect: '리다이렉트 되기 전 화면 보기',
+    viewRedirectedScreen: '리다이렉트 후 화면 보기',
     enterValue: '값 입력',
     recapture: '재캡처',
     hiddenNodes: (n: number) => `${n}개 노드 숨김`,
