@@ -20,8 +20,6 @@ import {
   UngroupIcon,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-
 import { cn } from '@/lib/utils';
 
 import { useT } from '@/hooks/useT';
@@ -53,39 +51,6 @@ function MenuGroups({ sections }: { sections: MenuSection[] }) {
         </Fragment>
       ))}
     </>
-  );
-}
-
-function DeleteConfirmItem({ label, onConfirm }: { label: string; onConfirm: () => void }) {
-  const [confirming, setConfirming] = useState(false);
-  const t = useT();
-
-  if (confirming) {
-    return (
-      <div className="px-2 py-1.5">
-        <p className="mb-1.5 text-sm font-medium text-destructive">{t.menu.deleteConfirm}</p>
-        <div className="flex gap-1">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 flex-1"
-            onClick={() => setConfirming(false)}
-          >
-            {t.dialog.cancel}
-          </Button>
-          <Button size="sm" variant="destructive" className="h-7 flex-1" onClick={onConfirm}>
-            {t.menu.delete}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div role="menuitem" className={ITEM_DESTRUCTIVE} onClick={() => setConfirming(true)}>
-      <Trash2Icon className={ICON} />
-      {label}
-    </div>
   );
 }
 
@@ -303,14 +268,18 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
       ],
       [addCommentItem],
       [
-        <DeleteConfirmItem
+        <div
           key="delete"
-          label={t.menu.deleteComment}
-          onConfirm={() => {
+          role="menuitem"
+          className={ITEM_DESTRUCTIVE}
+          onClick={() => {
             deleteElements({ nodes: [{ id: target.nodeId }] });
             close();
           }}
-        />,
+        >
+          <Trash2Icon className={ICON} />
+          {t.menu.deleteComment}
+        </div>,
       ],
     ];
   } else if (target.type === 'flowNode') {
@@ -436,14 +405,18 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
       [addCommentItem],
       // 그룹 4: 삭제
       [
-        <DeleteConfirmItem
+        <div
           key="nodeDelete"
-          label={t.menu.delete}
-          onConfirm={() => {
+          role="menuitem"
+          className={ITEM_DESTRUCTIVE}
+          onClick={() => {
             deleteElements({ nodes: [{ id: target.nodeId }] });
             close();
           }}
-        />,
+        >
+          <Trash2Icon className={ICON} />
+          {t.menu.delete}
+        </div>,
       ],
     ];
   } else if (target.type === 'groupNode') {
@@ -499,14 +472,18 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
       [addCommentItem],
       // 그룹 2: 삭제
       [
-        <DeleteConfirmItem
+        <div
           key="groupDelete"
-          label={t.menu.delete}
-          onConfirm={() => {
+          role="menuitem"
+          className={ITEM_DESTRUCTIVE}
+          onClick={() => {
             deleteElements({ nodes: [{ id: target.nodeId }] });
             close();
           }}
-        />,
+        >
+          <Trash2Icon className={ICON} />
+          {t.menu.delete}
+        </div>,
       ],
     ];
   } else if (target.type === 'edge') {
@@ -551,10 +528,11 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
       [addCommentItem],
       [
         hasVisibleLabel ? (
-          <DeleteConfirmItem
+          <div
             key="edgeCommentDelete"
-            label={t.menu.deleteEdgeComment}
-            onConfirm={() => {
+            role="menuitem"
+            className={ITEM_DESTRUCTIVE}
+            onClick={() => {
               setEdges((prev) =>
                 prev.map((e) =>
                   e.id === target.edgeId ? { ...e, data: { ...e.data, comment: '' } } : e,
@@ -562,16 +540,23 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
               );
               close();
             }}
-          />
+          >
+            <Trash2Icon className={ICON} />
+            {t.menu.deleteEdgeComment}
+          </div>
         ) : null,
-        <DeleteConfirmItem
+        <div
           key="edgeDelete"
-          label={t.menu.deleteEdge}
-          onConfirm={() => {
+          role="menuitem"
+          className={ITEM_DESTRUCTIVE}
+          onClick={() => {
             deleteElements({ edges: [{ id: target.edgeId }] });
             close();
           }}
-        />,
+        >
+          <Trash2Icon className={ICON} />
+          {t.menu.deleteEdge}
+        </div>,
       ],
     ];
   } else {

@@ -100,7 +100,6 @@ export const en = {
     editEdgeComment: 'Edit label',
     deleteEdgeComment: 'Delete label',
     deleteEdge: 'Delete edge',
-    deleteConfirm: 'Delete?',
     createGroup: 'Create group',
     edgeLineStyle: 'Line style',
     editNodeLabel: 'Edit label',
