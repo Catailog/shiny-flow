@@ -43,6 +43,7 @@ import { Z_INDEX } from '@/constants/zIndex';
 import { FlowActionsProvider } from '../actionsContext';
 import { CollapseContext } from '../collapseContext';
 import { useDragIntoGroup } from '../hooks/useDragIntoGroup';
+import { useEdgeCpSync } from '../hooks/useEdgeCpSync';
 import { buildChildrenMap, computeHiddenIds, countHiddenSubtree } from '../lib/collapse';
 import { applyDagreLayout } from '../lib/layout';
 import { graphToFlow } from '../lib/transform';
@@ -205,6 +206,29 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   // --- Drag into group ---
   const { dragOverGroupId, handleNodeDrag, handleNodeDragStop } = useDragIntoGroup(nodes, setNodes);
 
+  // --- Edge cp sync ---
+  const { onDragStart, syncCp } = useEdgeCpSync(nodes, setEdges);
+  const handleNodeDragStart = useCallback(
+    (_e: React.MouseEvent, node: Node) => {
+      onDragStart(node);
+    },
+    [onDragStart],
+  );
+  const handleNodeDragWithCp = useCallback(
+    (e: React.MouseEvent, node: Node, draggedNodes: Node[]) => {
+      handleNodeDrag(e, node);
+      syncCp(node, draggedNodes);
+    },
+    [handleNodeDrag, syncCp],
+  );
+  const handleNodeDragStopWithCp = useCallback(
+    (e: React.MouseEvent, node: Node, draggedNodes: Node[]) => {
+      syncCp(node, draggedNodes);
+      handleNodeDragStop(e, node);
+    },
+    [syncCp, handleNodeDragStop],
+  );
+
   const collapseContext = useMemo(
     () => ({ collapsedIds, toggleCollapse, hasChildren, hiddenCount, dragOverGroupId }),
     [collapsedIds, toggleCollapse, hasChildren, hiddenCount, dragOverGroupId],
@@ -322,8 +346,9 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
-              onNodeDrag={handleNodeDrag}
-              onNodeDragStop={handleNodeDragStop}
+              onNodeDragStart={handleNodeDragStart}
+              onNodeDrag={handleNodeDragWithCp}
+              onNodeDragStop={handleNodeDragStopWithCp}
               onNodeContextMenu={handleNodeContextMenu}
               onEdgeContextMenu={handleEdgeContextMenu}
               onPaneContextMenu={handlePaneContextMenu}
