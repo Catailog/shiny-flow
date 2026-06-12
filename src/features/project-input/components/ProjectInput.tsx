@@ -283,7 +283,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">{t.input.auth}</span>
-                {(['none', 'cookies', 'script'] as const).map((at) => (
+                {(['none', 'script'] as const).map((at) => (
                   <ActionButton
                     key={at}
                     type="button"
@@ -293,11 +293,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
                     onClick={() => setValue('authType', at)}
                     tooltip={loadingTip}
                   >
-                    {at === 'none'
-                      ? t.input.authNone
-                      : at === 'cookies'
-                        ? t.input.authCookies
-                        : t.input.authScript}
+                    {at === 'none' ? t.input.authNone : t.input.authScript}
                   </ActionButton>
                 ))}
               </div>
