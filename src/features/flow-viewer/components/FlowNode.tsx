@@ -121,7 +121,7 @@ export function FlowNode({ id, data, selected, width }: Props) {
       <NodeResizer minWidth={280} isVisible={selected} keepAspectRatio={shiftHeld} />
 
       {/* 핸들이 overflow-hidden에 잘리지 않도록 외부 div와 내부 content wrapper를 분리 */}
-      <div className="group relative cursor-pointer" style={{ width: width ?? 280 }}>
+      <div className="group relative cursor-pointer" style={{ width: width || 280 }}>
         {/* 접힘 스택 그림자: 메인 카드 뒤에 쌓인 카드처럼 보이도록 offset된 레이어 */}
         {isCollapsed && (
           <>
