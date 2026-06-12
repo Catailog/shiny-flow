@@ -24,6 +24,7 @@ export const en = {
     jsonParseFailed: 'JSON parse failed',
     analyzeFailed: 'Analysis failed',
     unknownError: 'Unknown error',
+    analyzingFiles: (done: number, total: number) => `Analyzing files (${done} / ${total})`,
     convertAuthorPrompt: 'Convert comment authors?',
     convertAuthorDesc:
       'Select UUIDs to convert. Converted comments will be assigned to your account name and cannot be edited afterwards.',

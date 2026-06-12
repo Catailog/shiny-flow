@@ -41,16 +41,20 @@ function loadAliases(projectRoot: string): Map<string, string> {
   return aliases;
 }
 
-export function extractEdges(
+export async function extractEdges(
   entryPoints: { route: string; filePath: string }[],
   projectRoot: string,
-): FlowEdge[] {
+  onProgress?: (done: number) => void,
+): Promise<FlowEdge[]> {
   const aliases = loadAliases(projectRoot);
   const all: RawEdge[] = [];
 
-  for (const entry of entryPoints) {
+  for (const [i, entry] of entryPoints.entries()) {
     const visited = new Set<string>();
     all.push(...collectEdges(entry.filePath, entry.route, visited, projectRoot, aliases));
+    onProgress?.(i + 1);
+    // SSE 청크가 클라이언트로 flush될 수 있도록 이벤트 루프에 양보
+    await new Promise<void>((resolve) => setImmediate(resolve));
   }
 
   // 같은 source → target → trigger 중복 제거

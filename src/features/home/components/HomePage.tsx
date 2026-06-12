@@ -20,6 +20,7 @@ import {
 import { AppHeader } from '@/components/AppHeader';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
 
 import type { FlowData } from '@/lib/adapters';
 import type { FlowGraph } from '@/lib/analyzer';
@@ -79,6 +80,10 @@ export function HomePage({ isCloudMode }: Props) {
     auth?: AuthInput;
     projectPath: string;
   } | null>(null);
+  const [analyzeProgress, setAnalyzeProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
   const t = useT();
   const setLocale = useUIStore((s) => s.setLocale);
@@ -116,6 +121,7 @@ export function HomePage({ isCloudMode }: Props) {
     abortRef.current = null;
     setSlowWarningSync(false);
     setOverlayError(null);
+    setAnalyzeProgress(null);
     setState({ status: 'idle' });
   };
 
@@ -228,6 +234,7 @@ export function HomePage({ isCloudMode }: Props) {
 
     setSlowWarningSync(false);
     setOverlayError(null);
+    setAnalyzeProgress(null);
     setState({ status: 'loading' });
     setScreenshotOptions(screenshot && baseUrl ? { baseUrl, auth, projectPath: path } : null);
     startSlowTimer();
@@ -241,18 +248,53 @@ export function HomePage({ isCloudMode }: Props) {
       });
 
       if (controller.signal.aborted) return;
-      clearTimers();
-      setSlowWarningSync(false);
 
-      const data = await res.json();
-      if (controller.signal.aborted) return;
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? t.home.analyzeFailed);
+      }
 
-      if (!res.ok) throw new Error(data.error ?? t.home.analyzeFailed);
-      setState({ status: 'success', graph: data });
-      setGraphKey((k) => k + 1);
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (controller.signal.aborted) {
+          reader.cancel();
+          return;
+        }
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() ?? '';
+
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue;
+          const event = JSON.parse(part.slice(6)) as
+            | { type: 'progress'; done: number; total: number }
+            | { type: 'result'; graph: FlowGraph }
+            | { type: 'error'; message: string };
+
+          if (event.type === 'progress') {
+            setAnalyzeProgress({ done: event.done, total: event.total });
+          } else if (event.type === 'result') {
+            clearTimers();
+            setSlowWarningSync(false);
+            setAnalyzeProgress(null);
+            setState({ status: 'success', graph: event.graph });
+            setGraphKey((k) => k + 1);
+            return;
+          } else if (event.type === 'error') {
+            throw new Error(event.message);
+          }
+        }
+      }
     } catch (err) {
       if (controller.signal.aborted) return;
       clearTimers();
+      setAnalyzeProgress(null);
       const message = err instanceof Error ? err.message : t.home.unknownError;
 
       if (slowWarningRef.current) {
@@ -463,7 +505,18 @@ export function HomePage({ isCloudMode }: Props) {
               {!overlayError && (
                 <>
                   <Loader2Icon size={36} className="animate-spin text-brand-primary" />
-                  <p className="text-sm text-muted-foreground">{t.home.analyzing}</p>
+                  {analyzeProgress ? (
+                    <div className="flex w-48 flex-col gap-1.5">
+                      <Progress
+                        value={Math.round((analyzeProgress.done / analyzeProgress.total) * 100)}
+                      />
+                      <p className="text-center text-xs text-muted-foreground">
+                        {t.home.analyzingFiles(analyzeProgress.done, analyzeProgress.total)}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t.home.analyzing}</p>
+                  )}
                 </>
               )}
 

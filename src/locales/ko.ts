@@ -26,6 +26,7 @@ export const ko: Translations = {
     jsonParseFailed: 'JSON 파싱 실패',
     analyzeFailed: '분석 실패',
     unknownError: '알 수 없는 오류',
+    analyzingFiles: (done: number, total: number) => `파일 분석 중 (${done} / ${total})`,
     convertAuthorPrompt: '댓글 작성자를 변환할까요?',
     convertAuthorDesc:
       '변환할 UUID를 선택하세요. 변환된 댓글의 작성자는 계정명으로 변경되며 이후 수정이 불가능해집니다.',
