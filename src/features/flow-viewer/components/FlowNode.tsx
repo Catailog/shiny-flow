@@ -77,48 +77,48 @@ export function FlowNode({ id, data, selected, width }: Props) {
 
   return (
     <>
-      {showNodeLabels && (
-        <NodeToolbar
-          className="pointer-events-none"
-          position={Position.Top}
-          align="start"
-          isVisible
-          offset={6}
-        >
-          <span className="flex cursor-default items-center gap-1 select-none">
-            {(data.redirected || redirectedSrc) && (
-              <span className="pointer-events-auto">
-                <Tooltip>
-                  <TooltipTrigger
-                    disabled={!redirectedSrc}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (redirectedSrc)
-                        openDialog({ type: 'screenshot', src: redirectedSrc, label: data.label });
-                    }}
-                    className={cn(buttonVariants({ variant: 'ghost' }), 'h-auto p-0')}
-                  >
-                    <LogInIcon size={13} className="shrink-0 text-warning" />
-                  </TooltipTrigger>
-                  <TooltipContent>{t.flowNode.viewRedirectedScreen}</TooltipContent>
-                </Tooltip>
-              </span>
-            )}
-            {data.label !== data.route ? (
-              <span className="flex flex-col">
+      <NodeToolbar
+        className="pointer-events-none"
+        position={Position.Top}
+        align="start"
+        isVisible
+        offset={6}
+      >
+        <span className="flex cursor-default items-center gap-1 select-none">
+          {(data.redirected || redirectedSrc) && (
+            <span className="pointer-events-auto">
+              <Tooltip>
+                <TooltipTrigger
+                  disabled={!redirectedSrc}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (redirectedSrc)
+                      openDialog({ type: 'screenshot', src: redirectedSrc, label: data.label });
+                  }}
+                  className={cn(buttonVariants({ variant: 'ghost' }), 'h-auto p-0')}
+                >
+                  <LogInIcon size={13} className="shrink-0 text-warning" />
+                </TooltipTrigger>
+                <TooltipContent>{t.flowNode.viewRedirectedScreen}</TooltipContent>
+              </Tooltip>
+            </span>
+          )}
+          {data.label !== data.route ? (
+            <span className="flex flex-col">
+              {showNodeLabels && (
                 <span className="text-sm font-medium text-brand-dark dark:text-foreground">
                   {data.label}
                 </span>
-                <span className="text-xs text-muted-foreground">{data.route}</span>
-              </span>
-            ) : (
-              <span className="text-sm font-medium text-brand-dark dark:text-foreground">
-                {data.route}
-              </span>
-            )}
-          </span>
-        </NodeToolbar>
-      )}
+              )}
+              <span className="text-xs text-muted-foreground">{data.route}</span>
+            </span>
+          ) : (
+            <span className="text-sm font-medium text-brand-dark dark:text-foreground">
+              {data.route}
+            </span>
+          )}
+        </span>
+      </NodeToolbar>
 
       <NodeResizer
         minWidth={280}
