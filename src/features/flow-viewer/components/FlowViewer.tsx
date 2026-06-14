@@ -28,7 +28,7 @@ import {
   useStore,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { LockIcon, TagIcon, UnlockIcon } from 'lucide-react';
+import { LockIcon, Redo2Icon, TagIcon, Undo2Icon, UnlockIcon } from 'lucide-react';
 
 import type { AuthInput } from '@/features/project-input';
 
@@ -42,6 +42,7 @@ import { Z_INDEX } from '@/constants/zIndex';
 
 import { FlowActionsProvider } from '../actionsContext';
 import { CollapseContext } from '../collapseContext';
+import { HistoryProvider, useHistory } from '../historyContext';
 import { useDragIntoGroup } from '../hooks/useDragIntoGroup';
 import { useEdgeCpSync } from '../hooks/useEdgeCpSync';
 import { buildChildrenMap, computeHiddenIds, countHiddenSubtree } from '../lib/collapse';
@@ -93,6 +94,31 @@ function AutoLayout({
   return null;
 }
 
+function KeyboardDeleteHandler() {
+  const { pushSnapshot } = useHistory();
+  const pushSnapshotRef = useRef(pushSnapshot);
+  pushSnapshotRef.current = pushSnapshot;
+
+  const hasSelection = useStore(
+    (s) => s.nodes.some((n) => n.selected) || s.edges.some((e) => e.selected),
+  );
+  const hasSelectionRef = useRef(hasSelection);
+  hasSelectionRef.current = hasSelection;
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if ((e.code === 'Backspace' || e.code === 'Delete') && !e.repeat && hasSelectionRef.current) {
+        pushSnapshotRef.current();
+      }
+    };
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
+  }, []);
+
+  return null;
+}
+
 // --- Main component ---
 
 export type FlowViewerHandle = {
@@ -124,6 +150,71 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     edges,
   ]);
 
+  // --- History ---
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const past = useRef<Array<{ nodes: Node[]; edges: Edge[]; collapsedIds: Set<string> }>>([]);
+  const future = useRef<Array<{ nodes: Node[]; edges: Edge[]; collapsedIds: Set<string> }>>([]);
+
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
+  const edgesRef = useRef(edges);
+  edgesRef.current = edges;
+  const collapsedIdsRef = useRef<Set<string>>(new Set());
+
+  const pushSnapshot = useCallback(() => {
+    past.current.push({
+      nodes: nodesRef.current,
+      edges: edgesRef.current,
+      collapsedIds: new Set(collapsedIdsRef.current),
+    });
+    future.current = [];
+    if (past.current.length > 100) past.current.shift();
+    setCanUndo(true);
+    setCanRedo(false);
+  }, []);
+
+  const undo = useCallback(() => {
+    const snapshot = past.current.pop();
+    if (!snapshot) return;
+    future.current.push({
+      nodes: nodesRef.current,
+      edges: edgesRef.current,
+      collapsedIds: new Set(collapsedIdsRef.current),
+    });
+    setNodes(snapshot.nodes);
+    setEdges(snapshot.edges);
+    setCollapsedIds(new Set(snapshot.collapsedIds));
+    setCanUndo(past.current.length > 0);
+    setCanRedo(true);
+    // setCollapsedIds is a stable React setter, safe to omit from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setNodes, setEdges]);
+
+  const redo = useCallback(() => {
+    const snapshot = future.current.pop();
+    if (!snapshot) return;
+    past.current.push({
+      nodes: nodesRef.current,
+      edges: edgesRef.current,
+      collapsedIds: new Set(collapsedIdsRef.current),
+    });
+    setNodes(snapshot.nodes);
+    setEdges(snapshot.edges);
+    setCollapsedIds(new Set(snapshot.collapsedIds));
+    setCanUndo(true);
+    setCanRedo(future.current.length > 0);
+    // setCollapsedIds is a stable React setter, safe to omit from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setNodes, setEdges]);
+
+  const undoRef = useRef(undo);
+  undoRef.current = undo;
+  const redoRef = useRef(redo);
+  redoRef.current = redo;
+  const pushSnapshotRef = useRef(pushSnapshot);
+  pushSnapshotRef.current = pushSnapshot;
+
   const [isLocked, setIsLocked] = useState(false);
   const [spacebarLocked, setSpacebarLocked] = useState(false);
   const isLockedRef = useRef(isLocked);
@@ -134,6 +225,16 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ' && !e.shiftKey) {
+        e.preventDefault();
+        undoRef.current();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey))) {
+        e.preventDefault();
+        redoRef.current();
+        return;
+      }
       if (e.code === 'KeyL' && !e.repeat) {
         setIsLocked((v) => !v);
         setSpacebarLocked(false);
@@ -155,26 +256,33 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   }, []);
 
   const onConnect = useCallback(
-    (connection: Connection) =>
-      setEdges((eds) => addEdge({ ...connection, type: 'flowEdge' }, eds)),
-    [setEdges],
+    (connection: Connection) => {
+      pushSnapshot();
+      setEdges((eds) => addEdge({ ...connection, type: 'flowEdge' }, eds));
+    },
+    [pushSnapshot, setEdges],
   );
 
   // --- Collapse ---
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  collapsedIdsRef.current = collapsedIds;
   const childrenMap = useMemo(() => buildChildrenMap(edges), [edges]);
   const hiddenIds = useMemo(
     () => computeHiddenIds(nodes, edges, collapsedIds),
     [nodes, edges, collapsedIds],
   );
-  const toggleCollapse = useCallback((id: string) => {
-    setCollapsedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
+  const toggleCollapse = useCallback(
+    (id: string) => {
+      pushSnapshot();
+      setCollapsedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    },
+    [pushSnapshot],
+  );
   const hasChildren = useCallback(
     (id: string) => (childrenMap.get(id)?.length ?? 0) > 0,
     [childrenMap],
@@ -210,9 +318,10 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   const { onDragStart, syncCp } = useEdgeCpSync(nodes, setEdges);
   const handleNodeDragStart = useCallback(
     (_e: React.MouseEvent, node: Node) => {
+      pushSnapshot();
       onDragStart(node);
     },
-    [onDragStart],
+    [pushSnapshot, onDragStart],
   );
   const handleNodeDragWithCp = useCallback(
     (e: React.MouseEvent, node: Node, draggedNodes: Node[]) => {
@@ -319,99 +428,119 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     [screenshotOptions, captureNode, validateForCapture],
   );
 
+  const historyValue = useMemo(() => ({ pushSnapshot }), [pushSnapshot]);
   const flowActionsValue = useMemo(() => ({ openDialog: setDialogRequest }), []);
   const nodesDraggable = !isLocked && !spacebarLocked;
   const { showNodeLabels, toggleNodeLabels } = useUIStore();
 
   return (
-    <FlowActionsProvider value={flowActionsValue}>
-      <ScreenshotContext.Provider value={screenshotContextValue}>
-        <CollapseContext.Provider value={collapseContext}>
-          <div
-            className="h-full w-full"
-            onContextMenu={(e) => {
-              if (!e.defaultPrevented) {
-                e.preventDefault();
-                setContextMenuState({
-                  screenX: e.clientX,
-                  screenY: e.clientY,
-                  target: { type: 'pane' },
-                });
-              }
-            }}
-          >
-            <ReactFlow
-              nodes={displayNodes}
-              edges={displayEdges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onNodeDragStart={handleNodeDragStart}
-              onNodeDrag={handleNodeDragWithCp}
-              onNodeDragStop={handleNodeDragStopWithCp}
-              onNodeContextMenu={handleNodeContextMenu}
-              onEdgeContextMenu={handleEdgeContextMenu}
-              onPaneContextMenu={handlePaneContextMenu}
-              nodeTypes={nodeTypes}
-              edgeTypes={edgeTypes}
-              defaultEdgeOptions={defaultEdgeOptions}
-              fitView
-              minZoom={0.05}
-              maxZoom={2}
-              nodesDraggable={nodesDraggable}
-              zoomOnDoubleClick={false}
-              deleteKeyCode={['Backspace', 'Delete']}
-              multiSelectionKeyCode="Shift"
-            >
-              <AutoLayout edges={initialEdges} onLayout={setNodes} skipLayout={!!savedRfNodes} />
-              <Background />
-              <Controls showInteractive={false}>
-                <ControlButton
-                  onClick={() => {
-                    setIsLocked((v) => !v);
-                    setSpacebarLocked(false);
-                  }}
-                  title={nodesDraggable ? 'Lock (L)' : 'Unlock (L)'}
-                >
-                  {nodesDraggable ? (
-                    <UnlockIcon size={12} style={{ fill: 'none' }} />
-                  ) : (
-                    <LockIcon size={12} style={{ fill: 'none' }} />
-                  )}
-                </ControlButton>
-                <ControlButton
-                  onClick={toggleNodeLabels}
-                  title={t.menu.toggleNodeLabels}
-                  style={{ opacity: showNodeLabels ? 1 : 0.4 }}
-                >
-                  <TagIcon size={12} style={{ fill: 'none' }} />
-                </ControlButton>
-              </Controls>
-              <MiniMap
-                nodeColor={(node) =>
-                  node.data?.isDeadEnd ? 'var(--color-brand-accent)' : 'var(--color-brand-primary)'
+    <HistoryProvider value={historyValue}>
+      <FlowActionsProvider value={flowActionsValue}>
+        <ScreenshotContext.Provider value={screenshotContextValue}>
+          <CollapseContext.Provider value={collapseContext}>
+            <div
+              className="h-full w-full"
+              onContextMenu={(e) => {
+                if (!e.defaultPrevented) {
+                  e.preventDefault();
+                  setContextMenuState({
+                    screenX: e.clientX,
+                    screenY: e.clientY,
+                    target: { type: 'pane' },
+                  });
                 }
-                maskColor="color-mix(in srgb, var(--background) 70%, transparent)"
-                className="rounded-lg border border-border shadow-sm"
-              />
-              <ContextMenuController
-                state={contextMenuState}
-                onClose={() => setContextMenuState(null)}
-                onOpenDialog={setDialogRequest}
-              />
-            </ReactFlow>
-          </div>
+              }}
+            >
+              <ReactFlow
+                nodes={displayNodes}
+                edges={displayEdges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onNodeDragStart={handleNodeDragStart}
+                onNodeDrag={handleNodeDragWithCp}
+                onNodeDragStop={handleNodeDragStopWithCp}
+                onNodeContextMenu={handleNodeContextMenu}
+                onEdgeContextMenu={handleEdgeContextMenu}
+                onPaneContextMenu={handlePaneContextMenu}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                defaultEdgeOptions={defaultEdgeOptions}
+                fitView
+                minZoom={0.05}
+                maxZoom={2}
+                nodesDraggable={nodesDraggable}
+                zoomOnDoubleClick={false}
+                deleteKeyCode={['Backspace', 'Delete']}
+                multiSelectionKeyCode="Shift"
+              >
+                <KeyboardDeleteHandler />
+                <AutoLayout edges={initialEdges} onLayout={setNodes} skipLayout={!!savedRfNodes} />
+                <Background />
+                <Controls showInteractive={false}>
+                  <ControlButton
+                    onClick={undo}
+                    title={t.menu.undo}
+                    style={{ opacity: canUndo ? 1 : 0.4 }}
+                  >
+                    <Undo2Icon size={12} style={{ fill: 'none' }} />
+                  </ControlButton>
+                  <ControlButton
+                    onClick={redo}
+                    title={t.menu.redo}
+                    style={{ opacity: canRedo ? 1 : 0.4 }}
+                  >
+                    <Redo2Icon size={12} style={{ fill: 'none' }} />
+                  </ControlButton>
+                  <ControlButton
+                    onClick={() => {
+                      setIsLocked((v) => !v);
+                      setSpacebarLocked(false);
+                    }}
+                    title={nodesDraggable ? 'Lock (L)' : 'Unlock (L)'}
+                  >
+                    {nodesDraggable ? (
+                      <UnlockIcon size={12} style={{ fill: 'none' }} />
+                    ) : (
+                      <LockIcon size={12} style={{ fill: 'none' }} />
+                    )}
+                  </ControlButton>
+                  <ControlButton
+                    onClick={toggleNodeLabels}
+                    title={t.menu.toggleNodeLabels}
+                    style={{ opacity: showNodeLabels ? 1 : 0.4 }}
+                  >
+                    <TagIcon size={12} style={{ fill: 'none' }} />
+                  </ControlButton>
+                </Controls>
+                <MiniMap
+                  nodeColor={(node) =>
+                    node.data?.isDeadEnd
+                      ? 'var(--color-brand-accent)'
+                      : 'var(--color-brand-primary)'
+                  }
+                  maskColor="color-mix(in srgb, var(--background) 70%, transparent)"
+                  className="rounded-lg border border-border shadow-sm"
+                />
+                <ContextMenuController
+                  state={contextMenuState}
+                  onClose={() => setContextMenuState(null)}
+                  onOpenDialog={setDialogRequest}
+                />
+              </ReactFlow>
+            </div>
 
-          <DialogRenderer
-            dialogRequest={dialogRequest}
-            nodes={nodes}
-            setNodes={setNodes}
-            edges={edges}
-            setEdges={setEdges}
-            onClose={() => setDialogRequest(null)}
-          />
-        </CollapseContext.Provider>
-      </ScreenshotContext.Provider>
-    </FlowActionsProvider>
+            <DialogRenderer
+              dialogRequest={dialogRequest}
+              nodes={nodes}
+              setNodes={setNodes}
+              edges={edges}
+              setEdges={setEdges}
+              onClose={() => setDialogRequest(null)}
+            />
+          </CollapseContext.Provider>
+        </ScreenshotContext.Provider>
+      </FlowActionsProvider>
+    </HistoryProvider>
   );
 });

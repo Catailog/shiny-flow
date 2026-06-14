@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 
 import { useT } from '@/hooks/useT';
 
+import { useHistory } from '../../historyContext';
 import { GROUP_Z_INDEX } from '../../lib/layout';
 import { GROUP_COLORS, GROUP_COLOR_STYLES } from '../../lib/nodeColors';
 import {
@@ -36,9 +37,11 @@ export function GroupCreateDialog({
   const [label, setLabel] = useState('');
   const [color, setColor] = useState('gray');
   const t = useT();
+  const { pushSnapshot } = useHistory();
 
   const confirm = () => {
     const trimmed = label.trim() || t.dialog.groupCreate.defaultName;
+    pushSnapshot();
     const { x: absX, y: absY, width, height } = computeGroupBounds(pendingNodes, nodes);
     const groupId = `group-${Date.now()}`;
     const pendingIds = new Set(pendingNodes.map((n) => n.id));

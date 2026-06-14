@@ -27,6 +27,7 @@ import { useUIStore } from '@/store/uiStore';
 
 import { useFlowActions } from '../actionsContext';
 import { useCollapseContext } from '../collapseContext';
+import { useHistory } from '../historyContext';
 import { useZoomCompensation } from '../hooks/useZoomCompensation';
 import { getNodeColorStyle } from '../lib/nodeColors';
 import { useScreenshotContext } from '../screenshotContext';
@@ -62,6 +63,7 @@ export function FlowNode({ id, data, selected, width }: Props) {
   const [isCapturing, setIsCapturing] = useState(false);
   const zoomCompensation = useZoomCompensation();
   const shiftHeld = useKeyPress('Shift');
+  const { pushSnapshot } = useHistory();
 
   const handleCapture = async () => {
     const resolvedRoute = data.route.replace(/\[([^\]]+)\]/g, (_, p) => paramValues[p] ?? p);
@@ -118,7 +120,12 @@ export function FlowNode({ id, data, selected, width }: Props) {
         </NodeToolbar>
       )}
 
-      <NodeResizer minWidth={280} isVisible={selected} keepAspectRatio={shiftHeld} />
+      <NodeResizer
+        minWidth={280}
+        isVisible={selected}
+        keepAspectRatio={shiftHeld}
+        onResizeStart={pushSnapshot}
+      />
 
       {/* 핸들이 overflow-hidden에 잘리지 않도록 외부 div와 내부 content wrapper를 분리 */}
       <div className="group relative cursor-pointer" style={{ width: width || 280 }}>

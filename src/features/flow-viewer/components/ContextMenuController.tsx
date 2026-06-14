@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { useT } from '@/hooks/useT';
 
 import { useCollapseContext } from '../collapseContext';
+import { useHistory } from '../historyContext';
 import { STATUS_COLORS, getNodeColorStyle } from '../lib/nodeColors';
 import { getAbsolutePosition, recomputeGroupZIndexes } from '../lib/nodeUtils';
 import type { ContextMenuState, DialogRequest } from '../types';
@@ -64,6 +65,7 @@ function ColorSubMenu({
   onClose: () => void;
 }) {
   const { setNodes } = useReactFlow();
+  const { pushSnapshot } = useHistory();
   const t = useT();
   return (
     <div className="absolute top-0 left-full min-w-[8rem] rounded-md border bg-popover p-1 shadow-md">
@@ -76,6 +78,7 @@ function ColorSubMenu({
             role="menuitem"
             className={ITEM}
             onClick={() => {
+              pushSnapshot();
               setNodes((prev) =>
                 prev.map((n) =>
                   n.id === nodeId ? { ...n, data: { ...n.data, color: value } } : n,
@@ -114,6 +117,7 @@ function EdgeLineStyleSubMenu({
   onClose: () => void;
 }) {
   const { setEdges } = useReactFlow();
+  const { pushSnapshot } = useHistory();
   const t = useT();
   return (
     <div className="absolute top-0 left-full min-w-[8rem] rounded-md border bg-popover p-1 shadow-md">
@@ -123,6 +127,7 @@ function EdgeLineStyleSubMenu({
           role="menuitem"
           className={ITEM}
           onClick={() => {
+            pushSnapshot();
             setEdges((prev) =>
               prev.map((e) =>
                 e.id === edgeId
@@ -151,6 +156,7 @@ type Props = {
 export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
   const { setNodes, setEdges, deleteElements, getNode, getEdge, screenToFlowPosition } =
     useReactFlow();
+  const { pushSnapshot } = useHistory();
   const t = useT();
   const { collapsedIds, toggleCollapse, hasChildren } = useCollapseContext();
   const selectedNodes = useStore((s) =>
@@ -190,6 +196,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
       role="menuitem"
       className={ITEM}
       onClick={() => {
+        pushSnapshot();
         const pos = screenToFlowPosition({ x: screenX, y: screenY });
         setNodes((prev) => [
           ...prev,
@@ -273,6 +280,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           role="menuitem"
           className={ITEM_DESTRUCTIVE}
           onClick={() => {
+            pushSnapshot();
             deleteElements({ nodes: [{ id: target.nodeId }] });
             close();
           }}
@@ -356,6 +364,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             role="menuitem"
             className={ITEM_DESTRUCTIVE}
             onClick={() => {
+              pushSnapshot();
               setNodes((prev) =>
                 prev.map((n) =>
                   n.id === target.nodeId ? { ...n, data: { ...n.data, memo: undefined } } : n,
@@ -410,6 +419,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           role="menuitem"
           className={ITEM_DESTRUCTIVE}
           onClick={() => {
+            pushSnapshot();
             deleteElements({ nodes: [{ id: target.nodeId }] });
             close();
           }}
@@ -450,6 +460,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
                 onOpenDialog({ type: 'groupUngroup', nodeId: target.nodeId });
                 close();
               } else {
+                pushSnapshot();
                 setNodes((prev) => {
                   const result = prev
                     .filter((n) => n.id !== target.nodeId)
@@ -477,6 +488,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           role="menuitem"
           className={ITEM_DESTRUCTIVE}
           onClick={() => {
+            pushSnapshot();
             deleteElements({ nodes: [{ id: target.nodeId }] });
             close();
           }}
@@ -533,6 +545,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             role="menuitem"
             className={ITEM_DESTRUCTIVE}
             onClick={() => {
+              pushSnapshot();
               setEdges((prev) =>
                 prev.map((e) =>
                   e.id === target.edgeId ? { ...e, data: { ...e.data, comment: '' } } : e,
@@ -550,6 +563,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           role="menuitem"
           className={ITEM_DESTRUCTIVE}
           onClick={() => {
+            pushSnapshot();
             deleteElements({ edges: [{ id: target.edgeId }] });
             close();
           }}

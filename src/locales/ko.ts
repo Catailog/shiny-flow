@@ -108,6 +108,8 @@ export const ko: Translations = {
     editNodeLabel: '라벨 편집',
     editNodeRoute: '경로 편집',
     toggleNodeLabels: '노드 라벨 표시 전환',
+    undo: '실행 취소 (Ctrl+Z)',
+    redo: '다시 실행 (Ctrl+Y)',
   },
 
   edgeLineStyles: {

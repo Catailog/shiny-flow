@@ -106,6 +106,8 @@ export const en = {
     editNodeLabel: 'Edit label',
     editNodeRoute: 'Edit route',
     toggleNodeLabels: 'Toggle node labels',
+    undo: 'Undo (Ctrl+Z)',
+    redo: 'Redo (Ctrl+Y)',
   },
 
   edgeLineStyles: {

@@ -15,6 +15,7 @@ import { useAuthorPreference } from '@/hooks/useAuthorPreference';
 import { useCloudAuthorName } from '@/hooks/useCloudAuthorName';
 import { useT } from '@/hooks/useT';
 
+import { useHistory } from '../../historyContext';
 import type { CommentNodeData } from '../FlowCommentNode';
 import { BaseDialog } from './BaseDialog';
 
@@ -100,12 +101,14 @@ export function CommentNodeDialog({
     setEditing(false);
   };
 
+  const { pushSnapshot } = useHistory();
   const timeRef = existing?.updatedAt ?? existing?.createdAt;
 
   const save = () => {
     const now = new Date().toISOString();
     const wasNonEmpty = !!existing?.content?.trim();
 
+    pushSnapshot();
     setNodes((prev) =>
       prev.map((n) => {
         if (n.id !== nodeId) return n;

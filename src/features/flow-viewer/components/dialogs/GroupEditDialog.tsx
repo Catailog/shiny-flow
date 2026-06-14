@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 
 import { useT } from '@/hooks/useT';
 
+import { useHistory } from '../../historyContext';
 import { GROUP_COLORS, GROUP_COLOR_STYLES } from '../../lib/nodeColors';
 import type { GroupNodeData } from '../../types';
 import { BaseDialog } from './BaseDialog';
@@ -32,10 +33,12 @@ export function GroupEditDialog({
   const [label, setLabel] = useState(data?.label ?? '');
   const [color, setColor] = useState(data?.color ?? 'gray');
   const t = useT();
+  const { pushSnapshot } = useHistory();
 
   const save = () => {
     const trimmed = label.trim();
     if (!trimmed) return;
+    pushSnapshot();
     setNodes((prev) =>
       prev.map((n) => (n.id === nodeId ? { ...n, data: { label: trimmed, color } } : n)),
     );

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 
 import { useT } from '@/hooks/useT';
 
+import { useHistory } from '../../historyContext';
 import type { FlowNodeData } from '../../types';
 import { BaseDialog } from './BaseDialog';
 
@@ -25,6 +26,7 @@ export function LabelEditDialog({
   onClose: () => void;
 }) {
   const t = useT();
+  const { pushSnapshot } = useHistory();
   const node = nodes.find((n) => n.id === nodeId);
   const nodeData = node?.data as FlowNodeData | undefined;
   const [label, setLabel] = useState(nodeData?.label ?? '');
@@ -32,6 +34,7 @@ export function LabelEditDialog({
   const confirm = () => {
     const trimmed = label.trim();
     if (!trimmed) return;
+    pushSnapshot();
     setNodes((prev) =>
       prev.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, label: trimmed } } : n)),
     );

@@ -16,6 +16,7 @@ import { useT } from '@/hooks/useT';
 
 import { Z_INDEX } from '@/constants/zIndex';
 
+import { useHistory } from '../historyContext';
 import {
   type Face,
   buildSelfLoopPath,
@@ -86,6 +87,7 @@ export function FlowEdge({
 }: Props) {
   const zoom = useStore((s) => s.transform[2]);
   const { setEdges, screenToFlowPosition } = useReactFlow();
+  const { pushSnapshot } = useHistory();
   const t = useT();
   const sourceNode = useStore(useCallback((s) => s.nodeLookup.get(source), [source]));
   const targetNode = useStore(useCallback((s) => s.nodeLookup.get(target), [target]));
@@ -163,6 +165,7 @@ export function FlowEdge({
         if (e.button !== 0) return;
         e.stopPropagation();
         e.preventDefault();
+        pushSnapshot();
         const onMove = (ev: MouseEvent) => {
           const mousePos = screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
           const center = getCenter(node);
@@ -189,6 +192,7 @@ export function FlowEdge({
       },
       onDoubleClick: (e: React.MouseEvent<HTMLDivElement>) => {
         e.stopPropagation();
+        pushSnapshot();
         setEdges((eds) =>
           eds.map((edge) =>
             edge.id === id ? { ...edge, data: { ...(edge.data ?? {}), [key]: undefined } } : edge,
@@ -203,6 +207,7 @@ export function FlowEdge({
       if (e.button !== 0) return;
       e.stopPropagation();
       e.preventDefault();
+      pushSnapshot();
       const spSnap = { ...sp };
       const tpSnap = { ...tp };
       const onMove = (ev: MouseEvent) => {
@@ -234,6 +239,7 @@ export function FlowEdge({
     },
     onDoubleClick: (e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
+      pushSnapshot();
       setEdges((eds) =>
         eds.map((edge) =>
           edge.id === id ? { ...edge, data: { ...(edge.data ?? {}), cp: undefined } } : edge,

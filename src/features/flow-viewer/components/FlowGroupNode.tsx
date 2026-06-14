@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Z_INDEX } from '@/constants/zIndex';
 
 import { useCollapseContext } from '../collapseContext';
+import { useHistory } from '../historyContext';
 import { getGroupColorStyle } from '../lib/nodeColors';
 import type { GroupNodeData } from '../types';
 
@@ -18,6 +19,7 @@ export function FlowGroupNode({ id, data, width, height, selected }: Props) {
   const colorStyle = getGroupColorStyle(data.color);
   const { dragOverGroupId } = useCollapseContext();
   const isDragOver = dragOverGroupId === id;
+  const { pushSnapshot } = useHistory();
 
   return (
     <>
@@ -33,7 +35,12 @@ export function FlowGroupNode({ id, data, width, height, selected }: Props) {
         </span>
       </NodeToolbar>
 
-      <NodeResizer isVisible={selected} minWidth={120} minHeight={80} />
+      <NodeResizer
+        isVisible={selected}
+        minWidth={120}
+        minHeight={80}
+        onResizeStart={pushSnapshot}
+      />
 
       <div
         style={{ width, height }}

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 
 import { useT } from '@/hooks/useT';
 
+import { useHistory } from '../../historyContext';
 import { BaseDialog } from './BaseDialog';
 
 export function EdgeCommentDialog({
@@ -30,9 +31,11 @@ export function EdgeCommentDialog({
     edgeComment !== undefined ? edgeComment : edge?.label ? String(edge.label) : '',
   );
   const t = useT();
+  const { pushSnapshot } = useHistory();
 
   const save = () => {
     const trimmed = value.trim();
+    pushSnapshot();
     setEdges((prev) =>
       prev.map((e) => (e.id === edgeId ? { ...e, data: { ...e.data, comment: trimmed } } : e)),
     );
