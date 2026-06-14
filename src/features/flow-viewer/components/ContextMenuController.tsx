@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useReactFlow, useStore } from '@xyflow/react';
@@ -59,16 +59,23 @@ function ColorSubMenu({
   nodeId,
   nodeColor,
   onClose,
+  flipLeft,
 }: {
   nodeId: string;
   nodeColor?: string;
   onClose: () => void;
+  flipLeft?: boolean;
 }) {
   const { setNodes } = useReactFlow();
   const { pushSnapshot } = useHistory();
   const t = useT();
   return (
-    <div className="absolute top-0 left-full min-w-[8rem] rounded-md border bg-popover p-1 shadow-md">
+    <div
+      className={cn(
+        'absolute top-0 min-w-[8rem] rounded-md border bg-popover p-1 shadow-md',
+        flipLeft ? 'right-full' : 'left-full',
+      )}
+    >
       {STATUS_COLORS.map(({ value }) => {
         const statusKey = (value ?? 'default') as keyof typeof t.nodeColors.status;
         const label = t.nodeColors.status[statusKey] ?? value;
@@ -111,16 +118,23 @@ function EdgeLineStyleSubMenu({
   edgeId,
   currentStyle,
   onClose,
+  flipLeft,
 }: {
   edgeId: string;
   currentStyle?: EdgeLineStyle;
   onClose: () => void;
+  flipLeft?: boolean;
 }) {
   const { setEdges } = useReactFlow();
   const { pushSnapshot } = useHistory();
   const t = useT();
   return (
-    <div className="absolute top-0 left-full min-w-[8rem] rounded-md border bg-popover p-1 shadow-md">
+    <div
+      className={cn(
+        'absolute top-0 min-w-[8rem] rounded-md border bg-popover p-1 shadow-md',
+        flipLeft ? 'right-full' : 'left-full',
+      )}
+    >
       {EDGE_LINE_STYLES.map(({ value, dotClass }) => (
         <div
           key={value}
@@ -180,9 +194,24 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
     return () => document.removeEventListener('mousedown', handleMouseDown, true);
   }, [state, onClose]);
 
+  useLayoutEffect(() => {
+    if (!menuRef.current || !state) return;
+    const el = menuRef.current;
+    el.style.left = `${state.screenX}px`;
+    el.style.top = `${state.screenY}px`;
+    const { width, height } = el.getBoundingClientRect();
+    let x = state.screenX;
+    let y = state.screenY;
+    if (x + width > window.innerWidth - 4) x -= width;
+    if (y + height > window.innerHeight - 4) y -= height;
+    el.style.left = `${Math.max(4, x)}px`;
+    el.style.top = `${Math.max(4, y)}px`;
+  }, [state]);
+
   if (!state) return null;
 
   const { screenX, screenY, target } = state;
+  const subMenuFlipLeft = screenX > window.innerWidth / 2;
 
   const close = () => {
     setColorSubOpen(false);
@@ -388,7 +417,12 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
           {t.menu.colorTag}
           <ChevronRightIcon size={14} className="ml-auto" />
           {colorSubOpen && (
-            <ColorSubMenu nodeId={target.nodeId} nodeColor={nodeData?.color} onClose={close} />
+            <ColorSubMenu
+              nodeId={target.nodeId}
+              nodeColor={nodeData?.color}
+              onClose={close}
+              flipLeft={subMenuFlipLeft}
+            />
           )}
         </div>,
         hasSrc ? (
@@ -533,6 +567,7 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
               edgeId={target.edgeId}
               currentStyle={edgeData?.lineStyle}
               onClose={close}
+              flipLeft={subMenuFlipLeft}
             />
           )}
         </div>,
@@ -581,7 +616,6 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
     <div
       ref={menuRef}
       className="fixed z-50 min-w-[8rem] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
-      style={{ left: screenX, top: screenY }}
       onContextMenu={(e) => e.preventDefault()}
     >
       <MenuGroups sections={sections} />
