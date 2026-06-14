@@ -96,20 +96,31 @@ function AutoLayout({
 
 function KeyboardDeleteHandler() {
   const { pushSnapshot } = useHistory();
+  const { deleteElements } = useReactFlow();
+
+  const selectedNodes = useStore((s) => s.nodes.filter((n) => n.selected));
+  const selectedEdges = useStore((s) => s.edges.filter((e) => e.selected));
+  const selectedNodesRef = useRef(selectedNodes);
+  const selectedEdgesRef = useRef(selectedEdges);
+  selectedNodesRef.current = selectedNodes;
+  selectedEdgesRef.current = selectedEdges;
+
   const pushSnapshotRef = useRef(pushSnapshot);
   pushSnapshotRef.current = pushSnapshot;
-
-  const hasSelection = useStore(
-    (s) => s.nodes.some((n) => n.selected) || s.edges.some((e) => e.selected),
-  );
-  const hasSelectionRef = useRef(hasSelection);
-  hasSelectionRef.current = hasSelection;
+  const deleteElementsRef = useRef(deleteElements);
+  deleteElementsRef.current = deleteElements;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if ((e.code === 'Backspace' || e.code === 'Delete') && !e.repeat && hasSelectionRef.current) {
+      const hasSelection =
+        selectedNodesRef.current.length > 0 || selectedEdgesRef.current.length > 0;
+      if ((e.code === 'Backspace' || e.code === 'Delete') && !e.repeat && hasSelection) {
         pushSnapshotRef.current();
+        void deleteElementsRef.current({
+          nodes: selectedNodesRef.current,
+          edges: selectedEdgesRef.current,
+        });
       }
     };
     window.addEventListener('keydown', handler, true);
@@ -471,7 +482,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
                 maxZoom={2}
                 nodesDraggable={nodesDraggable}
                 zoomOnDoubleClick={false}
-                deleteKeyCode={['Backspace', 'Delete']}
+                deleteKeyCode={null}
                 multiSelectionKeyCode="Shift"
               >
                 <KeyboardDeleteHandler />
