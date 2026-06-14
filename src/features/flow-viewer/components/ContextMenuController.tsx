@@ -1,7 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { Fragment } from 'react';
 
 import { useReactFlow, useStore } from '@xyflow/react';
 import {
@@ -20,6 +19,14 @@ import {
   UngroupIcon,
 } from 'lucide-react';
 
+import {
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+} from '@/components/ui/context-menu';
+
 import { cn } from '@/lib/utils';
 
 import { useT } from '@/hooks/useT';
@@ -32,13 +39,16 @@ import type { ContextMenuState, DialogRequest } from '../types';
 import type { EdgeLineStyle, FlowEdgeData } from './FlowEdge';
 import type { FlowNodeData } from './FlowNode';
 
-const ITEM =
-  'relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground';
 const ICON = 'size-3.5 shrink-0';
-const ITEM_DESTRUCTIVE = cn(ITEM, 'text-destructive hover:text-destructive focus:text-destructive');
-const SEPARATOR = '-mx-1 my-1 h-px bg-border';
 
-// 메뉴 그룹 시스템: 비어 있지 않은 그룹 사이에만 구분선을 삽입한다.
+const MenuItem = (props: React.ComponentProps<typeof ContextMenuItem>) => (
+  <ContextMenuItem {...props} className={cn('cursor-pointer', props.className)} />
+);
+
+const SubTrigger = (props: React.ComponentProps<typeof ContextMenuSubTrigger>) => (
+  <ContextMenuSubTrigger {...props} className={cn('cursor-pointer', props.className)} />
+);
+
 type MenuSection = (React.ReactNode | null | false)[];
 
 function MenuGroups({ sections }: { sections: MenuSection[] }) {
@@ -47,65 +57,11 @@ function MenuGroups({ sections }: { sections: MenuSection[] }) {
     <>
       {nonEmpty.map((section, i) => (
         <Fragment key={i}>
-          {i > 0 && <div className={SEPARATOR} />}
+          {i > 0 && <ContextMenuSeparator />}
           {section}
         </Fragment>
       ))}
     </>
-  );
-}
-
-function ColorSubMenu({
-  nodeId,
-  nodeColor,
-  onClose,
-  flipLeft,
-}: {
-  nodeId: string;
-  nodeColor?: string;
-  onClose: () => void;
-  flipLeft?: boolean;
-}) {
-  const { setNodes } = useReactFlow();
-  const { pushSnapshot } = useHistory();
-  const t = useT();
-  return (
-    <div
-      className={cn(
-        'absolute top-0 min-w-[8rem] rounded-md border bg-popover p-1 shadow-md',
-        flipLeft ? 'right-full' : 'left-full',
-      )}
-    >
-      {STATUS_COLORS.map(({ value }) => {
-        const statusKey = (value ?? 'default') as keyof typeof t.nodeColors.status;
-        const label = t.nodeColors.status[statusKey] ?? value;
-        return (
-          <div
-            key={value ?? 'default'}
-            role="menuitem"
-            className={ITEM}
-            onClick={() => {
-              pushSnapshot();
-              setNodes((prev) =>
-                prev.map((n) =>
-                  n.id === nodeId ? { ...n, data: { ...n.data, color: value } } : n,
-                ),
-              );
-              onClose();
-            }}
-          >
-            <span
-              className={cn(
-                'inline-block size-2.5 rounded-full border',
-                getNodeColorStyle(value)?.dot ?? 'border-border bg-transparent',
-              )}
-            />
-            {label}
-            {nodeColor === value && <span className="ml-auto text-xs">✓</span>}
-          </div>
-        );
-      })}
-    </div>
   );
 }
 
@@ -114,60 +70,12 @@ const EDGE_LINE_STYLES: { value: EdgeLineStyle; dotClass: string }[] = [
   { value: 'dashed', dotClass: 'w-5 border-t-2 border-dashed border-foreground' },
 ];
 
-function EdgeLineStyleSubMenu({
-  edgeId,
-  currentStyle,
-  onClose,
-  flipLeft,
-}: {
-  edgeId: string;
-  currentStyle?: EdgeLineStyle;
-  onClose: () => void;
-  flipLeft?: boolean;
-}) {
-  const { setEdges } = useReactFlow();
-  const { pushSnapshot } = useHistory();
-  const t = useT();
-  return (
-    <div
-      className={cn(
-        'absolute top-0 min-w-[8rem] rounded-md border bg-popover p-1 shadow-md',
-        flipLeft ? 'right-full' : 'left-full',
-      )}
-    >
-      {EDGE_LINE_STYLES.map(({ value, dotClass }) => (
-        <div
-          key={value}
-          role="menuitem"
-          className={ITEM}
-          onClick={() => {
-            pushSnapshot();
-            setEdges((prev) =>
-              prev.map((e) =>
-                e.id === edgeId
-                  ? { ...e, animated: value === 'dashed', data: { ...e.data, lineStyle: value } }
-                  : e,
-              ),
-            );
-            onClose();
-          }}
-        >
-          <span className={cn('inline-block shrink-0', dotClass)} />
-          {t.edgeLineStyles[value]}
-          {(currentStyle ?? 'solid') === value && <span className="ml-auto text-xs">✓</span>}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 type Props = {
   state: ContextMenuState;
-  onClose: () => void;
   onOpenDialog: (req: DialogRequest) => void;
 };
 
-export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
+export function ContextMenuController({ state, onOpenDialog }: Props) {
   const { setNodes, setEdges, deleteElements, getNode, getEdge, screenToFlowPosition } =
     useReactFlow();
   const { pushSnapshot } = useHistory();
@@ -178,52 +86,14 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
   );
   const parentIdSet = new Set(selectedNodes.map((n) => n.parentId ?? null));
   const canGroupSelected = selectedNodes.length >= 2 && parentIdSet.size === 1;
-  const [colorSubOpen, setColorSubOpen] = useState(false);
-  const [edgeStyleSubOpen, setEdgeStyleSubOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!state) return;
-    const handleMouseDown = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setColorSubOpen(false);
-        onClose();
-      }
-    };
-    document.addEventListener('mousedown', handleMouseDown, true);
-    return () => document.removeEventListener('mousedown', handleMouseDown, true);
-  }, [state, onClose]);
-
-  useLayoutEffect(() => {
-    if (!menuRef.current || !state) return;
-    const el = menuRef.current;
-    el.style.left = `${state.screenX}px`;
-    el.style.top = `${state.screenY}px`;
-    const { width, height } = el.getBoundingClientRect();
-    let x = state.screenX;
-    let y = state.screenY;
-    if (x + width > window.innerWidth - 4) x -= width;
-    if (y + height > window.innerHeight - 4) y -= height;
-    el.style.left = `${Math.max(4, x)}px`;
-    el.style.top = `${Math.max(4, y)}px`;
-  }, [state]);
 
   if (!state) return null;
 
   const { screenX, screenY, target } = state;
-  const subMenuFlipLeft = screenX > window.innerWidth / 2;
-
-  const close = () => {
-    setColorSubOpen(false);
-    setEdgeStyleSubOpen(false);
-    onClose();
-  };
 
   const addCommentItem = (
-    <div
+    <MenuItem
       key="addComment"
-      role="menuitem"
-      className={ITEM}
       onClick={() => {
         pushSnapshot();
         const pos = screenToFlowPosition({ x: screenX, y: screenY });
@@ -236,87 +106,74 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
             data: { content: '' },
           },
         ]);
-        close();
       }}
     >
       <MessageSquarePlusIcon className={ICON} />
       {t.menu.addComment}
-    </div>
+    </MenuItem>
   );
 
   let sections: MenuSection[];
 
-  // 다중 선택 그룹 생성 조건이 충족되면 우클릭 대상과 무관하게 그룹 생성 메뉴를 보여 준다.
   if (canGroupSelected) {
     sections = [
       [
-        <div
+        <MenuItem
           key="groupCreate"
-          role="menuitem"
-          className={ITEM}
           onClick={() => {
             onOpenDialog({ type: 'groupCreate', nodes: selectedNodes });
-            close();
           }}
         >
           <BoxSelectIcon className={ICON} />
           {t.menu.createGroup}
-        </div>,
+        </MenuItem>,
       ],
       [addCommentItem],
     ];
   } else if (target.type === 'pane') {
     sections = [
       [
-        <div
+        <MenuItem
           key="nodeCreate"
-          role="menuitem"
-          className={ITEM}
           onClick={() => {
             onOpenDialog({
               type: 'nodeCreate',
               pos: screenToFlowPosition({ x: screenX, y: screenY }),
             });
-            close();
           }}
         >
           <PlusIcon className={ICON} />
           {t.menu.createNode}
-        </div>,
+        </MenuItem>,
       ],
       [addCommentItem],
     ];
   } else if (target.type === 'commentNode') {
     sections = [
       [
-        <div
+        <MenuItem
           key="edit"
-          role="menuitem"
-          className={ITEM}
           onClick={() => {
             onOpenDialog({ type: 'comment', nodeId: target.nodeId });
-            close();
           }}
         >
           <PencilIcon className={ICON} />
           {t.menu.editComment}
-        </div>,
+        </MenuItem>,
       ],
       [addCommentItem],
       [
-        <div
+        <MenuItem
           key="delete"
-          role="menuitem"
-          className={ITEM_DESTRUCTIVE}
+          variant="destructive"
           onClick={() => {
             pushSnapshot();
             deleteElements({ nodes: [{ id: target.nodeId }] });
-            close();
           }}
         >
           <Trash2Icon className={ICON} />
           {t.menu.deleteComment}
-        </div>,
+        </MenuItem>,
       ],
     ];
   } else if (target.type === 'flowNode') {
@@ -328,16 +185,12 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
     const hasSrc = !!nodeData?.screenshot;
 
     sections = [
-      // 그룹 1: 탐색 (접기/펼치기) — 조건부, 없으면 구분선 사라짐
       [
         canCollapse ? (
-          <div
+          <MenuItem
             key="collapse"
-            role="menuitem"
-            className={ITEM}
             onClick={() => {
               toggleCollapse(target.nodeId);
-              close();
             }}
           >
             {isCollapsed ? (
@@ -346,52 +199,41 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
               <ChevronRightIcon className={ICON} />
             )}
             {isCollapsed ? t.menu.expand : t.menu.collapse}
-          </div>
+          </MenuItem>
         ) : null,
       ],
-      // 그룹 2: 노드 속성 (라벨, 메모, 상태 태그, 스크린샷)
       [
-        <div
+        <MenuItem
           key="labelEdit"
-          role="menuitem"
-          className={ITEM}
           onClick={() => {
             onOpenDialog({ type: 'labelEdit', nodeId: target.nodeId });
-            close();
           }}
         >
           <PencilIcon className={ICON} />
           {t.menu.editNodeLabel}
-        </div>,
-        <div
+        </MenuItem>,
+        <MenuItem
           key="routeEdit"
-          role="menuitem"
-          className={ITEM}
           onClick={() => {
             onOpenDialog({ type: 'routeEdit', nodeId: target.nodeId });
-            close();
           }}
         >
           <PencilIcon className={ICON} />
           {t.menu.editNodeRoute}
-        </div>,
-        <div
+        </MenuItem>,
+        <MenuItem
           key="memo"
-          role="menuitem"
-          className={ITEM}
           onClick={() => {
             onOpenDialog({ type: 'memo', nodeId: target.nodeId });
-            close();
           }}
         >
           <StickyNoteIcon className={ICON} />
           {hasMemo ? t.menu.editMemo : t.menu.addMemo}
-        </div>,
+        </MenuItem>,
         hasMemo ? (
-          <div
+          <MenuItem
             key="memoDelete"
-            role="menuitem"
-            className={ITEM_DESTRUCTIVE}
+            variant="destructive"
             onClick={() => {
               pushSnapshot();
               setNodes((prev) =>
@@ -399,68 +241,75 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
                   n.id === target.nodeId ? { ...n, data: { ...n.data, memo: undefined } } : n,
                 ),
               );
-              close();
             }}
           >
             <Trash2Icon className={ICON} />
             {t.menu.deleteMemo}
-          </div>
+          </MenuItem>
         ) : null,
-        <div
-          key="colorTag"
-          role="menuitem"
-          className={cn(ITEM, 'relative')}
-          onMouseEnter={() => setColorSubOpen(true)}
-          onMouseLeave={() => setColorSubOpen(false)}
-        >
-          <PaletteIcon className={ICON} />
-          {t.menu.colorTag}
-          <ChevronRightIcon size={14} className="ml-auto" />
-          {colorSubOpen && (
-            <ColorSubMenu
-              nodeId={target.nodeId}
-              nodeColor={nodeData?.color}
-              onClose={close}
-              flipLeft={subMenuFlipLeft}
-            />
-          )}
-        </div>,
+        <ContextMenuSub key="colorTag">
+          <SubTrigger>
+            <PaletteIcon className={ICON} />
+            {t.menu.colorTag}
+          </SubTrigger>
+          <ContextMenuSubContent>
+            {STATUS_COLORS.map(({ value }) => {
+              const statusKey = (value ?? 'default') as keyof typeof t.nodeColors.status;
+              const label = t.nodeColors.status[statusKey] ?? value;
+              return (
+                <MenuItem
+                  key={value ?? 'default'}
+                  onClick={() => {
+                    pushSnapshot();
+                    setNodes((prev) =>
+                      prev.map((n) =>
+                        n.id === target.nodeId ? { ...n, data: { ...n.data, color: value } } : n,
+                      ),
+                    );
+                  }}
+                >
+                  <span
+                    className={cn(
+                      'inline-block size-2.5 rounded-full border',
+                      getNodeColorStyle(value)?.dot ?? 'border-border bg-transparent',
+                    )}
+                  />
+                  {label}
+                  {nodeData?.color === value && <span className="ml-auto text-xs">&#10003;</span>}
+                </MenuItem>
+              );
+            })}
+          </ContextMenuSubContent>
+        </ContextMenuSub>,
         hasSrc ? (
-          <div
+          <MenuItem
             key="screenshot"
-            role="menuitem"
-            className={ITEM}
             onClick={() => {
               onOpenDialog({
                 type: 'screenshot',
                 src: `data:image/png;base64,${nodeData!.screenshot}`,
                 label: nodeData!.label,
               });
-              close();
             }}
           >
             <MaximizeIcon className={ICON} />
             {t.menu.viewLarge}
-          </div>
+          </MenuItem>
         ) : null,
       ],
-      // 그룹 3: 댓글 생성
       [addCommentItem],
-      // 그룹 4: 삭제
       [
-        <div
+        <MenuItem
           key="nodeDelete"
-          role="menuitem"
-          className={ITEM_DESTRUCTIVE}
+          variant="destructive"
           onClick={() => {
             pushSnapshot();
             deleteElements({ nodes: [{ id: target.nodeId }] });
-            close();
           }}
         >
           <Trash2Icon className={ICON} />
           {t.menu.delete}
-        </div>,
+        </MenuItem>,
       ],
     ];
   } else if (target.type === 'groupNode') {
@@ -468,31 +317,25 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
     const otherNodesSelected = selectedNodes.some((n) => n.id !== target.nodeId);
 
     sections = [
-      // 단일 선택일 때만 그룹 액션 노출; 다중 선택 시 모두 null → 구분선 없이 댓글 생성만 표시
       [
         !otherNodesSelected ? (
-          <div
+          <MenuItem
             key="groupEdit"
-            role="menuitem"
-            className={ITEM}
             onClick={() => {
               onOpenDialog({ type: 'groupEdit', nodeId: target.nodeId });
-              close();
             }}
           >
             <PencilIcon className={ICON} />
             {t.menu.editGroup}
-          </div>
+          </MenuItem>
         ) : null,
         !otherNodesSelected ? (
-          <div
+          <MenuItem
             key="groupUngroup"
-            role="menuitem"
-            className={ITEM_DESTRUCTIVE}
+            variant="destructive"
             onClick={() => {
               if (group?.parentId) {
                 onOpenDialog({ type: 'groupUngroup', nodeId: target.nodeId });
-                close();
               } else {
                 pushSnapshot();
                 setNodes((prev) => {
@@ -505,31 +348,27 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
                     });
                   return recomputeGroupZIndexes(result);
                 });
-                close();
               }
             }}
           >
             <UngroupIcon className={ICON} />
             {t.menu.ungroup}
-          </div>
+          </MenuItem>
         ) : null,
       ],
       [addCommentItem],
-      // 그룹 2: 삭제
       [
-        <div
+        <MenuItem
           key="groupDelete"
-          role="menuitem"
-          className={ITEM_DESTRUCTIVE}
+          variant="destructive"
           onClick={() => {
             pushSnapshot();
             deleteElements({ nodes: [{ id: target.nodeId }] });
-            close();
           }}
         >
           <Trash2Icon className={ICON} />
           {t.menu.delete}
-        </div>,
+        </MenuItem>,
       ],
     ];
   } else if (target.type === 'edge') {
@@ -537,48 +376,59 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
     const edgeData = edge?.data as FlowEdgeData | undefined;
     const edgeComment = edgeData?.comment;
     const hasVisibleLabel = edgeComment !== undefined ? edgeComment !== '' : !!edge?.label;
+    const currentStyle = edgeData?.lineStyle;
 
     sections = [
       [
-        <div
+        <MenuItem
           key="edgeCommentEdit"
-          role="menuitem"
-          className={ITEM}
           onClick={() => {
             onOpenDialog({ type: 'edgeComment', edgeId: target.edgeId });
-            close();
           }}
         >
           <MessageSquareIcon className={ICON} />
           {t.menu.editEdgeComment}
-        </div>,
-        <div
-          key="edgeLineStyle"
-          role="menuitem"
-          className={cn(ITEM, 'relative')}
-          onMouseEnter={() => setEdgeStyleSubOpen(true)}
-          onMouseLeave={() => setEdgeStyleSubOpen(false)}
-        >
-          <SlidersHorizontalIcon className={ICON} />
-          {t.menu.edgeLineStyle}
-          <ChevronRightIcon size={14} className="ml-auto" />
-          {edgeStyleSubOpen && (
-            <EdgeLineStyleSubMenu
-              edgeId={target.edgeId}
-              currentStyle={edgeData?.lineStyle}
-              onClose={close}
-              flipLeft={subMenuFlipLeft}
-            />
-          )}
-        </div>,
+        </MenuItem>,
+        <ContextMenuSub key="edgeLineStyle">
+          <SubTrigger>
+            <SlidersHorizontalIcon className={ICON} />
+            {t.menu.edgeLineStyle}
+          </SubTrigger>
+          <ContextMenuSubContent>
+            {EDGE_LINE_STYLES.map(({ value, dotClass }) => (
+              <MenuItem
+                key={value}
+                onClick={() => {
+                  pushSnapshot();
+                  setEdges((prev) =>
+                    prev.map((e) =>
+                      e.id === target.edgeId
+                        ? {
+                            ...e,
+                            animated: value === 'dashed',
+                            data: { ...e.data, lineStyle: value },
+                          }
+                        : e,
+                    ),
+                  );
+                }}
+              >
+                <span className={cn('inline-block shrink-0', dotClass)} />
+                {t.edgeLineStyles[value]}
+                {(currentStyle ?? 'solid') === value && (
+                  <span className="ml-auto text-xs">&#10003;</span>
+                )}
+              </MenuItem>
+            ))}
+          </ContextMenuSubContent>
+        </ContextMenuSub>,
       ],
       [addCommentItem],
       [
         hasVisibleLabel ? (
-          <div
+          <MenuItem
             key="edgeCommentDelete"
-            role="menuitem"
-            className={ITEM_DESTRUCTIVE}
+            variant="destructive"
             onClick={() => {
               pushSnapshot();
               setEdges((prev) =>
@@ -586,40 +436,28 @@ export function ContextMenuController({ state, onClose, onOpenDialog }: Props) {
                   e.id === target.edgeId ? { ...e, data: { ...e.data, comment: '' } } : e,
                 ),
               );
-              close();
             }}
           >
             <Trash2Icon className={ICON} />
             {t.menu.deleteEdgeComment}
-          </div>
+          </MenuItem>
         ) : null,
-        <div
+        <MenuItem
           key="edgeDelete"
-          role="menuitem"
-          className={ITEM_DESTRUCTIVE}
+          variant="destructive"
           onClick={() => {
             pushSnapshot();
             deleteElements({ edges: [{ id: target.edgeId }] });
-            close();
           }}
         >
           <Trash2Icon className={ICON} />
           {t.menu.deleteEdge}
-        </div>,
+        </MenuItem>,
       ],
     ];
   } else {
     sections = [[addCommentItem]];
   }
 
-  return createPortal(
-    <div
-      ref={menuRef}
-      className="fixed z-50 min-w-[8rem] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      <MenuGroups sections={sections} />
-    </div>,
-    document.body,
-  );
+  return <MenuGroups sections={sections} />;
 }

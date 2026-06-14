@@ -32,6 +32,8 @@ import { LockIcon, Redo2Icon, TagIcon, Undo2Icon, UnlockIcon } from 'lucide-reac
 
 import type { AuthInput } from '@/features/project-input';
 
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
+
 import type { FlowGraph } from '@/lib/analyzer';
 
 import { useT } from '@/hooks/useT';
@@ -49,7 +51,7 @@ import { buildChildrenMap, computeHiddenIds, countHiddenSubtree } from '../lib/c
 import { applyDagreLayout } from '../lib/layout';
 import { graphToFlow } from '../lib/transform';
 import { ScreenshotContext } from '../screenshotContext';
-import type { ContextMenuState, DialogRequest } from '../types';
+import type { ContextMenuState, ContextMenuTarget, DialogRequest } from '../types';
 import { ContextMenuController } from './ContextMenuController';
 import { DialogRenderer } from './DialogRenderer';
 import { FlowCommentNode } from './FlowCommentNode';
@@ -358,6 +360,10 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   const [contextMenuState, setContextMenuState] = useState<ContextMenuState>(null);
   const [dialogRequest, setDialogRequest] = useState<DialogRequest | null>(null);
 
+  // pendingTargetRef: node/edge handlers set this synchronously before the contextmenu
+  // event bubbles up to ContextMenuTrigger, so the trigger can read the correct target.
+  const pendingTargetRef = useRef<ContextMenuTarget>({ type: 'pane' });
+
   const handleNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
     e.preventDefault();
     const type =
@@ -366,29 +372,18 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
         : node.type === 'commentNode'
           ? 'commentNode'
           : 'flowNode';
-    setContextMenuState({
-      screenX: e.clientX,
-      screenY: e.clientY,
-      target: { type, nodeId: node.id },
-    });
+    pendingTargetRef.current = { type, nodeId: node.id };
   }, []);
 
   const handleEdgeContextMenu = useCallback((e: React.MouseEvent, edge: Edge) => {
     e.preventDefault();
-    setContextMenuState({
-      screenX: e.clientX,
-      screenY: e.clientY,
-      target: { type: 'edge', edgeId: edge.id },
-    });
+    pendingTargetRef.current = { type: 'edge', edgeId: edge.id };
   }, []);
 
-  const handlePaneContextMenu = useCallback((e: MouseEvent | React.MouseEvent) => {
-    e.preventDefault();
-    setContextMenuState({
-      screenX: e.clientX,
-      screenY: e.clientY,
-      target: { type: 'pane' },
-    });
+  const handleContextMenuOpen = useCallback((e: React.MouseEvent) => {
+    const target = pendingTargetRef.current;
+    pendingTargetRef.current = { type: 'pane' };
+    setContextMenuState({ screenX: e.clientX, screenY: e.clientY, target });
   }, []);
 
   const captureNode = useCallback(
@@ -449,97 +444,95 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
       <FlowActionsProvider value={flowActionsValue}>
         <ScreenshotContext.Provider value={screenshotContextValue}>
           <CollapseContext.Provider value={collapseContext}>
-            <div
-              className="h-full w-full"
-              onContextMenu={(e) => {
-                if (!e.defaultPrevented) {
-                  e.preventDefault();
-                  setContextMenuState({
-                    screenX: e.clientX,
-                    screenY: e.clientY,
-                    target: { type: 'pane' },
-                  });
-                }
+            <ContextMenu
+              onOpenChangeComplete={(open) => {
+                if (!open) setContextMenuState(null);
               }}
             >
-              <ReactFlow
-                nodes={displayNodes}
-                edges={displayEdges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                onNodeDragStart={handleNodeDragStart}
-                onNodeDrag={handleNodeDragWithCp}
-                onNodeDragStop={handleNodeDragStopWithCp}
-                onNodeContextMenu={handleNodeContextMenu}
-                onEdgeContextMenu={handleEdgeContextMenu}
-                onPaneContextMenu={handlePaneContextMenu}
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
-                defaultEdgeOptions={defaultEdgeOptions}
-                fitView
-                minZoom={0.05}
-                maxZoom={2}
-                nodesDraggable={nodesDraggable}
-                zoomOnDoubleClick={false}
-                deleteKeyCode={null}
-                multiSelectionKeyCode="Shift"
-              >
-                <KeyboardDeleteHandler />
-                <AutoLayout edges={initialEdges} onLayout={setNodes} skipLayout={!!savedRfNodes} />
-                <Background />
-                <Controls showInteractive={false}>
-                  <ControlButton
-                    onClick={undo}
-                    title={t.menu.undo}
-                    style={{ opacity: canUndo ? 1 : 0.4 }}
-                  >
-                    <Undo2Icon size={12} style={{ fill: 'none' }} />
-                  </ControlButton>
-                  <ControlButton
-                    onClick={redo}
-                    title={t.menu.redo}
-                    style={{ opacity: canRedo ? 1 : 0.4 }}
-                  >
-                    <Redo2Icon size={12} style={{ fill: 'none' }} />
-                  </ControlButton>
-                  <ControlButton
-                    onClick={() => {
-                      setIsLocked((v) => !v);
-                      setSpacebarLocked(false);
-                    }}
-                    title={nodesDraggable ? 'Lock (L)' : 'Unlock (L)'}
-                  >
-                    {nodesDraggable ? (
-                      <UnlockIcon size={12} style={{ fill: 'none' }} />
-                    ) : (
-                      <LockIcon size={12} style={{ fill: 'none' }} />
-                    )}
-                  </ControlButton>
-                  <ControlButton
-                    onClick={toggleNodeLabels}
-                    title={t.menu.toggleNodeLabels}
-                    style={{ opacity: showNodeLabels ? 1 : 0.4 }}
-                  >
-                    <TagIcon size={12} style={{ fill: 'none' }} />
-                  </ControlButton>
-                </Controls>
-                <MiniMap
-                  nodeColor={(node) =>
-                    node.data?.isDeadEnd
-                      ? 'var(--color-brand-accent)'
-                      : 'var(--color-brand-primary)'
-                  }
-                  maskColor="color-mix(in srgb, var(--background) 70%, transparent)"
-                  className="rounded-lg border border-border shadow-sm"
-                />
-                <ContextMenuController
-                  state={contextMenuState}
-                  onClose={() => setContextMenuState(null)}
-                  onOpenDialog={setDialogRequest}
-                />
-              </ReactFlow>
-            </div>
+              <ContextMenuTrigger className="h-full w-full" onContextMenu={handleContextMenuOpen}>
+                <ReactFlow
+                  nodes={displayNodes}
+                  edges={displayEdges}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onConnect={onConnect}
+                  onNodeDragStart={handleNodeDragStart}
+                  onNodeDrag={handleNodeDragWithCp}
+                  onNodeDragStop={handleNodeDragStopWithCp}
+                  onNodeContextMenu={handleNodeContextMenu}
+                  onEdgeContextMenu={handleEdgeContextMenu}
+                  nodeTypes={nodeTypes}
+                  edgeTypes={edgeTypes}
+                  defaultEdgeOptions={defaultEdgeOptions}
+                  fitView
+                  minZoom={0.05}
+                  maxZoom={2}
+                  nodesDraggable={nodesDraggable}
+                  zoomOnDoubleClick={false}
+                  deleteKeyCode={null}
+                  multiSelectionKeyCode="Shift"
+                >
+                  <KeyboardDeleteHandler />
+                  <AutoLayout
+                    edges={initialEdges}
+                    onLayout={setNodes}
+                    skipLayout={!!savedRfNodes}
+                  />
+                  <Background />
+                  <Controls showInteractive={false}>
+                    <ControlButton
+                      onClick={undo}
+                      title={t.menu.undo}
+                      style={{ opacity: canUndo ? 1 : 0.4 }}
+                    >
+                      <Undo2Icon size={12} style={{ fill: 'none' }} />
+                    </ControlButton>
+                    <ControlButton
+                      onClick={redo}
+                      title={t.menu.redo}
+                      style={{ opacity: canRedo ? 1 : 0.4 }}
+                    >
+                      <Redo2Icon size={12} style={{ fill: 'none' }} />
+                    </ControlButton>
+                    <ControlButton
+                      onClick={() => {
+                        setIsLocked((v) => !v);
+                        setSpacebarLocked(false);
+                      }}
+                      title={nodesDraggable ? 'Lock (L)' : 'Unlock (L)'}
+                    >
+                      {nodesDraggable ? (
+                        <UnlockIcon size={12} style={{ fill: 'none' }} />
+                      ) : (
+                        <LockIcon size={12} style={{ fill: 'none' }} />
+                      )}
+                    </ControlButton>
+                    <ControlButton
+                      onClick={toggleNodeLabels}
+                      title={t.menu.toggleNodeLabels}
+                      style={{ opacity: showNodeLabels ? 1 : 0.4 }}
+                    >
+                      <TagIcon size={12} style={{ fill: 'none' }} />
+                    </ControlButton>
+                  </Controls>
+                  <MiniMap
+                    nodeColor={(node) =>
+                      node.data?.isDeadEnd
+                        ? 'var(--color-brand-accent)'
+                        : 'var(--color-brand-primary)'
+                    }
+                    maskColor="color-mix(in srgb, var(--background) 70%, transparent)"
+                    className="rounded-lg border border-border shadow-sm"
+                  />
+                  <ContextMenuContent>
+                    <ContextMenuController
+                      state={contextMenuState}
+                      onOpenDialog={setDialogRequest}
+                    />
+                  </ContextMenuContent>
+                </ReactFlow>
+              </ContextMenuTrigger>
+            </ContextMenu>
 
             <DialogRenderer
               dialogRequest={dialogRequest}
