@@ -163,7 +163,8 @@ export function MemoEditor({ value, onChange }: Props) {
 
   if (!editor) return null;
 
-  const currentFontSize = editor.getAttributes('textStyle').fontSize as string | undefined;
+  const currentFontSize =
+    (editor.getAttributes('textStyle').fontSize as string | undefined) ?? FONT_SIZES[1].size;
 
   // 브라우저 DOM이 HTML 파싱 시 hex → rgb(r, g, b) 로 정규화하므로 두 형식 모두 비교
   const hexToRgb = (hex: string) => {
