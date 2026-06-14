@@ -25,6 +25,9 @@ export const en = {
     analyzeFailed: 'Analysis failed',
     unknownError: 'Unknown error',
     analyzingFiles: (done: number, total: number) => `Analyzing files (${done} / ${total})`,
+    analysisDone: 'Analysis complete, preparing screenshot capture...',
+    capturingScreenshots: (done: number, total: number) =>
+      `Capturing screenshots (${done} / ${total})`,
     convertAuthorPrompt: 'Convert comment authors?',
     convertAuthorDesc:
       'Select UUIDs to convert. Converted comments will be assigned to your account name and cannot be edited afterwards.',

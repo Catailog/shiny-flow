@@ -90,7 +90,9 @@ export async function POST(req: NextRequest) {
               return resolved;
             });
 
-            const screenshots = await captureRoutesOnPage(session.page, routes, baseUrl);
+            const screenshots = await captureRoutesOnPage(session.page, routes, baseUrl, {
+              onProgress: (done, total) => send({ type: 'screenshotProgress', done, total }),
+            });
 
             const screenshotMap = new Map(
               screenshots.map((s) => [resolvedToOriginal.get(s.route) ?? s.route, s]),

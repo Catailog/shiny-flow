@@ -84,6 +84,10 @@ export function HomePage({ isCloudMode }: Props) {
     done: number;
     total: number;
   } | null>(null);
+  const [screenshotProgress, setScreenshotProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
   const t = useT();
   const setLocale = useUIStore((s) => s.setLocale);
@@ -122,6 +126,7 @@ export function HomePage({ isCloudMode }: Props) {
     setSlowWarningSync(false);
     setOverlayError(null);
     setAnalyzeProgress(null);
+    setScreenshotProgress(null);
     setState({ status: 'idle' });
   };
 
@@ -235,6 +240,7 @@ export function HomePage({ isCloudMode }: Props) {
     setSlowWarningSync(false);
     setOverlayError(null);
     setAnalyzeProgress(null);
+    setScreenshotProgress(null);
     setState({ status: 'loading' });
     setScreenshotOptions(screenshot && baseUrl ? { baseUrl, auth, projectPath: path } : null);
     startSlowTimer();
@@ -274,15 +280,19 @@ export function HomePage({ isCloudMode }: Props) {
           if (!part.startsWith('data: ')) continue;
           const event = JSON.parse(part.slice(6)) as
             | { type: 'progress'; done: number; total: number }
+            | { type: 'screenshotProgress'; done: number; total: number }
             | { type: 'result'; graph: FlowGraph }
             | { type: 'error'; message: string };
 
           if (event.type === 'progress') {
             setAnalyzeProgress({ done: event.done, total: event.total });
+          } else if (event.type === 'screenshotProgress') {
+            setScreenshotProgress({ done: event.done, total: event.total });
           } else if (event.type === 'result') {
             clearTimers();
             setSlowWarningSync(false);
             setAnalyzeProgress(null);
+            setScreenshotProgress(null);
             setState({ status: 'success', graph: event.graph });
             setGraphKey((k) => k + 1);
             return;
@@ -295,6 +305,7 @@ export function HomePage({ isCloudMode }: Props) {
       if (controller.signal.aborted) return;
       clearTimers();
       setAnalyzeProgress(null);
+      setScreenshotProgress(null);
       const message = err instanceof Error ? err.message : t.home.unknownError;
 
       if (slowWarningRef.current) {
@@ -505,7 +516,23 @@ export function HomePage({ isCloudMode }: Props) {
               {!overlayError && (
                 <>
                   <Loader2Icon size={36} className="animate-spin text-brand-primary" />
-                  {analyzeProgress ? (
+                  {screenshotProgress ? (
+                    <div className="flex w-48 flex-col gap-1.5">
+                      <Progress
+                        value={Math.round(
+                          (screenshotProgress.done / screenshotProgress.total) * 100,
+                        )}
+                      />
+                      <p className="text-center text-xs text-muted-foreground">
+                        {t.home.capturingScreenshots(
+                          screenshotProgress.done,
+                          screenshotProgress.total,
+                        )}
+                      </p>
+                    </div>
+                  ) : analyzeProgress && analyzeProgress.done === analyzeProgress.total ? (
+                    <p className="text-sm text-muted-foreground">{t.home.analysisDone}</p>
+                  ) : analyzeProgress ? (
                     <div className="flex w-48 flex-col gap-1.5">
                       <Progress
                         value={Math.round((analyzeProgress.done / analyzeProgress.total) * 100)}
