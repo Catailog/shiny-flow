@@ -380,6 +380,17 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     pendingTargetRef.current = { type: 'edge', edgeId: edge.id };
   }, []);
 
+  // NodeResizer가 있는 노드는 ReactFlow 내부 클릭→단독 선택 로직이 동작하지 않아
+  // Shift 없이 클릭해도 다중 선택이 유지되는 버그가 있음. 명시적으로 처리.
+  const handleNodeClick = useCallback(
+    (e: React.MouseEvent, clickedNode: Node) => {
+      if (e.shiftKey) return;
+      setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === clickedNode.id })));
+      setEdges((eds) => eds.map((ed) => ({ ...ed, selected: false })));
+    },
+    [setNodes, setEdges],
+  );
+
   const handleContextMenuOpen = useCallback((e: React.MouseEvent) => {
     const target = pendingTargetRef.current;
     pendingTargetRef.current = { type: 'pane' };
@@ -459,6 +470,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
                   onNodeDragStart={handleNodeDragStart}
                   onNodeDrag={handleNodeDragWithCp}
                   onNodeDragStop={handleNodeDragStopWithCp}
+                  onNodeClick={handleNodeClick}
                   onNodeContextMenu={handleNodeContextMenu}
                   onEdgeContextMenu={handleEdgeContextMenu}
                   nodeTypes={nodeTypes}
