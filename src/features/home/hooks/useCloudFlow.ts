@@ -9,14 +9,17 @@ import type { AnalyzeFormValues } from '@/features/project-input';
 import { type FlowData, type FlowMeta, cloudFlowAdapter } from '@/lib/adapters';
 import type { FlowGraph } from '@/lib/analyzer';
 
+type DuplicateConflict = { existingId: string; targetName: string };
+
 export type CloudFlowState = {
   cloudFlowId: string | null;
   cloudFlowName: string;
   saveDialogOpen: boolean;
   saveNameInput: string;
+  duplicateConflict: DuplicateConflict | null;
   myFlowsOpen: boolean;
   flowsList: FlowMeta[];
-  busyAction: 'save' | 'myFlows' | 'share' | null;
+  busyAction: 'save' | 'overwrite' | 'duplicate' | 'myFlows' | 'share' | null;
   shareCopied: boolean;
   rowBusy: { id: string; action: 'share' | 'delete' | 'rename' } | null;
   copiedFlowId: string | null;
@@ -33,7 +36,11 @@ export type CloudFlowActions = {
   setEditingNameId: (id: string | null) => void;
   setEditingNameValue: (value: string) => void;
   handleCloudSave: () => void;
+  handleCloseSaveDialog: () => void;
   handleSaveConfirm: () => Promise<void>;
+  handleSaveOverwrite: () => Promise<void>;
+  handleSaveDuplicate: () => Promise<void>;
+  handleSaveRename: () => void;
   handleOpenMyFlows: () => Promise<void>;
   handleLoadFlow: (id: string, name: string) => Promise<void>;
   handleShare: () => Promise<void>;
@@ -63,9 +70,12 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
   const [cloudFlowName, setCloudFlowName] = useState('');
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [saveNameInput, setSaveNameInput] = useState('');
+  const [duplicateConflict, setDuplicateConflict] = useState<DuplicateConflict | null>(null);
   const [myFlowsOpen, setMyFlowsOpen] = useState(false);
   const [flowsList, setFlowsList] = useState<FlowMeta[]>([]);
-  const [busyAction, setBusyAction] = useState<'save' | 'myFlows' | 'share' | null>(null);
+  const [busyAction, setBusyAction] = useState<
+    'save' | 'overwrite' | 'duplicate' | 'myFlows' | 'share' | null
+  >(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [rowBusy, setRowBusy] = useState<{
     id: string;
@@ -84,6 +94,11 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
     setSaveDialogOpen(true);
   };
 
+  const handleCloseSaveDialog = () => {
+    setSaveDialogOpen(false);
+    setDuplicateConflict(null);
+  };
+
   const handleSaveConfirm = async () => {
     const data = getCurrentFlowData();
     if (!data || !saveNameInput.trim()) return;
@@ -92,6 +107,19 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
       setBusyAction('save');
       if (cloudFlowId && name === cloudFlowName) {
         await cloudFlowAdapter.save(cloudFlowId, data);
+        setCloudFlowName(name);
+        setSaveDialogOpen(false);
+        return;
+      }
+      const flows = await cloudFlowAdapter.list();
+      setFlowsList(flows);
+      const existing = flows.find((f) => f.name === name && f.id !== cloudFlowId);
+      if (existing) {
+        setDuplicateConflict({ existingId: existing.id, targetName: name });
+        return;
+      }
+      if (cloudFlowId) {
+        await cloudFlowAdapter.save(cloudFlowId, data, name);
       } else {
         const id = await cloudFlowAdapter.create(name, data);
         setCloudFlowId(id);
@@ -101,6 +129,49 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
     } finally {
       setBusyAction(null);
     }
+  };
+
+  const handleSaveOverwrite = async () => {
+    const data = getCurrentFlowData();
+    if (!data || !duplicateConflict) return;
+    const { existingId, targetName } = duplicateConflict;
+    try {
+      setBusyAction('overwrite');
+      await cloudFlowAdapter.save(existingId, data);
+      setCloudFlowId(existingId);
+      setCloudFlowName(targetName);
+      setDuplicateConflict(null);
+      setSaveDialogOpen(false);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleSaveDuplicate = async () => {
+    const data = getCurrentFlowData();
+    if (!data || !duplicateConflict) return;
+    const { targetName } = duplicateConflict;
+    try {
+      setBusyAction('duplicate');
+      const existingNames = new Set(flowsList.map((f) => f.name));
+      let n = 2;
+      let uniqueName = `${targetName} (${n})`;
+      while (existingNames.has(uniqueName)) {
+        n++;
+        uniqueName = `${targetName} (${n})`;
+      }
+      const id = await cloudFlowAdapter.create(uniqueName, data);
+      setCloudFlowId(id);
+      setCloudFlowName(uniqueName);
+      setDuplicateConflict(null);
+      setSaveDialogOpen(false);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleSaveRename = () => {
+    setDuplicateConflict(null);
   };
 
   const handleOpenMyFlows = async () => {
@@ -209,6 +280,7 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
       cloudFlowName,
       saveDialogOpen,
       saveNameInput,
+      duplicateConflict,
       myFlowsOpen,
       flowsList,
       busyAction,
@@ -227,7 +299,11 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
       setEditingNameId,
       setEditingNameValue,
       handleCloudSave,
+      handleCloseSaveDialog,
       handleSaveConfirm,
+      handleSaveOverwrite,
+      handleSaveDuplicate,
+      handleSaveRename,
       handleOpenMyFlows,
       handleLoadFlow,
       handleShare,

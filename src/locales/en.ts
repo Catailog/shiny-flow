@@ -55,6 +55,10 @@ export const en = {
     delete: 'Delete',
     copyShareLink: 'Copy share link',
     rename: 'Rename',
+    duplicateConflict: (name: string) => `A flow named "${name}" already exists.`,
+    overwrite: 'Overwrite',
+    saveAsCopy: 'Save as copy',
+    reenterName: 'Re-enter name',
   },
 
   // Project input

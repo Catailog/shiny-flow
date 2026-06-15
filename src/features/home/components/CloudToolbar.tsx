@@ -43,6 +43,7 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
     cloudFlowName,
     saveDialogOpen,
     saveNameInput,
+    duplicateConflict,
     myFlowsOpen,
     flowsList,
     busyAction,
@@ -55,14 +56,17 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
   } = state;
 
   const {
-    setSaveDialogOpen,
     setSaveNameInput,
     setMyFlowsOpen,
     setConfirmDeleteId,
     setEditingNameId,
     setEditingNameValue,
     handleCloudSave,
+    handleCloseSaveDialog,
     handleSaveConfirm,
+    handleSaveOverwrite,
+    handleSaveDuplicate,
+    handleSaveRename,
     handleOpenMyFlows,
     handleLoadFlow,
     handleShare,
@@ -74,6 +78,8 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
 
   const isLoggedIn = !!session?.user;
   const t = useT();
+  const isSaveBusy =
+    busyAction === 'save' || busyAction === 'overwrite' || busyAction === 'duplicate';
 
   const saveDisabledTip = !hasFlow
     ? t.cloud.noGraph
@@ -100,7 +106,7 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={!!saveDisabledTip || busyAction === 'save'}
+                  disabled={!!saveDisabledTip || isSaveBusy}
                   onClick={handleCloudSave}
                 >
                   {busyAction === 'save' ? (
@@ -172,7 +178,12 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
       </div>
 
       {/* save name dialog */}
-      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+      <Dialog
+        open={saveDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCloseSaveDialog();
+        }}
+      >
         <DialogContent showCloseButton={false}>
           <DialogHeader>
             <DialogTitle>{t.cloud.saveFlow}</DialogTitle>
@@ -181,21 +192,55 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
             value={saveNameInput}
             onChange={(e) => setSaveNameInput(e.target.value)}
             placeholder={t.cloud.flowName}
-            onKeyDown={(e) => e.key === 'Enter' && handleSaveConfirm()}
-            autoFocus
+            onKeyDown={(e) => !duplicateConflict && e.key === 'Enter' && handleSaveConfirm()}
+            disabled={!!duplicateConflict || busyAction === 'save'}
+            autoFocus={!duplicateConflict}
           />
+          {duplicateConflict && (
+            <p className="text-sm text-destructive">
+              {t.cloud.duplicateConflict(duplicateConflict.targetName)}
+            </p>
+          )}
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setSaveDialogOpen(false)}>
-              {t.cloud.cancel}
-            </Button>
-            <Button
-              size="sm"
-              disabled={!saveNameInput.trim() || busyAction === 'save'}
-              onClick={handleSaveConfirm}
-            >
-              {busyAction === 'save' && <Loader2Icon size={14} className="animate-spin" />}
-              {t.cloud.save}
-            </Button>
+            {duplicateConflict ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isSaveBusy}
+                  onClick={handleSaveRename}
+                >
+                  {t.cloud.reenterName}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={isSaveBusy}
+                  onClick={handleSaveOverwrite}
+                >
+                  {busyAction === 'overwrite' && <Loader2Icon size={14} className="animate-spin" />}
+                  {t.cloud.overwrite}
+                </Button>
+                <Button size="sm" disabled={isSaveBusy} onClick={handleSaveDuplicate}>
+                  {busyAction === 'duplicate' && <Loader2Icon size={14} className="animate-spin" />}
+                  {t.cloud.saveAsCopy}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" size="sm" onClick={handleCloseSaveDialog}>
+                  {t.cloud.cancel}
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={!saveNameInput.trim() || isSaveBusy}
+                  onClick={handleSaveConfirm}
+                >
+                  {busyAction === 'save' && <Loader2Icon size={14} className="animate-spin" />}
+                  {t.cloud.save}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
