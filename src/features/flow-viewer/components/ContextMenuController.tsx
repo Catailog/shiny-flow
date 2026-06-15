@@ -308,13 +308,15 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
           }}
         >
           <Trash2Icon className={ICON} />
-          {t.menu.delete}
+          {t.menu.deleteNode}
         </MenuItem>,
       ],
     ];
   } else if (target.type === 'groupNode') {
     const group = getNode(target.nodeId);
-    const otherNodesSelected = selectedNodes.some((n) => n.id !== target.nodeId);
+    const otherNodesSelected = selectedNodes.some(
+      (n) => n.id !== target.nodeId && n.type === 'groupNode',
+    );
 
     sections = [
       [
@@ -367,7 +369,7 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
           }}
         >
           <Trash2Icon className={ICON} />
-          {t.menu.delete}
+          {t.menu.deleteGroup}
         </MenuItem>,
       ],
     ];
