@@ -240,33 +240,48 @@ function extractTemplatePattern(node: Node): string | undefined {
   return result.startsWith('/') ? result : undefined;
 }
 
-function extractEnclosingComponentName(node: Node): string | undefined {
+// 최상위(outermost) 감싸는 컴포넌트 이름 반환
+function extractOutermostComponentName(node: Node): string | undefined {
   let current: Node | undefined = node.getParent();
+  let lastName: string | undefined;
   while (current) {
     const kind = current.getKind();
     if (kind === SyntaxKind.FunctionDeclaration) {
       const name = current.getFirstChildByKind(SyntaxKind.Identifier)?.getText();
-      if (name) return name;
+      if (name) lastName = name;
     }
     if (kind === SyntaxKind.ArrowFunction || kind === SyntaxKind.FunctionExpression) {
       const varDecl = current.getParent();
       if (varDecl?.getKind() === SyntaxKind.VariableDeclaration) {
         const name = varDecl.getFirstChildByKind(SyntaxKind.Identifier)?.getText();
-        if (name) return name;
+        if (name) lastName = name;
       }
     }
     current = current.getParent();
   }
-  return undefined;
+  return lastName;
 }
 
 function extractLinkText(node: Node): string | undefined {
   const parent = node.getParent();
+
+  // 1. JSX 텍스트 콘텐츠
   const jsxText = parent
     ?.getDescendantsOfKind(SyntaxKind.JsxText)
     .map((n) => n.getText().trim())
     .find(Boolean);
-  return jsxText ?? extractEnclosingComponentName(node);
+  if (jsxText) return jsxText;
+
+  // 2. aria-label
+  const ariaLabel = node
+    .getChildrenOfKind(SyntaxKind.JsxAttributes)[0]
+    ?.getChildrenOfKind(SyntaxKind.JsxAttribute)
+    .find((attr) => attr.getFirstChild()?.getText() === 'aria-label');
+  const ariaValue = ariaLabel ? extractStringValue(ariaLabel.getLastChild()) : undefined;
+  if (ariaValue) return ariaValue;
+
+  // 3. 최상위 감싸는 컴포넌트 이름
+  return extractOutermostComponentName(node);
 }
 
 function resolveLocalImports(
