@@ -6,128 +6,171 @@ import { Z_INDEX } from '@/constants/zIndex';
 import type { GroupNodeData } from '../types';
 
 export const NODE_WIDTH = 280;
-export const NODE_HEIGHT = 600; // 측정 전 초기 추정값
+export const NODE_HEIGHT = 600; // 스크린샷 있는 노드 추정 높이
+const NODE_HEIGHT_SMALL = 80; // 스크린샷 없는 노드 추정 높이
 export const GROUP_Z_INDEX = Z_INDEX.groupNode;
 
 const GROUP_PADDING = 40;
-const GRID_COL_GAP = 80;
-const GRID_ROW_GAP = 100;
-const GRID_MAX_COLS = 3;
 
 function nodeSize(node: Node) {
+  const hasScreenshot = !!(node.data as { screenshot?: string })?.screenshot;
+  const defaultHeight = hasScreenshot ? NODE_HEIGHT : NODE_HEIGHT_SMALL;
   return {
     width: node.measured?.width ?? NODE_WIDTH,
-    height: node.measured?.height ?? NODE_HEIGHT,
+    height: node.measured?.height ?? defaultHeight,
   };
 }
 
-export function applyDagreLayout(nodes: Node[], edges: Edge[]): Node[] {
+function layoutGroupInternally(
+  members: Node[],
+  allEdges: Edge[],
+): { width: number; height: number; positions: Map<string, { x: number; y: number }> } {
+  const memberIds = new Set(members.map((m) => m.id));
+  const internalEdges = allEdges.filter((e) => memberIds.has(e.source) && memberIds.has(e.target));
+
   const graph = new dagre.graphlib.Graph();
   graph.setDefaultEdgeLabel(() => ({}));
-  graph.setGraph({ rankdir: 'TB', nodesep: 80, ranksep: 100 });
+  graph.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 80 });
 
-  for (const node of nodes) {
+  for (const node of members) {
     const { width, height } = nodeSize(node);
     graph.setNode(node.id, { width, height });
   }
-
-  for (const edge of edges) {
+  for (const edge of internalEdges) {
     graph.setEdge(edge.source, edge.target);
   }
 
   dagre.layout(graph);
 
-  const flat = nodes.map((node) => {
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
+  const raw = new Map<string, { x: number; y: number }>();
+  for (const node of members) {
+    const dn = graph.node(node.id);
+    if (!dn) continue;
     const { width, height } = nodeSize(node);
-    const { x, y } = graph.node(node.id);
-    return {
-      ...node,
-      position: { x: x - width / 2, y: y - height / 2 },
-    };
-  });
+    const x = dn.x - width / 2;
+    const y = dn.y - height / 2;
+    raw.set(node.id, { x, y });
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x + width);
+    maxY = Math.max(maxY, y + height);
+  }
 
-  // Dagre는 실제 엣지만으로 비그룹 노드를 배치하고,
-  // 그룹 멤버는 외부 진입 노드 기준으로 그리드 배치로 덮어씀
-  const gridded = placeGroupsAsGrids(flat, nodes, edges);
-  return applyGroupLayout(separateComponents(gridded, edges));
+  // (0, 0) 기준 정규화
+  const positions = new Map<string, { x: number; y: number }>();
+  for (const [id, pos] of raw) {
+    positions.set(id, { x: pos.x - minX, y: pos.y - minY });
+  }
+
+  return {
+    width: maxX - minX + GROUP_PADDING * 2,
+    height: maxY - minY + GROUP_PADDING * 2,
+    positions,
+  };
 }
 
-// Dagre 배치 후 그룹 멤버를 깔끔한 그리드로 재배치
-// - 외부 부모(그룹 밖 → 그룹 안 엣지의 source) 아래쪽에 그리드를 시작
-// - 외부 부모가 없으면 Dagre minY를 기준으로 배치 (separateComponents가 컴포넌트 분리 처리)
-function placeGroupsAsGrids(flat: Node[], origNodes: Node[], edges: Edge[]): Node[] {
-  const groupMap = new Map<string, string[]>();
-  const nodeGroupMap = new Map<string, string>();
-  for (const n of flat) {
-    const gid = (n.data as { layoutGroupId?: string })?.layoutGroupId;
+export function applyDagreLayout(nodes: Node[], edges: Edge[]): Node[] {
+  // layoutGroupId별 그룹 멤버 분류
+  const groupMemberMap = new Map<string, Node[]>();
+  for (const node of nodes) {
+    const gid = (node.data as { layoutGroupId?: string })?.layoutGroupId;
     if (!gid) continue;
-    nodeGroupMap.set(n.id, gid);
-    if (!groupMap.has(gid)) groupMap.set(gid, []);
-    groupMap.get(gid)!.push(n.id);
+    if (!groupMemberMap.has(gid)) groupMemberMap.set(gid, []);
+    groupMemberMap.get(gid)!.push(node);
   }
 
-  const result = flat.map((n) => ({ ...n }));
+  // 그룹 내부를 dagre로 레이아웃하여 크기와 내부 위치를 사전 계산
+  type GroupLayout = {
+    width: number;
+    height: number;
+    positions: Map<string, { x: number; y: number }>;
+  };
+  const groupLayouts = new Map<string, GroupLayout>();
+  for (const [gid, members] of groupMemberMap) {
+    if (members.length < 2) continue;
+    groupLayouts.set(gid, layoutGroupInternally(members, edges));
+  }
 
-  for (const [gid, memberIds] of groupMap) {
-    if (memberIds.length < 2) continue;
+  // dagre에서 제외할 노드 ID (그룹 멤버, 기존 groupNode 컨테이너)
+  const groupedIds = new Set([...groupMemberMap.values()].flatMap((ms) => ms.map((m) => m.id)));
+  const existingGroupIds = new Set(nodes.filter((n) => n.type === 'groupNode').map((n) => n.id));
 
-    // 외부 부모 중 가장 아래쪽(bottom Y 최대) 기준으로 그리드 시작 Y 결정
-    let entryY: number | null = null;
-    let entryCenterX: number | null = null;
+  const graph = new dagre.graphlib.Graph();
+  graph.setDefaultEdgeLabel(() => ({}));
+  graph.setGraph({ rankdir: 'TB', nodesep: 80, ranksep: 100 });
 
-    for (const e of edges) {
-      if (nodeGroupMap.get(e.target) !== gid) continue;
-      if (nodeGroupMap.get(e.source) === gid) continue;
-      const parentFlat = flat.find((n) => n.id === e.source);
-      const origParent = origNodes.find((n) => n.id === e.source);
-      if (!parentFlat || !origParent) continue;
-      const { width: pw, height: ph } = nodeSize(origParent);
-      const bottom = parentFlat.position.y + ph + GRID_ROW_GAP;
-      const cx = parentFlat.position.x + pw / 2;
-      if (entryY === null || bottom > entryY) {
-        entryY = bottom;
-        entryCenterX = cx;
-      }
-    }
+  // 비그룹 노드를 dagre에 추가
+  for (const node of nodes) {
+    if (groupedIds.has(node.id) || existingGroupIds.has(node.id)) continue;
+    const { width, height } = nodeSize(node);
+    graph.setNode(node.id, { width, height });
+  }
 
-    // 외부 부모 없음 → Dagre minY + 멤버 중심 X 사용 (separateComponents가 이후 처리)
-    if (entryY === null) {
-      entryY = Math.min(...memberIds.map((id) => flat.find((n) => n.id === id)?.position.y ?? 0));
-      const cxList = memberIds.map((id) => {
-        const n = flat.find((nn) => nn.id === id);
-        const orig = origNodes.find((nn) => nn.id === id);
-        const w = orig ? nodeSize(orig).width : NODE_WIDTH;
-        return (n?.position.x ?? 0) + w / 2;
+  // 그룹을 하나의 가상 노드로 dagre에 추가
+  for (const [gid, layout] of groupLayouts) {
+    graph.setNode(gid, { width: layout.width, height: layout.height });
+  }
+
+  // 엣지: 그룹 멤버로 이어지는 엣지는 가상 그룹 노드로 변환
+  const nodeGroupMap = new Map<string, string>();
+  for (const [gid, members] of groupMemberMap) {
+    for (const m of members) nodeGroupMap.set(m.id, gid);
+  }
+
+  const addedEdges = new Set<string>();
+  for (const edge of edges) {
+    const srcGid = nodeGroupMap.get(edge.source);
+    const tgtGid = nodeGroupMap.get(edge.target);
+    const srcId = srcGid && groupLayouts.has(srcGid) ? srcGid : edge.source;
+    const tgtId = tgtGid && groupLayouts.has(tgtGid) ? tgtGid : edge.target;
+    if (srcId === tgtId) continue; // 그룹 내부 엣지 제외
+    if (!graph.hasNode(srcId) || !graph.hasNode(tgtId)) continue;
+    const key = `${srcId}->${tgtId}`;
+    if (addedEdges.has(key)) continue;
+    addedEdges.add(key);
+    graph.setEdge(srcId, tgtId);
+  }
+
+  dagre.layout(graph);
+
+  // dagre 결과로 각 노드 위치 결정
+  const positioned = new Map<string, { x: number; y: number }>();
+
+  for (const node of nodes) {
+    if (groupedIds.has(node.id) || existingGroupIds.has(node.id)) continue;
+    const dagreNode = graph.node(node.id);
+    if (!dagreNode) continue;
+    const { width, height } = nodeSize(node);
+    positioned.set(node.id, { x: dagreNode.x - width / 2, y: dagreNode.y - height / 2 });
+  }
+
+  // 가상 그룹 노드 위치에 내부 dagre 결과를 적용
+  for (const [gid, layout] of groupLayouts) {
+    const dagreNode = graph.node(gid);
+    if (!dagreNode) continue;
+    const gx = dagreNode.x - layout.width / 2;
+    const gy = dagreNode.y - layout.height / 2;
+    for (const [memberId, relPos] of layout.positions) {
+      positioned.set(memberId, {
+        x: gx + GROUP_PADDING + relPos.x,
+        y: gy + GROUP_PADDING + relPos.y,
       });
-      entryCenterX = cxList.reduce((a, b) => a + b, 0) / cxList.length;
     }
-
-    // 경로순 정렬 → 일관된 그리드 배치
-    const sortedIds = [...memberIds].sort();
-    const origMembers = sortedIds.map((id) => origNodes.find((n) => n.id === id)!);
-    const maxW = Math.max(...origMembers.map((n) => nodeSize(n).width));
-    const maxH = Math.max(...origMembers.map((n) => nodeSize(n).height));
-    const cols = Math.min(sortedIds.length, GRID_MAX_COLS);
-    const totalWidth = cols * maxW + (cols - 1) * GRID_COL_GAP;
-    const startX = (entryCenterX ?? 0) - totalWidth / 2;
-
-    sortedIds.forEach((id, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const idx = result.findIndex((n) => n.id === id);
-      if (idx >= 0) {
-        result[idx] = {
-          ...result[idx],
-          position: {
-            x: startX + col * (maxW + GRID_COL_GAP),
-            y: entryY! + row * (maxH + GRID_ROW_GAP),
-          },
-        };
-      }
-    });
   }
 
-  return result;
+  // 기존 groupNode 컨테이너 제외 (applyGroupLayout이 재생성)
+  const flat = nodes
+    .filter((n) => !existingGroupIds.has(n.id))
+    .map((node): Node => {
+      const pos = positioned.get(node.id);
+      return pos ? { ...node, position: pos } : { ...node };
+    });
+
+  return applyGroupLayout(separateComponents(flat, edges));
 }
 
 const COMPONENT_GAP = 120;
