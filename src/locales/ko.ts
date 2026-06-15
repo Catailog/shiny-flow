@@ -109,6 +109,7 @@ export const ko: Translations = {
     edgeLineStyle: '선 스타일',
     deleteNode: '노드 삭제',
     deleteGroup: '그룹 삭제',
+    deleteSelected: '선택 삭제',
     editNodeLabel: '라벨 편집',
     editNodeRoute: '경로 편집',
     toggleNodeLabels: '노드 라벨 표시 전환',

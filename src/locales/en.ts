@@ -108,6 +108,7 @@ export const en = {
     edgeLineStyle: 'Line style',
     deleteNode: 'Delete node',
     deleteGroup: 'Delete group',
+    deleteSelected: 'Delete selected',
     editNodeLabel: 'Edit label',
     editNodeRoute: 'Edit route',
     toggleNodeLabels: 'Toggle node labels',

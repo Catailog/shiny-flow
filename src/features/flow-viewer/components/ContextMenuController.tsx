@@ -84,8 +84,10 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
   const selectedNodes = useStore((s) =>
     s.nodes.filter((n) => n.selected && (n.type === 'flowNode' || n.type === 'groupNode')),
   );
+  const selectedEdges = useStore((s) => s.edges.filter((e) => e.selected));
   const parentIdSet = new Set(selectedNodes.map((n) => n.parentId ?? null));
   const canGroupSelected = selectedNodes.length >= 2 && parentIdSet.size === 1;
+  const isMultiSelected = selectedNodes.length + selectedEdges.length >= 2;
 
   if (!state) return null;
 
@@ -113,6 +115,20 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
     </MenuItem>
   );
 
+  const deleteSelectedItem = isMultiSelected ? (
+    <MenuItem
+      key="deleteSelected"
+      variant="destructive"
+      onClick={() => {
+        pushSnapshot();
+        deleteElements({ nodes: selectedNodes, edges: selectedEdges });
+      }}
+    >
+      <Trash2Icon className={ICON} />
+      {t.menu.deleteSelected}
+    </MenuItem>
+  ) : null;
+
   let sections: MenuSection[];
 
   if (canGroupSelected) {
@@ -129,6 +145,7 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
         </MenuItem>,
       ],
       [addCommentItem],
+      [deleteSelectedItem],
     ];
   } else if (target.type === 'pane') {
     sections = [
@@ -310,6 +327,7 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
           <Trash2Icon className={ICON} />
           {t.menu.deleteNode}
         </MenuItem>,
+        deleteSelectedItem,
       ],
     ];
   } else if (target.type === 'groupNode') {
@@ -371,6 +389,7 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
           <Trash2Icon className={ICON} />
           {t.menu.deleteGroup}
         </MenuItem>,
+        deleteSelectedItem,
       ],
     ];
   } else if (target.type === 'edge') {
@@ -455,6 +474,7 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
           <Trash2Icon className={ICON} />
           {t.menu.deleteEdge}
         </MenuItem>,
+        deleteSelectedItem,
       ],
     ];
   } else {
