@@ -41,7 +41,7 @@ function extractParams(route: string): string[] {
   return [...route.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]);
 }
 
-export function FlowNode({ id, data, selected, width }: Props) {
+export function FlowNode({ id, data, selected, width, height }: Props) {
   const { openDialog } = useFlowActions();
   const t = useT();
   const showNodeLabels = useUIStore((s) => s.showNodeLabels);
@@ -122,13 +122,17 @@ export function FlowNode({ id, data, selected, width }: Props) {
 
       <NodeResizer
         minWidth={280}
+        minHeight={60}
         isVisible={selected}
         keepAspectRatio={shiftHeld}
         onResizeStart={pushSnapshot}
       />
 
       {/* 핸들이 overflow-hidden에 잘리지 않도록 외부 div와 내부 content wrapper를 분리 */}
-      <div className="group relative cursor-pointer" style={{ width: width || 280 }}>
+      <div
+        className="group relative cursor-pointer"
+        style={{ width: width || 280, height: height ?? undefined }}
+      >
         {/* 접힘 스택 그림자: 메인 카드 뒤에 쌓인 카드처럼 보이도록 offset된 레이어 */}
         {isCollapsed && (
           <>
@@ -138,7 +142,7 @@ export function FlowNode({ id, data, selected, width }: Props) {
         )}
         <div
           className={cn(
-            'relative flex flex-col overflow-hidden rounded-lg shadow-sm',
+            'relative flex h-full flex-col overflow-hidden rounded-lg shadow-sm',
             colorStyle
               ? `border-2 ${colorStyle.border} bg-brand-light dark:bg-card`
               : data.isDeadEnd
@@ -201,23 +205,40 @@ export function FlowNode({ id, data, selected, width }: Props) {
             </div>
           )}
 
-          {src && (
-            <Image
-              src={src}
-              alt={data.label}
-              width={280}
-              height={0}
-              style={{ height: 'auto', width: '100%' }}
-              className="block cursor-pointer border-b border-inherit"
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                openDialog({ type: 'screenshot', src, label: data.label });
-              }}
-              unoptimized
-            />
-          )}
+          {src &&
+            (height ? (
+              <div className="relative min-h-0 flex-1 overflow-hidden border-b border-inherit">
+                <Image
+                  src={src}
+                  alt={data.label}
+                  fill
+                  className="cursor-pointer object-cover"
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    openDialog({ type: 'screenshot', src, label: data.label });
+                  }}
+                  unoptimized
+                />
+              </div>
+            ) : (
+              <Image
+                src={src}
+                alt={data.label}
+                width={280}
+                height={0}
+                style={{ height: 'auto', width: '100%' }}
+                className="block cursor-pointer border-b border-inherit"
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  openDialog({ type: 'screenshot', src, label: data.label });
+                }}
+                unoptimized
+              />
+            ))}
           {!src && (
-            <div className="px-4 py-6 text-center text-sm text-muted-foreground">{data.route}</div>
+            <div className="flex flex-1 items-center justify-center px-4 py-6 text-center text-sm text-muted-foreground">
+              {data.route}
+            </div>
           )}
 
           {data.memo && (
