@@ -71,6 +71,7 @@ export function HomePage({ isCloudMode }: Props) {
   const [graphKey, setGraphKey] = useState(0);
   const [slowWarning, setSlowWarning] = useState(false);
   const [overlayError, setOverlayError] = useState<string | null>(null);
+  const [staleTimerKey, setStaleTimerKey] = useState(0);
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [pendingConvert, setPendingConvert] = useState<PendingConvert | null>(null);
   const [convertSelectedUuids, setConvertSelectedUuids] = useState<string[]>([]);
@@ -96,34 +97,35 @@ export function HomePage({ isCloudMode }: Props) {
   const viewerRef = useRef<FlowViewerHandle>(null);
   const projectInputRef = useRef<ProjectInputHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const slowTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const slowWarningRef = useRef(false);
 
-  const clearTimers = () => {
-    if (slowTimerRef.current) {
-      clearInterval(slowTimerRef.current);
-      slowTimerRef.current = null;
+  const analyzeProgressKey = analyzeProgress
+    ? `${analyzeProgress.done}/${analyzeProgress.total}`
+    : null;
+  const screenshotProgressKey = screenshotProgress
+    ? `${screenshotProgress.done}/${screenshotProgress.total}`
+    : null;
+
+  useEffect(() => {
+    if (state.status !== 'loading' || overlayError) {
+      if (state.status !== 'loading') {
+        slowWarningRef.current = false;
+        setSlowWarning(false);
+      }
+      return;
     }
-  };
-
-  const setSlowWarningSync = (val: boolean) => {
-    slowWarningRef.current = val;
-    setSlowWarning(val);
-  };
-
-  const startSlowTimer = () => {
-    clearTimers();
-    slowTimerRef.current = setInterval(() => {
+    slowWarningRef.current = false;
+    setSlowWarning(false);
+    const timer = setTimeout(() => {
       slowWarningRef.current = true;
       setSlowWarning(true);
     }, SLOW_TIMEOUT_MS);
-  };
+    return () => clearTimeout(timer);
+  }, [state.status, analyzeProgressKey, screenshotProgressKey, staleTimerKey, overlayError]);
 
   const handleCancel = () => {
-    clearTimers();
     abortRef.current?.abort();
     abortRef.current = null;
-    setSlowWarningSync(false);
     setOverlayError(null);
     setAnalyzeProgress(null);
     setScreenshotProgress(null);
@@ -131,8 +133,7 @@ export function HomePage({ isCloudMode }: Props) {
   };
 
   const handleKeepWaiting = () => {
-    setSlowWarningSync(false);
-    // interval이 계속 돌고 있으므로 재시작 불필요
+    setStaleTimerKey((k) => k + 1);
   };
 
   const handleOverlayErrorDismiss = () => {
@@ -232,18 +233,15 @@ export function HomePage({ isCloudMode }: Props) {
   };
 
   const handleAnalyze = async ({ path, screenshot, baseUrl, auth }: AnalyzeOptions) => {
-    clearTimers();
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setSlowWarningSync(false);
     setOverlayError(null);
     setAnalyzeProgress(null);
     setScreenshotProgress(null);
     setState({ status: 'loading' });
     setScreenshotOptions(screenshot && baseUrl ? { baseUrl, auth, projectPath: path } : null);
-    startSlowTimer();
 
     try {
       const res = await fetch('/api/analyze', {
@@ -289,8 +287,6 @@ export function HomePage({ isCloudMode }: Props) {
           } else if (event.type === 'screenshotProgress') {
             setScreenshotProgress({ done: event.done, total: event.total });
           } else if (event.type === 'result') {
-            clearTimers();
-            setSlowWarningSync(false);
             setAnalyzeProgress(null);
             setScreenshotProgress(null);
             setState({ status: 'success', graph: event.graph });
@@ -303,16 +299,14 @@ export function HomePage({ isCloudMode }: Props) {
       }
     } catch (err) {
       if (controller.signal.aborted) return;
-      clearTimers();
       setAnalyzeProgress(null);
       setScreenshotProgress(null);
       const message = err instanceof Error ? err.message : t.home.unknownError;
 
       if (slowWarningRef.current) {
-        setSlowWarningSync(false);
+        slowWarningRef.current = false;
         setOverlayError(message);
       } else {
-        setSlowWarningSync(false);
         setState({ status: 'error', message });
       }
     }
