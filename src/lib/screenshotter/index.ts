@@ -115,7 +115,21 @@ export async function setupBrowserSession({
         throw new Error('.shiny-flow/auth.js가 함수를 export하지 않습니다.');
       }
       page.setDefaultTimeout(0);
-      await authFn(page, baseUrl);
+      const guardedPage = new Proxy(page, {
+        get(target, prop, receiver) {
+          if (prop !== 'goto') return Reflect.get(target, prop, receiver);
+          return async (...args: Parameters<typeof target.goto>) => {
+            const response = await target.goto(...args);
+            if (response && response.status() >= 400) {
+              throw new Error(
+                `페이지를 찾지 못했습니다: ${String(args[0])} (HTTP ${response.status()})`,
+              );
+            }
+            return response;
+          };
+        },
+      });
+      await authFn(guardedPage, baseUrl);
     }
 
     return { browser, page };
