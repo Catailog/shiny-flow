@@ -443,7 +443,17 @@ export function HomePage({ isCloudMode }: Props) {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <AppHeader isCloudMode={isCloudMode} />
+      <AppHeader
+        isCloudMode={isCloudMode}
+        cloudTitle={
+          isCloudMode
+            ? {
+                name: cloudState.cloudFlowName,
+                onRename: cloudActions.handleRenameTitle,
+              }
+            : undefined
+        }
+      />
 
       <div className="flex flex-1 overflow-hidden">
         {/* 좌측 사이드 패널 */}

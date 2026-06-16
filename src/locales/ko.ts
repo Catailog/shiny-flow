@@ -7,6 +7,8 @@ export const ko: Translations = {
     login: 'GitHub 로그인',
     switchToDark: '다크 모드로 전환',
     switchToLight: '라이트 모드로 전환',
+    untitled: '제목 없음',
+    renameTitle: '제목 수정',
   },
 
   // Home page

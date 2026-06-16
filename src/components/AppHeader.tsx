@@ -1,5 +1,7 @@
 'use client';
 
+import { useRef, useState } from 'react';
+
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 
@@ -12,6 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { useT } from '@/hooks/useT';
@@ -23,11 +26,82 @@ const LANGUAGES: { code: Locale; flag: string; label: string }[] = [
   { code: 'ko', flag: 'kr', label: '한국어' },
 ];
 
-type Props = {
-  isCloudMode: boolean;
+type CloudTitleProps = {
+  name: string;
+  onRename: (newName: string) => Promise<void>;
 };
 
-export function AppHeader({ isCloudMode }: Props) {
+type Props = {
+  isCloudMode: boolean;
+  cloudTitle?: CloudTitleProps;
+};
+
+function FlowTitle({ name, onRename }: CloudTitleProps) {
+  const t = useT();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const cancelledRef = useRef(false);
+
+  const startEdit = () => {
+    cancelledRef.current = false;
+    setEditValue(name);
+    setIsEditing(true);
+  };
+
+  const confirm = () => {
+    if (cancelledRef.current) return;
+    const trimmed = editValue.trim();
+    setIsEditing(false);
+    if (trimmed && trimmed !== name) {
+      void onRename(trimmed);
+    }
+  };
+
+  const cancel = () => {
+    cancelledRef.current = true;
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <Input
+        autoFocus
+        value={editValue}
+        onChange={(e) => setEditValue(e.target.value)}
+        onFocus={(e) => e.target.select()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') confirm();
+          if (e.key === 'Escape') cancel();
+        }}
+        onBlur={confirm}
+        className="h-7 w-52 rounded-sm border-border/70 bg-transparent px-2 text-sm font-semibold shadow-none focus-visible:ring-1"
+      />
+    );
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span className="inline-flex">
+            <Button
+              variant="ghost"
+              onClick={startEdit}
+              className="h-7 max-w-[240px] truncate px-2 text-sm font-semibold text-foreground"
+            >
+              {name || (
+                <span className="font-normal text-muted-foreground">{t.header.untitled}</span>
+              )}
+            </Button>
+          </span>
+        }
+      />
+      <TooltipContent>{t.header.renameTitle}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+export function AppHeader({ isCloudMode, cloudTitle }: Props) {
   const { data: session } = useSession();
   const isLoggedIn = !!session?.user;
 
@@ -41,8 +115,8 @@ export function AppHeader({ isCloudMode }: Props) {
   const t = useT();
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-6">
-      <span className="text-sm font-semibold tracking-tight">shiny-flow</span>
+    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
+      <div className="flex min-w-0 items-center">{cloudTitle && <FlowTitle {...cloudTitle} />}</div>
 
       <div className="flex items-center gap-1">
         {/* 언어 선택 */}

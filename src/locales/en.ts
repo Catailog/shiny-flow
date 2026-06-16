@@ -5,6 +5,8 @@ export const en = {
     login: 'Sign in with GitHub',
     switchToDark: 'Switch to dark mode',
     switchToLight: 'Switch to light mode',
+    untitled: 'Untitled',
+    renameTitle: 'Rename',
   },
 
   // Home page
