@@ -49,18 +49,12 @@ export const en = {
     saveFirst: 'Save before sharing.',
     serverSaving: 'Saving link to server...',
     copyLink: 'Copy link',
-    saveFlow: 'Save Flow',
-    flowName: 'Flow name',
     cancel: 'Cancel',
     noFlows: 'No saved flows.',
     confirmDelete: 'Delete?',
     delete: 'Delete',
     copyShareLink: 'Copy share link',
     rename: 'Rename',
-    duplicateConflict: (name: string) => `A flow named "${name}" already exists.`,
-    overwrite: 'Overwrite',
-    saveAsCopy: 'Save as copy',
-    reenterName: 'Re-enter name',
   },
 
   // Project input

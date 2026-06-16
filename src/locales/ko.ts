@@ -50,18 +50,12 @@ export const ko: Translations = {
     saveFirst: '먼저 저장해야 공유할 수 있습니다.',
     serverSaving: '공유 링크를 서버에 저장하는 중입니다.',
     copyLink: '링크 복사',
-    saveFlow: '플로우 저장',
-    flowName: '플로우 이름',
     cancel: '취소',
     noFlows: '저장된 플로우가 없습니다.',
     confirmDelete: '삭제할까요?',
     delete: '삭제',
     copyShareLink: '공유 링크 복사',
     rename: '이름 변경',
-    duplicateConflict: (name: string) => `'${name}' 이름의 플로우가 이미 존재합니다.`,
-    overwrite: '덮어쓰기',
-    saveAsCopy: '사본으로 저장',
-    reenterName: '이름 다시 쓰기',
   },
 
   // Project input
