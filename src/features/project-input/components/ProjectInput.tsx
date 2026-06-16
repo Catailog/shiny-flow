@@ -183,6 +183,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
     getConfig: () => getValues(),
     restoreConfig: (values: AnalyzeFormValues) => {
       reset(values);
+      setValue('authType', values.authType);
     },
   }));
 
