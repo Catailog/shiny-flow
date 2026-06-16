@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 
 import type { Edge, Node } from '@xyflow/react';
-import { ChevronRightIcon, Loader2Icon, PinIcon, PinOffIcon } from 'lucide-react';
+import { AlertCircleIcon, ChevronRightIcon, Loader2Icon, PinIcon, PinOffIcon } from 'lucide-react';
 
 import { FlowViewer, type FlowViewerHandle } from '@/features/flow-viewer';
 import type { CommentNodeData } from '@/features/flow-viewer/components/FlowCommentNode';
@@ -583,7 +583,12 @@ export function HomePage({ isCloudMode }: Props) {
             </div>
           )}
 
-          {state.status === 'error' && <p className="text-sm text-destructive">{state.message}</p>}
+          {state.status === 'error' && (
+            <div className="flex max-w-sm flex-col items-center gap-2 rounded-lg border border-destructive bg-destructive/10 px-6 py-4 text-sm">
+              <AlertCircleIcon size={22} className="shrink-0 text-destructive" />
+              <p className="text-center font-medium text-destructive">{state.message}</p>
+            </div>
+          )}
 
           {state.status === 'success' && (
             <FlowViewer
