@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
@@ -102,7 +102,7 @@ function FlowTitle({ name, onRename }: CloudTitleProps) {
 }
 
 export function AppHeader({ isCloudMode, cloudTitle }: Props) {
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const isLoggedIn = !!session?.user;
 
   const { resolvedTheme, setTheme } = useTheme();
@@ -113,6 +113,47 @@ export function AppHeader({ isCloudMode, cloudTitle }: Props) {
   const current = LANGUAGES.find((l) => l.code === locale) ?? LANGUAGES[0];
 
   const t = useT();
+
+  const openLoginPopup = async () => {
+    const res = await fetch('/api/auth/csrf');
+    const { csrfToken } = (await res.json()) as { csrfToken: string };
+
+    const callbackUrl = `${window.location.origin}/auth-popup-done`;
+    const popup = window.open('', 'sf_auth_popup', 'width=520,height=640,top=100,left=200');
+
+    if (!popup) {
+      void signIn('github');
+      return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/api/auth/signin/github';
+    form.target = 'sf_auth_popup';
+
+    const inputs: [string, string][] = [
+      ['csrfToken', csrfToken],
+      ['callbackUrl', callbackUrl],
+    ];
+    for (const [name, value] of inputs) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+  };
+
+  useEffect(() => {
+    if (!isCloudMode) return;
+    const channel = new BroadcastChannel('sf_auth_popup');
+    channel.onmessage = () => void updateSession();
+    return () => channel.close();
+  }, [isCloudMode, updateSession]);
 
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
@@ -178,7 +219,7 @@ export function AppHeader({ isCloudMode, cloudTitle }: Props) {
                 </Tooltip>
               </>
             ) : (
-              <Button variant="outline" size="sm" onClick={() => signIn('github')}>
+              <Button variant="outline" size="sm" onClick={() => void openLoginPopup()}>
                 {t.header.login}
               </Button>
             )}
