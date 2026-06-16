@@ -206,6 +206,18 @@
 .dark .react-flow {
   --xy-edge-stroke-default: #4a5e53;
   --xy-edge-stroke-selected-default: #a3b5a3;
+  --xy-controls-button-background-color-default: var(--card);
+  --xy-controls-button-background-color-hover-default: var(--accent);
+  --xy-controls-button-color-default: var(--foreground);
+  --xy-controls-button-color-hover-default: var(--accent-foreground);
+  --xy-controls-button-border-color-default: var(--border);
+  --xy-minimap-background-color-default: var(--card);
+  --xy-minimap-mask-background-color-default: color-mix(
+    in srgb,
+    var(--background) 70%,
+    transparent
+  );
+  --xy-minimap-node-background-color-default: var(--muted-foreground);
 }
 
 /* ── React Flow: 엣지 라벨 컨테이너를 노드/엣지 레이어 위로 올림 ──
