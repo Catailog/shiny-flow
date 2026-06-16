@@ -7,6 +7,7 @@ export const en = {
     switchToLight: 'Switch to light mode',
     untitled: 'Untitled',
     renameTitle: 'Rename',
+    titlePlaceholder: 'Title',
   },
 
   // Home page

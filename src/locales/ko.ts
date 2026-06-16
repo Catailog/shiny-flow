@@ -9,6 +9,7 @@ export const ko: Translations = {
     switchToLight: '라이트 모드로 전환',
     untitled: '제목 없음',
     renameTitle: '제목 수정',
+    titlePlaceholder: '제목',
   },
 
   // Home page

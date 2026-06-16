@@ -415,6 +415,8 @@ export function HomePage({ isCloudMode }: Props) {
     };
   };
 
+  const [titleFocusTrigger, setTitleFocusTrigger] = useState(0);
+
   const { state: cloudState, actions: cloudActions } = useCloudFlow({
     getCurrentFlowData,
     onFlowLoaded: ({ graph, rfNodes, rfEdges, analyzeConfig, id: _id, name: _name }) => {
@@ -425,6 +427,7 @@ export function HomePage({ isCloudMode }: Props) {
         projectInputRef.current?.restoreConfig(analyzeConfig);
       }
     },
+    onMissingTitle: () => setTitleFocusTrigger((v) => v + 1),
   });
 
   const isLoading = state.status === 'loading';
@@ -440,10 +443,11 @@ export function HomePage({ isCloudMode }: Props) {
       <AppHeader
         isCloudMode={isCloudMode}
         cloudTitle={
-          isCloudMode
+          isCloudMode && hasFlow
             ? {
                 name: cloudState.cloudFlowName,
                 onRename: cloudActions.handleRenameTitle,
+                focusTrigger: titleFocusTrigger,
               }
             : undefined
         }

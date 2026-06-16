@@ -29,6 +29,7 @@ const LANGUAGES: { code: Locale; flag: string; label: string }[] = [
 type CloudTitleProps = {
   name: string;
   onRename: (newName: string) => Promise<void>;
+  focusTrigger?: number;
 };
 
 type Props = {
@@ -36,7 +37,7 @@ type Props = {
   cloudTitle?: CloudTitleProps;
 };
 
-function FlowTitle({ name, onRename }: CloudTitleProps) {
+function FlowTitle({ name, onRename, focusTrigger }: CloudTitleProps) {
   const t = useT();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
@@ -48,11 +49,18 @@ function FlowTitle({ name, onRename }: CloudTitleProps) {
     setIsEditing(true);
   };
 
+  useEffect(() => {
+    if (!focusTrigger) return;
+    cancelledRef.current = false;
+    setEditValue('');
+    setIsEditing(true);
+  }, [focusTrigger]);
+
   const confirm = () => {
     if (cancelledRef.current) return;
     const trimmed = editValue.trim();
     setIsEditing(false);
-    if (trimmed && trimmed !== name) {
+    if (trimmed !== name) {
       void onRename(trimmed);
     }
   };
@@ -67,6 +75,7 @@ function FlowTitle({ name, onRename }: CloudTitleProps) {
       <Input
         autoFocus
         value={editValue}
+        placeholder={t.header.titlePlaceholder}
         onChange={(e) => setEditValue(e.target.value)}
         onFocus={(e) => e.target.select()}
         onKeyDown={(e) => {

@@ -49,9 +49,10 @@ type Deps = {
     id: string;
     name: string;
   }) => void;
+  onMissingTitle?: () => void;
 };
 
-export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
+export function useCloudFlow({ getCurrentFlowData, onFlowLoaded, onMissingTitle }: Deps): {
   state: CloudFlowState;
   actions: CloudFlowActions;
 } {
@@ -72,24 +73,26 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
 
   const handleRenameTitle = async (newName: string) => {
     const name = newName.trim();
-    if (!name || name === cloudFlowName) return;
+    if (name === cloudFlowName) return;
     setCloudFlowName(name);
-    if (!cloudFlowId) return;
+    if (!name || !cloudFlowId) return;
     await cloudFlowAdapter.rename(cloudFlowId, name);
   };
 
   const handleCloudSave = async () => {
     const data = getCurrentFlowData();
     if (!data) return;
+    if (!cloudFlowId && !cloudFlowName) {
+      onMissingTitle?.();
+      return;
+    }
     try {
       setBusyAction('save');
       if (cloudFlowId) {
         await cloudFlowAdapter.save(cloudFlowId, data);
       } else {
-        const name = cloudFlowName || data.graph.projectPath.split(/[\\/]/).at(-1) || 'flow';
-        const id = await cloudFlowAdapter.create(name, data);
+        const id = await cloudFlowAdapter.create(cloudFlowName, data);
         setCloudFlowId(id);
-        setCloudFlowName(name);
       }
     } finally {
       setBusyAction(null);
