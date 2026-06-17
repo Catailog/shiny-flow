@@ -72,7 +72,11 @@ export function CloudToolbar({ hasFlow, state, actions, isAnalyzing }: Props) {
       ? t.cloud.loginRequired
       : undefined;
 
-  const myFlowsDisabledTip = !isLoggedIn ? t.cloud.loginRequired : undefined;
+  const myFlowsDisabledTip = isAnalyzing
+    ? t.home.analyzeDisabled
+    : !isLoggedIn
+      ? t.cloud.loginRequired
+      : undefined;
 
   const shareDisabledTip = isAnalyzing
     ? t.home.analyzeDisabled
