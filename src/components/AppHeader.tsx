@@ -76,20 +76,25 @@ function FlowTitle({ name, onRename, focusTrigger, disabled }: CloudTitleProps) 
 
   if (isEditing) {
     return (
-      <Input
-        autoFocus
-        value={editValue}
-        placeholder={t.header.titlePlaceholder}
-        maxLength={FLOW_NAME_MAX_LENGTH}
-        onChange={(e) => setEditValue(e.target.value)}
-        onFocus={(e) => e.target.select()}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') confirm();
-          if (e.key === 'Escape') cancel();
-        }}
-        onBlur={confirm}
-        className="h-7 w-52 rounded-sm border-border/70 bg-transparent px-2 text-sm font-semibold shadow-none focus-visible:ring-1"
-      />
+      <div className="flex items-center gap-1.5">
+        <Input
+          autoFocus
+          value={editValue}
+          placeholder={t.header.titlePlaceholder}
+          maxLength={FLOW_NAME_MAX_LENGTH}
+          onChange={(e) => setEditValue(e.target.value)}
+          onFocus={(e) => e.target.select()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') confirm();
+            if (e.key === 'Escape') cancel();
+          }}
+          onBlur={confirm}
+          className="h-7 w-52 rounded-sm border-border/70 bg-transparent px-2 text-sm font-semibold shadow-none focus-visible:ring-1"
+        />
+        <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+          {editValue.length}/{FLOW_NAME_MAX_LENGTH}
+        </span>
+      </div>
     );
   }
 
@@ -102,11 +107,13 @@ function FlowTitle({ name, onRename, focusTrigger, disabled }: CloudTitleProps) 
               variant="ghost"
               onClick={startEdit}
               disabled={disabled}
-              className="h-7 max-w-[240px] truncate px-2 text-sm font-semibold text-foreground"
+              className="h-7 max-w-[240px] justify-start overflow-hidden px-2 text-sm font-semibold text-foreground"
             >
-              {name || (
-                <span className="font-normal text-muted-foreground">{t.header.untitled}</span>
-              )}
+              <span className="min-w-0 truncate">
+                {name || (
+                  <span className="font-normal text-muted-foreground">{t.header.untitled}</span>
+                )}
+              </span>
             </Button>
           </span>
         }

@@ -210,6 +210,9 @@ export function CloudToolbar({ hasFlow, state, actions, isAnalyzing }: Props) {
                           }}
                           autoFocus
                         />
+                        <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                          {editingNameValue.length}/{FLOW_NAME_MAX_LENGTH}
+                        </span>
                         <Button
                           variant="ghost"
                           size="icon-sm"
