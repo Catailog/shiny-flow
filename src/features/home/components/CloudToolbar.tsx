@@ -22,6 +22,8 @@ import { cn } from '@/lib/utils';
 
 import { useT } from '@/hooks/useT';
 
+import { FLOW_NAME_MAX_LENGTH } from '@/constants/flow';
+
 import type { CloudFlowActions, CloudFlowState } from '../hooks/useCloudFlow';
 
 type Props = {
@@ -197,6 +199,7 @@ export function CloudToolbar({ hasFlow, state, actions, isAnalyzing }: Props) {
                         <Input
                           className="h-8 flex-1 text-sm"
                           value={editingNameValue}
+                          maxLength={FLOW_NAME_MAX_LENGTH}
                           onChange={(e) => setEditingNameValue(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleRenameConfirm(f.id);
@@ -227,28 +230,37 @@ export function CloudToolbar({ hasFlow, state, actions, isAnalyzing }: Props) {
                       </>
                     ) : (
                       <>
-                        <Button
-                          variant="ghost"
-                          className="h-auto flex-1 justify-between px-3 py-2 text-sm font-normal"
-                          onClick={() => actions.handleLoadFlow(f.id, f.name)}
-                          disabled={!!rowBusy || busyAction === 'myFlows' || isConfirming}
-                        >
-                          <span className="flex items-center gap-1.5">
-                            {isActive ? (
-                              <CheckIcon size={13} className="shrink-0 text-primary" />
-                            ) : (
-                              <span className="w-[13px] shrink-0" />
-                            )}
-                            {f.name}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(f.updatedAt).toLocaleString(t.dateLocale, {
-                              dateStyle: 'short',
-                              timeStyle: 'medium',
-                              hour12: false,
-                            })}
-                          </span>
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <span className="inline-flex min-w-0 flex-1">
+                                <Button
+                                  variant="ghost"
+                                  className="h-auto min-w-0 flex-1 justify-between px-3 py-2 text-sm font-normal"
+                                  onClick={() => actions.handleLoadFlow(f.id, f.name)}
+                                  disabled={!!rowBusy || busyAction === 'myFlows' || isConfirming}
+                                >
+                                  <span className="flex min-w-0 items-center gap-1.5">
+                                    {isActive ? (
+                                      <CheckIcon size={13} className="shrink-0 text-primary" />
+                                    ) : (
+                                      <span className="w-[13px] shrink-0" />
+                                    )}
+                                    <span className="truncate">{f.name}</span>
+                                  </span>
+                                  <span className="shrink-0 text-xs text-muted-foreground">
+                                    {new Date(f.updatedAt).toLocaleString(t.dateLocale, {
+                                      dateStyle: 'short',
+                                      timeStyle: 'medium',
+                                      hour12: false,
+                                    })}
+                                  </span>
+                                </Button>
+                              </span>
+                            }
+                          />
+                          <TooltipContent>{f.name}</TooltipContent>
+                        </Tooltip>
 
                         {isConfirming ? (
                           <>

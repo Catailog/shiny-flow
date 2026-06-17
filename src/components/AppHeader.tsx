@@ -21,6 +21,8 @@ import { useT } from '@/hooks/useT';
 
 import { type Locale, useUIStore } from '@/store/uiStore';
 
+import { FLOW_NAME_MAX_LENGTH } from '@/constants/flow';
+
 const LANGUAGES: { code: Locale; flag: string; label: string }[] = [
   { code: 'en', flag: 'us', label: 'English' },
   { code: 'ko', flag: 'kr', label: '한국어' },
@@ -78,6 +80,7 @@ function FlowTitle({ name, onRename, focusTrigger, disabled }: CloudTitleProps) 
         autoFocus
         value={editValue}
         placeholder={t.header.titlePlaceholder}
+        maxLength={FLOW_NAME_MAX_LENGTH}
         onChange={(e) => setEditValue(e.target.value)}
         onFocus={(e) => e.target.select()}
         onKeyDown={(e) => {
