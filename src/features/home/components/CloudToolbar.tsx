@@ -192,7 +192,10 @@ export function CloudToolbar({ hasFlow, state, actions, isAnalyzing }: Props) {
                 return (
                   <li
                     key={f.id}
-                    className={cn('flex items-center gap-1 rounded-md', isActive && 'bg-accent/60')}
+                    className={cn(
+                      'flex items-center gap-1 overflow-hidden rounded-md',
+                      isActive && 'bg-accent/60',
+                    )}
                   >
                     {isEditing ? (
                       <>
