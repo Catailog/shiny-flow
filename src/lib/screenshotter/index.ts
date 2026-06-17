@@ -147,7 +147,7 @@ export async function captureRoutesOnPage(
     waitUntil = 'networkidle',
     onProgress,
   }: Pick<SessionOptions, 'waitUntil'> & {
-    onProgress?: (done: number, total: number) => void;
+    onProgress?: (done: number, total: number, currentRoute: string) => void;
   } = {},
 ): Promise<ScreenshotResult[]> {
   const results: ScreenshotResult[] = [];
@@ -171,7 +171,7 @@ export async function captureRoutesOnPage(
       // 캡처 실패 시 해당 라우트는 건너뜀
     }
     done++;
-    onProgress?.(done, routes.length);
+    onProgress?.(done, routes.length, route);
   }
 
   return results;

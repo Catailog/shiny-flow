@@ -64,7 +64,9 @@ export async function POST(req: NextRequest) {
         }
 
         const [graph, session, defaultParams] = await Promise.all([
-          analyzeProject(normalizedPath, (done, total) => send({ type: 'progress', done, total })),
+          analyzeProject(normalizedPath, (done, total, currentFile) =>
+            send({ type: 'progress', done, total, currentFile }),
+          ),
           screenshot && baseUrl
             ? setupBrowserSession({ baseUrl, auth: parsedAuth })
             : Promise.resolve(null),
@@ -91,7 +93,8 @@ export async function POST(req: NextRequest) {
             });
 
             const screenshots = await captureRoutesOnPage(session.page, routes, baseUrl, {
-              onProgress: (done, total) => send({ type: 'screenshotProgress', done, total }),
+              onProgress: (done, total, currentRoute) =>
+                send({ type: 'screenshotProgress', done, total, currentRoute }),
             });
 
             const screenshotMap = new Map(

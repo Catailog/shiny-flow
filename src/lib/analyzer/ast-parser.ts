@@ -44,7 +44,7 @@ function loadAliases(projectRoot: string): Map<string, string> {
 export async function extractEdges(
   entryPoints: { route: string; filePath: string }[],
   projectRoot: string,
-  onProgress?: (done: number) => void,
+  onProgress?: (done: number, currentFile: string) => void,
 ): Promise<FlowEdge[]> {
   const aliases = loadAliases(projectRoot);
   const all: RawEdge[] = [];
@@ -52,8 +52,7 @@ export async function extractEdges(
   for (const [i, entry] of entryPoints.entries()) {
     const visited = new Set<string>();
     all.push(...collectEdges(entry.filePath, entry.route, visited, projectRoot, aliases));
-    onProgress?.(i + 1);
-    // SSE 청크가 클라이언트로 flush될 수 있도록 이벤트 루프에 양보
+    onProgress?.(i + 1, entry.filePath);
     await new Promise<void>((resolve) => setImmediate(resolve));
   }
 

@@ -1,3 +1,5 @@
+import path from 'path';
+
 import { extractEdges } from './ast-parser';
 import { buildGraph } from './graph-builder';
 import { scanLayouts, scanRoutes } from './route-scanner';
@@ -6,13 +8,15 @@ import { routeLastSegmentLabel } from './utils';
 
 export async function analyzeProject(
   projectPath: string,
-  onProgress?: (done: number, total: number) => void,
+  onProgress?: (done: number, total: number, currentFile: string) => void,
 ): Promise<FlowGraph> {
   const routes = scanRoutes(projectPath);
   const layouts = scanLayouts(projectPath);
   const total = routes.length;
   const routeSet = new Set(routes.map((r) => r.route));
-  const rawEdges = await extractEdges(routes, projectPath, (done) => onProgress?.(done, total));
+  const rawEdges = await extractEdges(routes, projectPath, (done, currentFile) =>
+    onProgress?.(done, total, path.relative(projectPath, currentFile)),
+  );
   const layoutEdges = await extractEdges(layouts, projectPath);
   const layoutGroupMap = buildLayoutGroupMap(routeSet, layouts, layoutEdges);
 

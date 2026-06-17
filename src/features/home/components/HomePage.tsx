@@ -84,10 +84,12 @@ export function HomePage({ isCloudMode }: Props) {
   const [analyzeProgress, setAnalyzeProgress] = useState<{
     done: number;
     total: number;
+    currentFile?: string;
   } | null>(null);
   const [screenshotProgress, setScreenshotProgress] = useState<{
     done: number;
     total: number;
+    currentRoute?: string;
   } | null>(null);
 
   const t = useT();
@@ -277,15 +279,23 @@ export function HomePage({ isCloudMode }: Props) {
         for (const part of parts) {
           if (!part.startsWith('data: ')) continue;
           const event = JSON.parse(part.slice(6)) as
-            | { type: 'progress'; done: number; total: number }
-            | { type: 'screenshotProgress'; done: number; total: number }
+            | { type: 'progress'; done: number; total: number; currentFile?: string }
+            | { type: 'screenshotProgress'; done: number; total: number; currentRoute?: string }
             | { type: 'result'; graph: FlowGraph }
             | { type: 'error'; message: string };
 
           if (event.type === 'progress') {
-            setAnalyzeProgress({ done: event.done, total: event.total });
+            setAnalyzeProgress({
+              done: event.done,
+              total: event.total,
+              currentFile: event.currentFile,
+            });
           } else if (event.type === 'screenshotProgress') {
-            setScreenshotProgress({ done: event.done, total: event.total });
+            setScreenshotProgress({
+              done: event.done,
+              total: event.total,
+              currentRoute: event.currentRoute,
+            });
           } else if (event.type === 'result') {
             setAnalyzeProgress(null);
             setScreenshotProgress(null);
@@ -534,7 +544,7 @@ export function HomePage({ isCloudMode }: Props) {
                 <>
                   <Loader2Icon size={36} className="animate-spin text-brand-primary" />
                   {screenshotProgress ? (
-                    <div className="flex w-48 flex-col gap-1.5">
+                    <div className="flex w-64 flex-col gap-1.5">
                       <Progress
                         value={Math.round(
                           (screenshotProgress.done / screenshotProgress.total) * 100,
@@ -546,17 +556,27 @@ export function HomePage({ isCloudMode }: Props) {
                           screenshotProgress.total,
                         )}
                       </p>
+                      {screenshotProgress.currentRoute && (
+                        <p className="text-center text-xs break-all text-muted-foreground/60">
+                          {screenshotProgress.currentRoute}
+                        </p>
+                      )}
                     </div>
                   ) : analyzeProgress && analyzeProgress.done === analyzeProgress.total ? (
                     <p className="text-sm text-muted-foreground">{t.home.analysisDone}</p>
                   ) : analyzeProgress ? (
-                    <div className="flex w-48 flex-col gap-1.5">
+                    <div className="flex w-64 flex-col gap-1.5">
                       <Progress
                         value={Math.round((analyzeProgress.done / analyzeProgress.total) * 100)}
                       />
                       <p className="text-center text-xs text-muted-foreground">
                         {t.home.analyzingFiles(analyzeProgress.done, analyzeProgress.total)}
                       </p>
+                      {analyzeProgress.currentFile && (
+                        <p className="text-center text-xs break-all text-muted-foreground/60">
+                          {analyzeProgress.currentFile}
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">{t.home.analyzing}</p>
