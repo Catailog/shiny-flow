@@ -182,7 +182,7 @@ export function CloudToolbar({ hasFlow, state, actions, isAnalyzing }: Props) {
           {flowsList.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">{t.cloud.noFlows}</p>
           ) : (
-            <ul className="flex flex-col gap-1">
+            <ul className="flex min-w-0 flex-col gap-1">
               {flowsList.map((f) => {
                 const isRowBusy = rowBusy?.id === f.id;
                 const isCopied = copiedFlowId === f.id;
