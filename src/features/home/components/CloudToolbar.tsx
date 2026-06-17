@@ -28,9 +28,10 @@ type Props = {
   hasFlow: boolean;
   state: CloudFlowState;
   actions: CloudFlowActions;
+  isAnalyzing?: boolean;
 };
 
-export function CloudToolbar({ hasFlow, state, actions }: Props) {
+export function CloudToolbar({ hasFlow, state, actions, isAnalyzing }: Props) {
   const { data: session } = useSession();
   const {
     cloudFlowId,
@@ -71,11 +72,13 @@ export function CloudToolbar({ hasFlow, state, actions }: Props) {
 
   const myFlowsDisabledTip = !isLoggedIn ? t.cloud.loginRequired : undefined;
 
-  const shareDisabledTip = !isLoggedIn
-    ? t.cloud.loginRequired
-    : !cloudFlowId
-      ? t.cloud.saveFirst
-      : undefined;
+  const shareDisabledTip = isAnalyzing
+    ? t.home.analyzeDisabled
+    : !isLoggedIn
+      ? t.cloud.loginRequired
+      : !cloudFlowId
+        ? t.cloud.saveFirst
+        : undefined;
 
   return (
     <>

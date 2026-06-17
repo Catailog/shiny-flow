@@ -30,6 +30,7 @@ type CloudTitleProps = {
   name: string;
   onRename: (newName: string) => Promise<void>;
   focusTrigger?: number;
+  disabled?: boolean;
 };
 
 type Props = {
@@ -37,13 +38,14 @@ type Props = {
   cloudTitle?: CloudTitleProps;
 };
 
-function FlowTitle({ name, onRename, focusTrigger }: CloudTitleProps) {
+function FlowTitle({ name, onRename, focusTrigger, disabled }: CloudTitleProps) {
   const t = useT();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const cancelledRef = useRef(false);
 
   const startEdit = () => {
+    if (disabled) return;
     cancelledRef.current = false;
     setEditValue(name);
     setIsEditing(true);
@@ -92,10 +94,11 @@ function FlowTitle({ name, onRename, focusTrigger }: CloudTitleProps) {
     <Tooltip>
       <TooltipTrigger
         render={
-          <span className="inline-flex">
+          <span className={disabled ? 'inline-flex cursor-not-allowed' : 'inline-flex'}>
             <Button
               variant="ghost"
               onClick={startEdit}
+              disabled={disabled}
               className="h-7 max-w-[240px] truncate px-2 text-sm font-semibold text-foreground"
             >
               {name || (
@@ -105,7 +108,7 @@ function FlowTitle({ name, onRename, focusTrigger }: CloudTitleProps) {
           </span>
         }
       />
-      <TooltipContent>{t.header.renameTitle}</TooltipContent>
+      <TooltipContent>{disabled ? t.home.analyzeDisabled : t.header.renameTitle}</TooltipContent>
     </Tooltip>
   );
 }

@@ -448,6 +448,7 @@ export function HomePage({ isCloudMode }: Props) {
                 name: cloudState.cloudFlowName,
                 onRename: cloudActions.handleRenameTitle,
                 focusTrigger: titleFocusTrigger,
+                disabled: isLoading,
               }
             : undefined
         }
@@ -508,7 +509,12 @@ export function HomePage({ isCloudMode }: Props) {
             />
 
             {isCloudMode && (
-              <CloudToolbar hasFlow={hasFlow} state={cloudState} actions={cloudActions} />
+              <CloudToolbar
+                hasFlow={hasFlow}
+                state={cloudState}
+                actions={cloudActions}
+                isAnalyzing={isLoading}
+              />
             )}
           </div>
         </aside>
