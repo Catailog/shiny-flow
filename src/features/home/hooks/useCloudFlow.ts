@@ -28,6 +28,7 @@ export type CloudFlowActions = {
   setConfirmDeleteId: (id: string | null) => void;
   setEditingNameId: (id: string | null) => void;
   setEditingNameValue: (value: string) => void;
+  resetCloudFlow: () => void;
   handleRenameTitle: (newName: string) => Promise<void>;
   handleCloudSave: () => Promise<void>;
   handleOpenMyFlows: () => Promise<void>;
@@ -70,6 +71,11 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded, onMissingTitle 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [editingNameValue, setEditingNameValue] = useState('');
+
+  const resetCloudFlow = () => {
+    setCloudFlowId(null);
+    setCloudFlowName('');
+  };
 
   const handleRenameTitle = async (newName: string) => {
     const name = newName.trim();
@@ -218,6 +224,7 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded, onMissingTitle 
       setConfirmDeleteId,
       setEditingNameId,
       setEditingNameValue,
+      resetCloudFlow,
       handleRenameTitle,
       handleCloudSave,
       handleOpenMyFlows,

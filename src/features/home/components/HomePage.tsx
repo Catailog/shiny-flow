@@ -501,7 +501,10 @@ export function HomePage({ isCloudMode }: Props) {
             />
             <ProjectInput
               ref={projectInputRef}
-              onAnalyze={handleAnalyze}
+              onAnalyze={(options) => {
+                if (isCloudMode) cloudActions.resetCloudFlow();
+                void handleAnalyze(options);
+              }}
               isLoading={isLoading}
               onImport={() => fileInputRef.current?.click()}
               onExport={handleExport}
