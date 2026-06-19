@@ -37,8 +37,15 @@ export type { FlowNodeData };
 
 type Props = NodeProps<Node<FlowNodeData>>;
 
-function extractParams(route: string): string[] {
-  return [...route.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]);
+type RouteParam = { key: string; optional: boolean };
+
+function extractParams(route: string, catchAllParam?: string): RouteParam[] {
+  const required = [...route.matchAll(/\[\.{0,3}([^\]]+)\]/g)].map((m) => ({
+    key: m[1],
+    optional: false,
+  }));
+  if (catchAllParam) return [...required, { key: catchAllParam, optional: true }];
+  return required;
 }
 
 export function FlowNode({ id, data, selected, width, height }: Props) {
@@ -56,17 +63,25 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
     : null;
   const colorStyle = getNodeColorStyle(data.color);
 
-  const dynamicParams = extractParams(data.route);
+  const dynamicParams = extractParams(data.route, data.catchAllParam);
   const [paramValues, setParamValues] = useState<Record<string, string>>(
-    () => data.paramValues ?? Object.fromEntries(dynamicParams.map((p) => [p, ''])),
+    () => data.paramValues ?? Object.fromEntries(dynamicParams.map(({ key }) => [key, ''])),
   );
+
   const [isCapturing, setIsCapturing] = useState(false);
   const zoomCompensation = useZoomCompensation();
   const shiftHeld = useKeyPress('Shift');
   const { pushSnapshot } = useHistory();
 
   const handleCapture = async () => {
-    const resolvedRoute = data.route.replace(/\[([^\]]+)\]/g, (_, p) => paramValues[p] ?? p);
+    let resolvedRoute = data.route.replace(
+      /\[\.{0,3}([^\]]+)\]/g,
+      (_, key) => paramValues[key] ?? key,
+    );
+    if (data.catchAllParam) {
+      const val = paramValues[data.catchAllParam]?.trim();
+      if (val) resolvedRoute = `${resolvedRoute}/${val}`;
+    }
     setIsCapturing(true);
     try {
       await captureNode(id, resolvedRoute, paramValues);
@@ -170,18 +185,16 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
           )}
           {dynamicParams.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 border-b border-inherit px-3 py-2">
-              {dynamicParams.map((param) => (
-                <label
-                  key={param}
-                  className="flex items-center gap-1 text-xs text-muted-foreground"
-                >
-                  <span className="shrink-0 font-mono">{param}</span>
+              {dynamicParams.map(({ key, optional }) => (
+                <label key={key} className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="shrink-0 font-mono">
+                    {key}
+                    {optional && <span className="text-muted-foreground/50">?</span>}
+                  </span>
                   <Input
-                    value={paramValues[param] ?? ''}
-                    onChange={(e) =>
-                      setParamValues((prev) => ({ ...prev, [param]: e.target.value }))
-                    }
-                    placeholder={t.flowNode.enterValue}
+                    value={paramValues[key] ?? ''}
+                    onChange={(e) => setParamValues((prev) => ({ ...prev, [key]: e.target.value }))}
+                    placeholder={optional ? t.flowNode.optional : t.flowNode.enterValue}
                     className="nodrag h-5 w-20 rounded-sm px-1.5 text-xs"
                   />
                 </label>
@@ -192,7 +205,11 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
                 size="xs"
                 onClick={available ? handleCapture : validateForCapture}
                 disabled={
-                  available && (isCapturing || dynamicParams.some((p) => !paramValues[p]?.trim()))
+                  available &&
+                  (isCapturing ||
+                    dynamicParams.some(
+                      ({ key, optional }) => !optional && !paramValues[key]?.trim(),
+                    ))
                 }
                 className="nodrag ml-auto"
               >

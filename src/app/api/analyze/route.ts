@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 
-import { type FlowEdge, analyzeProject } from '@/lib/analyzer';
+import { type FlowEdge, type ParamSet, analyzeProject } from '@/lib/analyzer';
 import {
   type AuthBody,
   type AuthOptions,
@@ -72,22 +72,74 @@ export async function POST(req: NextRequest) {
             : Promise.resolve(null),
           fs
             .readFile(path.join(normalizedPath, '.shiny-flow', 'params.json'), 'utf-8')
-            .then((raw) => JSON.parse(raw) as Record<string, Record<string, string>>)
+            .then((raw) => JSON.parse(raw) as Record<string, ParamSet | ParamSet[]>)
             .catch(() => undefined),
         ]);
 
-        if (defaultParams) graph.defaultParams = defaultParams;
+        if (defaultParams) {
+          graph.defaultParams = defaultParams;
+
+          // Required catch-all ([...slug]) 노드를 params의 구체적 노드로 교체
+          const patternToConcreteIds = new Map<string, string[]>();
+          graph.nodes = graph.nodes.flatMap((n) => {
+            if (!/\[\.\.\.([^\]]+)\]/.test(n.id)) return [n];
+            const entry = defaultParams[n.id];
+            if (!entry) return [n]; // params 없으면 패턴 노드 유지
+            const sets = Array.isArray(entry) ? entry : [entry];
+            const concreteIds: string[] = [];
+            const expanded = sets.map((set) => {
+              const id = n.id.replace(/\[\.{0,3}([^\]]+)\]/g, (_, key) => set[key] ?? `[${key}]`);
+              concreteIds.push(id);
+              return { ...n, id, label: id };
+            });
+            patternToConcreteIds.set(n.id, concreteIds);
+            return expanded;
+          });
+
+          // Deduplicate: expanded concrete nodes may collide with phantom nodes that
+          // were created from links pointing to the same concrete path.
+          // Keep the real node (filePath !== '') over the phantom.
+          const nodeById = new Map<string, (typeof graph.nodes)[0]>();
+          for (const n of graph.nodes) {
+            if (!nodeById.has(n.id) || n.filePath !== '') nodeById.set(n.id, n);
+          }
+          graph.nodes = [...nodeById.values()];
+
+          if (patternToConcreteIds.size > 0) {
+            graph.edges = graph.edges.flatMap((e) => {
+              const sources = patternToConcreteIds.get(e.source);
+              const target = patternToConcreteIds.get(e.target)?.[0] ?? e.target;
+              if (sources) {
+                return sources.map((source, i) => ({
+                  ...e,
+                  id: i === 0 ? e.id : `${e.id}__${i}`,
+                  source,
+                  target,
+                }));
+              }
+              return [{ ...e, target }];
+            });
+          }
+        }
 
         if (screenshot && baseUrl && session) {
           try {
             const resolvedToOriginal = new Map<string, string>();
             const routes = graph.nodes.map((n) => {
-              const params = defaultParams?.[n.id];
-              if (!params) return n.id;
-              const resolved = n.id.replace(/\[([^\]]+)\]/g, (_, p) => {
-                const key = p.replace(/^\.\.\./, '');
-                return params[key] || `[${p}]`;
-              });
+              const entry = defaultParams?.[n.id];
+              const params = Array.isArray(entry) ? entry[0] : entry;
+              // [id] 세그먼트 치환 (required catch-all은 이미 확장됨)
+              let resolved = params
+                ? n.id.replace(/\[\.{0,3}([^\]]+)\]/g, (_, key) => params[key] ?? `[${key}]`)
+                : n.id;
+              // [[...key]] optional catch-all 값 append
+              const catchAllKey = n.filePath
+                .replace(/\\/g, '/')
+                .match(/\[\[\.\.\.([^\]]+)\]\]/)?.[1];
+              if (catchAllKey && params) {
+                const val = params[catchAllKey]?.trim();
+                if (val) resolved = `${resolved}/${val}`;
+              }
               if (resolved !== n.id) resolvedToOriginal.set(resolved, n.id);
               return resolved;
             });

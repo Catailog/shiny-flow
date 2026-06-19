@@ -46,7 +46,14 @@ export function scanRoutes(projectPath: string): RouteEntry[] {
 
   if (!fs.existsSync(resolvedAppDir)) return [];
 
-  return collectRoutes(resolvedAppDir, resolvedAppDir);
+  const routes = collectRoutes(resolvedAppDir, resolvedAppDir);
+  // [[...slug]] 디렉토리가 부모 page.tsx와 동일한 route로 정규화될 때 중복 제거 (부모 우선)
+  const seen = new Set<string>();
+  return routes.filter((r) => {
+    if (seen.has(r.route)) return false;
+    seen.add(r.route);
+    return true;
+  });
 }
 
 function collectRoutes(appDir: string, currentDir: string): RouteEntry[] {
@@ -63,22 +70,16 @@ function collectRoutes(appDir: string, currentDir: string): RouteEntry[] {
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    // (group), _private, @parallel 등 라우팅에 영향 없는 디렉토리 처리
-    const isRouteGroup = entry.name.startsWith('(') && entry.name.endsWith(')');
     const isPrivate = entry.name.startsWith('_');
+    // @slot 은 URL 세그먼트가 아니므로 하위 page가 부모 route와 중복 등록됨 → 건너뜀
     const isParallel = entry.name.startsWith('@');
+    // (.)seg, (..)seg, (..)(..)seg, (...)seg 형태 — '(' 시작이지만 ')'로 끝나지 않음
+    const isIntercepting = entry.name.startsWith('(') && !entry.name.endsWith(')');
 
-    if (isPrivate) continue;
+    if (isPrivate || isParallel || isIntercepting) continue;
 
-    const subDir = path.join(currentDir, entry.name);
-    const subRoutes = collectRoutes(appDir, subDir);
-
-    // 라우트 그룹은 URL에 포함되지 않으므로 그대로 올림
-    if (isRouteGroup || isParallel) {
-      results.push(...subRoutes);
-    } else {
-      results.push(...subRoutes);
-    }
+    // (group) 은 dirToRoute에서 URL 세그먼트가 제거되므로 그대로 재귀
+    results.push(...collectRoutes(appDir, path.join(currentDir, entry.name)));
   }
 
   return results;
@@ -93,6 +94,8 @@ function dirToRoute(appDir: string, dirPath: string): string {
     if (seg.startsWith('(') && seg.endsWith(')')) return false;
     // @slot 은 URL에서 제거
     if (seg.startsWith('@')) return false;
+    // [[...slug]] optional catch-all — 세그먼트 자체가 옵션이므로 부모 경로로 정규화
+    if (seg.startsWith('[[') && seg.endsWith(']]')) return false;
     return true;
   });
 

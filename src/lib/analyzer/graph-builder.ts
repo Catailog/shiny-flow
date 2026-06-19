@@ -1,5 +1,22 @@
 import type { FlowEdge, FlowGraph, FlowNode } from './types';
 
+// Checks if a concrete path matches a Next.js dynamic route pattern.
+// Handles [param], [...param] (required catch-all), [[...param]] (optional catch-all).
+function matchesDynamicPattern(path: string, pattern: string): boolean {
+  const pathSegs = path.split('/').filter(Boolean);
+  const patternSegs = pattern.split('/').filter(Boolean);
+  let pi = 0;
+  for (let si = 0; si < patternSegs.length; si++) {
+    const seg = patternSegs[si];
+    if (/^\[\[\.\.\./.test(seg)) return si === patternSegs.length - 1;
+    if (/^\[\.\.\./.test(seg)) return pi < pathSegs.length && si === patternSegs.length - 1;
+    if (pi >= pathSegs.length) return false;
+    if (!/^\[/.test(seg) && pathSegs[pi] !== seg) return false;
+    pi++;
+  }
+  return pi === pathSegs.length;
+}
+
 export function buildGraph(
   routes: { route: string; filePath: string }[],
   rawEdges: FlowEdge[],
@@ -17,7 +34,30 @@ export function buildGraph(
     layoutGroupLabel: layoutGroupMap.get(route)?.label,
   }));
 
-  const edges: FlowEdge[] = rawEdges.filter((edge) => edge.source && edge.target.startsWith('/'));
+  const filteredEdges: FlowEdge[] = rawEdges.filter(
+    (edge) => edge.source && edge.target.startsWith('/'),
+  );
+
+  // Remap edge targets that don't exist as real routes but match a non-catch-all dynamic
+  // route pattern. This prevents phantom node accumulation and keeps back-links visible on
+  // the correct pattern node (e.g., /gallery/photo/2 → /gallery/photo/[id]).
+  // Catch-all patterns are excluded here because their concrete variants are created by the
+  // expansion step in analyze/route.ts — remapping them would lose per-variant edge accuracy.
+  const dynamicPatterns = [...routeSet].filter((r) => r.includes('[') && !/\[\.\.\./.test(r));
+  const edgeSeen = new Set<string>();
+  const edges: FlowEdge[] = [];
+  for (const e of filteredEdges) {
+    let target = e.target;
+    if (!routeSet.has(target) && dynamicPatterns.length > 0) {
+      const match = dynamicPatterns.find((p) => matchesDynamicPattern(target, p));
+      if (match) target = match;
+    }
+    const key = `${e.source}|${target}|${e.trigger}`;
+    if (!edgeSeen.has(key)) {
+      edgeSeen.add(key);
+      edges.push(target !== e.target ? { ...e, target } : e);
+    }
+  }
 
   // dead-end 탐지: 나가는 edge가 없는 노드
   const sourcesWithOutgoing = new Set(edges.map((e) => e.source));

@@ -193,6 +193,7 @@ export const en = {
   flowNode: {
     viewRedirectedScreen: 'View redirected screen',
     enterValue: 'Enter value',
+    optional: 'Optional',
     recapture: 'Recapture',
     hiddenNodes: (n: number) => `${n} node${n === 1 ? '' : 's'} hidden`,
     collapsed: 'Collapsed',

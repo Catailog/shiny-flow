@@ -10,6 +10,7 @@ export type FlowNodeData = {
   redirected?: boolean;
   redirectedScreenshot?: string;
   paramValues?: Record<string, string>;
+  catchAllParam?: string;
   color?: string;
   memo?: string;
 };

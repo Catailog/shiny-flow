@@ -3,6 +3,7 @@ import path from 'path';
 import { extractEdges } from './ast-parser';
 import { buildGraph } from './graph-builder';
 import { scanLayouts, scanRoutes } from './route-scanner';
+import type { FlowEdge } from './types';
 import type { FlowGraph } from './types';
 import { routeLastSegmentLabel } from './utils';
 
@@ -76,4 +77,4 @@ function buildLayoutGroupMap(
   return map;
 }
 
-export type { FlowEdge, FlowGraph, FlowNode } from './types';
+export type { FlowEdge, FlowGraph, FlowNode, ParamSet } from './types';

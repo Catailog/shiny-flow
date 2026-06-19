@@ -22,10 +22,12 @@ export type FlowEdge = {
   sourceLine: number;
 };
 
+export type ParamSet = Record<string, string>;
+
 export type FlowGraph = {
   nodes: FlowNode[];
   edges: FlowEdge[];
   analyzedAt: string;
   projectPath: string;
-  defaultParams?: Record<string, Record<string, string>>;
+  defaultParams?: Record<string, ParamSet | ParamSet[]>;
 };
