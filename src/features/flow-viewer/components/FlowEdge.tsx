@@ -264,7 +264,13 @@ export function FlowEdge({
           path={edgePath}
           markerEnd={markerEnd}
           markerStart={markerStart}
-          style={{ ...style, strokeWidth: STROKE_WIDTH / zoom }}
+          style={{
+            ...style,
+            strokeWidth: STROKE_WIDTH / zoom,
+            ...(data?.lineStyle === 'dashed' && {
+              strokeDasharray: `${6 / zoom} ${4 / zoom}`,
+            }),
+          }}
           interactionWidth={20 / zoom}
         />
       </g>

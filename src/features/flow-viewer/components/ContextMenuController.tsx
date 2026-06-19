@@ -426,7 +426,7 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
                       e.id === target.edgeId
                         ? {
                             ...e,
-                            animated: value === 'dashed',
+                            animated: false,
                             data: { ...e.data, lineStyle: value },
                           }
                         : e,

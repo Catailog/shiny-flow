@@ -35,7 +35,6 @@ export function graphToFlow(graph: FlowGraph): { nodes: Node[]; edges: Edge[] } 
       source: e.source,
       target: e.target,
       label: e.label ?? e.trigger,
-      animated: isRedirect,
       data: { lineStyle: isRedirect ? 'dashed' : 'solid' },
     };
   });
