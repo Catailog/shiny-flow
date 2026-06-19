@@ -55,7 +55,7 @@ import type { ContextMenuState, ContextMenuTarget, DialogRequest } from '../type
 import { ContextMenuController } from './ContextMenuController';
 import { DialogRenderer } from './DialogRenderer';
 import { FlowCommentNode } from './FlowCommentNode';
-import { FlowEdge } from './FlowEdge';
+import { FlowEdge, type FlowEdgeData } from './FlowEdge';
 import { FlowGroupNode } from './FlowGroupNode';
 import { FlowNode, type FlowNodeData } from './FlowNode';
 
@@ -333,8 +333,13 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     (_e: React.MouseEvent, node: Node) => {
       pushSnapshot();
       onDragStart(node);
+      setNodes((nds) => {
+        const idx = nds.findIndex((n) => n.id === node.id);
+        if (idx === -1 || idx === nds.length - 1) return nds;
+        return [...nds.slice(0, idx), ...nds.slice(idx + 1), nds[idx]];
+      });
     },
-    [pushSnapshot, onDragStart],
+    [pushSnapshot, onDragStart, setNodes],
   );
   const handleNodeDragWithCp = useCallback(
     (e: React.MouseEvent, node: Node, draggedNodes: Node[]) => {
@@ -385,10 +390,35 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   const handleNodeClick = useCallback(
     (e: React.MouseEvent, clickedNode: Node) => {
       if (e.shiftKey) return;
-      setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === clickedNode.id })));
+      setNodes((nds) => {
+        const updated = nds.map((n) => ({ ...n, selected: n.id === clickedNode.id }));
+        const idx = updated.findIndex((n) => n.id === clickedNode.id);
+        if (idx === -1 || idx === updated.length - 1) return updated;
+        return [...updated.slice(0, idx), ...updated.slice(idx + 1), updated[idx]];
+      });
       setEdges((eds) => eds.map((ed) => ({ ...ed, selected: false })));
     },
     [setNodes, setEdges],
+  );
+
+  const handleEdgeClick = useCallback(
+    (_e: React.MouseEvent, clickedEdge: Edge) => {
+      setEdges((eds) => {
+        const maxZ = Math.max(0, ...eds.map((e) => (e.data as FlowEdgeData)?.labelZIndex ?? 0));
+        const idx = eds.findIndex((e) => e.id === clickedEdge.id);
+        const reordered =
+          idx === -1 || idx === eds.length - 1
+            ? eds
+            : [...eds.slice(0, idx), ...eds.slice(idx + 1), eds[idx]];
+        return reordered.map((e) => ({
+          ...e,
+          selected: e.id === clickedEdge.id,
+          ...(e.id === clickedEdge.id && { data: { ...(e.data ?? {}), labelZIndex: maxZ + 1 } }),
+        }));
+      });
+      setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+    },
+    [setEdges, setNodes],
   );
 
   const handleContextMenuOpen = useCallback((e: React.MouseEvent) => {
@@ -471,6 +501,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
                   onNodeDrag={handleNodeDragWithCp}
                   onNodeDragStop={handleNodeDragStopWithCp}
                   onNodeClick={handleNodeClick}
+                  onEdgeClick={handleEdgeClick}
                   onNodeContextMenu={handleNodeContextMenu}
                   onEdgeContextMenu={handleEdgeContextMenu}
                   nodeTypes={nodeTypes}

@@ -37,6 +37,7 @@ export type FlowEdgeData = {
   sourceDir?: { dx: number; dy: number };
   targetDir?: { dx: number; dy: number };
   cp?: { x: number; y: number };
+  labelZIndex?: number;
 };
 
 type Props = EdgeProps<Edge<FlowEdgeData>>;
@@ -86,7 +87,7 @@ export function FlowEdge({
   selected,
 }: Props) {
   const zoom = useStore((s) => s.transform[2]);
-  const { setEdges, screenToFlowPosition } = useReactFlow();
+  const { setEdges, setNodes, screenToFlowPosition } = useReactFlow();
   const { pushSnapshot } = useHistory();
   const t = useT();
   const sourceNode = useStore(useCallback((s) => s.nodeLookup.get(source), [source]));
@@ -166,6 +167,20 @@ export function FlowEdge({
         e.stopPropagation();
         e.preventDefault();
         pushSnapshot();
+        setEdges((eds) => {
+          const maxZ = Math.max(0, ...eds.map((e) => (e.data as FlowEdgeData)?.labelZIndex ?? 0));
+          const idx = eds.findIndex((ed) => ed.id === id);
+          const reordered =
+            idx === -1 || idx === eds.length - 1
+              ? eds
+              : [...eds.slice(0, idx), ...eds.slice(idx + 1), eds[idx]];
+          return reordered.map((e) => ({
+            ...e,
+            selected: e.id === id,
+            ...(e.id === id && { data: { ...(e.data ?? {}), labelZIndex: maxZ + 1 } }),
+          }));
+        });
+        setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
         const onMove = (ev: MouseEvent) => {
           const mousePos = screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
           const center = getCenter(node);
@@ -186,6 +201,7 @@ export function FlowEdge({
         const onUp = () => {
           window.removeEventListener('mousemove', onMove);
           window.removeEventListener('mouseup', onUp);
+          setEdges((eds) => eds.map((e) => ({ ...e, selected: e.id === id })));
         };
         window.addEventListener('mousemove', onMove);
         window.addEventListener('mouseup', onUp);
@@ -208,6 +224,17 @@ export function FlowEdge({
       e.stopPropagation();
       e.preventDefault();
       pushSnapshot();
+      setEdges((eds) => {
+        const maxZ = Math.max(0, ...eds.map((e) => (e.data as FlowEdgeData)?.labelZIndex ?? 0));
+        const idx = eds.findIndex((ed) => ed.id === id);
+        const reordered =
+          idx === -1 || idx === eds.length - 1
+            ? eds
+            : [...eds.slice(0, idx), ...eds.slice(idx + 1), eds[idx]];
+        return reordered.map((e) =>
+          e.id === id ? { ...e, data: { ...(e.data ?? {}), labelZIndex: maxZ + 1 } } : e,
+        );
+      });
       const spSnap = { ...sp };
       const tpSnap = { ...tp };
       const onMove = (ev: MouseEvent) => {
@@ -267,6 +294,9 @@ export function FlowEdge({
           style={{
             ...style,
             strokeWidth: STROKE_WIDTH / zoom,
+            stroke: selected
+              ? 'var(--xy-edge-stroke-selected-default, #555)'
+              : 'var(--xy-edge-stroke-default, #b1b1b7)',
             ...(data?.lineStyle === 'dashed' && {
               strokeDasharray: `${6 / zoom} ${4 / zoom}`,
             }),
@@ -280,7 +310,7 @@ export function FlowEdge({
             className="nodrag nopan absolute"
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) scale(${1 / zoom})`,
-              zIndex: Z_INDEX.edgeLabel,
+              zIndex: data?.labelZIndex ?? Z_INDEX.edgeLabel,
               pointerEvents: 'all',
               cursor: 'grab',
             }}
