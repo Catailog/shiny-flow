@@ -19,11 +19,14 @@ import { Z_INDEX } from '@/constants/zIndex';
 import { useHistory } from '../historyContext';
 import {
   type Face,
+  type LoopAttachment,
+  buildCustomSelfLoopPath,
   buildSelfLoopPath,
   computeHandlePlacement,
   faceHandlePos,
   getCenter,
   getRectIntersectionFromDir,
+  snapToNodePerimeter,
 } from '../lib/edgeGeometry';
 
 // 엣지 스트로크 스타일 상수 — 변경 시 이 곳만 편집
@@ -38,6 +41,9 @@ export type FlowEdgeData = {
   targetDir?: { dx: number; dy: number };
   cp?: { x: number; y: number };
   labelZIndex?: number;
+  loopSp?: LoopAttachment;
+  loopTp?: LoopAttachment;
+  loopCtrl?: { x: number; y: number };
 };
 
 type Props = EdgeProps<Edge<FlowEdgeData>>;
@@ -131,12 +137,21 @@ export function FlowEdge({
   let tp: { x: number; y: number };
 
   if (isSelfLoop) {
-    const loop = buildSelfLoopPath(sourceNode, loopIndex);
-    edgePath = loop.path;
-    labelX = loop.labelX;
-    labelY = loop.labelY;
-    sp = loop.sp;
-    tp = loop.tp;
+    if (data?.loopSp && data?.loopTp) {
+      const loop = buildCustomSelfLoopPath(sourceNode, data.loopSp, data.loopTp, data.loopCtrl);
+      edgePath = loop.path;
+      labelX = loop.labelX;
+      labelY = loop.labelY;
+      sp = loop.spCanvas;
+      tp = loop.tpCanvas;
+    } else {
+      const loop = buildSelfLoopPath(sourceNode, loopIndex);
+      edgePath = loop.path;
+      labelX = loop.labelX;
+      labelY = loop.labelY;
+      sp = loop.sp;
+      tp = loop.tp;
+    }
   } else {
     sp = data?.sourceDir
       ? getRectIntersectionFromDir(sourceNode, data.sourceDir)
@@ -157,7 +172,73 @@ export function FlowEdge({
     }
   }
 
-  const showHandles = !isSelfLoop && (selected || hovered);
+  const showHandles = selected || hovered;
+
+  const makeSelfLoopHandleDragHandler = (
+    type: 'source' | 'target',
+    currentSp: { x: number; y: number },
+    currentTp: { x: number; y: number },
+  ) => ({
+    onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => {
+      if (e.button !== 0) return;
+      e.stopPropagation();
+      e.preventDefault();
+      pushSnapshot();
+      setEdges((eds) => {
+        const maxZ = Math.max(0, ...eds.map((e) => (e.data as FlowEdgeData)?.labelZIndex ?? 0));
+        const idx = eds.findIndex((ed) => ed.id === id);
+        const reordered =
+          idx === -1 || idx === eds.length - 1
+            ? eds
+            : [...eds.slice(0, idx), ...eds.slice(idx + 1), eds[idx]];
+        return reordered.map((e) => ({
+          ...e,
+          selected: e.id === id,
+          ...(e.id === id && { data: { ...(e.data ?? {}), labelZIndex: maxZ + 1 } }),
+        }));
+      });
+      setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+      // 드래그 시작 시점의 양쪽 attachment를 스냅샷으로 고정
+      const initSp: LoopAttachment = data?.loopSp ?? snapToNodePerimeter(sourceNode, currentSp);
+      const initTp: LoopAttachment = data?.loopTp ?? snapToNodePerimeter(sourceNode, currentTp);
+      const onMove = (ev: MouseEvent) => {
+        const mousePos = screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
+        const attachment = snapToNodePerimeter(sourceNode, mousePos);
+        setEdges((eds) =>
+          eds.map((edge) =>
+            edge.id === id
+              ? {
+                  ...edge,
+                  data: {
+                    ...(edge.data ?? {}),
+                    loopSp: type === 'source' ? attachment : initSp,
+                    loopTp: type === 'target' ? attachment : initTp,
+                  },
+                }
+              : edge,
+          ),
+        );
+      };
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        setEdges((eds) => eds.map((e) => ({ ...e, selected: e.id === id })));
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    },
+    onDoubleClick: (e: React.MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      pushSnapshot();
+      setEdges((eds) =>
+        eds.map((edge) =>
+          edge.id === id
+            ? { ...edge, data: { ...(edge.data ?? {}), loopSp: undefined, loopTp: undefined } }
+            : edge,
+        ),
+      );
+    },
+  });
 
   const makeDragHandlers = (type: 'source' | 'target', node: InternalNode) => {
     const key = type === 'source' ? 'sourceDir' : 'targetDir';
@@ -216,6 +297,61 @@ export function FlowEdge({
         );
       },
     };
+  };
+
+  const selfLoopBadgeDragHandlers = {
+    onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => {
+      if (e.button !== 0) return;
+      e.stopPropagation();
+      e.preventDefault();
+      pushSnapshot();
+      setEdges((eds) => {
+        const maxZ = Math.max(0, ...eds.map((e) => (e.data as FlowEdgeData)?.labelZIndex ?? 0));
+        const idx = eds.findIndex((ed) => ed.id === id);
+        const reordered =
+          idx === -1 || idx === eds.length - 1
+            ? eds
+            : [...eds.slice(0, idx), ...eds.slice(idx + 1), eds[idx]];
+        return reordered.map((e) =>
+          e.id === id ? { ...e, data: { ...(e.data ?? {}), labelZIndex: maxZ + 1 } } : e,
+        );
+      });
+      // 드래그 시작 시점의 루프 기하 정보 고정
+      const midX = (sp.x + tp.x) / 2;
+      const midY = (sp.y + tp.y) / 2;
+      const initSp: LoopAttachment = data?.loopSp ?? snapToNodePerimeter(sourceNode, sp);
+      const initTp: LoopAttachment = data?.loopTp ?? snapToNodePerimeter(sourceNode, tp);
+      const onMove = (ev: MouseEvent) => {
+        const B = screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
+        // 라벨 위치 = midXY + 0.75 * ctrl → ctrl 역산
+        const loopCtrl = { x: (B.x - midX) / 0.75, y: (B.y - midY) / 0.75 };
+        setEdges((eds) =>
+          eds.map((edge) =>
+            edge.id === id
+              ? {
+                  ...edge,
+                  data: { ...(edge.data ?? {}), loopSp: initSp, loopTp: initTp, loopCtrl },
+                }
+              : edge,
+          ),
+        );
+      };
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    },
+    onDoubleClick: (e: React.MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      pushSnapshot();
+      setEdges((eds) =>
+        eds.map((edge) =>
+          edge.id === id ? { ...edge, data: { ...(edge.data ?? {}), loopCtrl: undefined } } : edge,
+        ),
+      );
+    },
   };
 
   const badgeDragHandlers = {
@@ -315,7 +451,7 @@ export function FlowEdge({
               cursor: 'grab',
             }}
             title={t.flowEdge.dragCurve}
-            {...badgeDragHandlers}
+            {...(isSelfLoop ? selfLoopBadgeDragHandlers : badgeDragHandlers)}
           >
             <div className="rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground shadow-sm dark:border-foreground/20">
               {comment}
@@ -333,29 +469,60 @@ export function FlowEdge({
               leaveTimer.current = setTimeout(() => setHovered(false), 150);
             }}
           >
-            <EdgeHandle
-              x={sp.x}
-              y={sp.y}
-              zoom={zoom}
-              title={t.flowEdge.dragConnectionPoint}
-              {...makeDragHandlers('source', sourceNode)}
-            />
-            <EdgeHandle
-              x={tp.x}
-              y={tp.y}
-              zoom={zoom}
-              title={t.flowEdge.dragConnectionPoint}
-              {...makeDragHandlers('target', targetNode)}
-            />
-            {!comment && (
-              <EdgeHandle
-                x={labelX}
-                y={labelY}
-                zoom={zoom}
-                title={t.flowEdge.dragCurve}
-                onMouseDown={badgeDragHandlers.onMouseDown}
-                onDoubleClick={badgeDragHandlers.onDoubleClick}
-              />
+            {isSelfLoop ? (
+              <>
+                <EdgeHandle
+                  x={sp.x}
+                  y={sp.y}
+                  zoom={zoom}
+                  title={t.flowEdge.dragConnectionPoint}
+                  {...makeSelfLoopHandleDragHandler('source', sp, tp)}
+                />
+                <EdgeHandle
+                  x={tp.x}
+                  y={tp.y}
+                  zoom={zoom}
+                  title={t.flowEdge.dragConnectionPoint}
+                  {...makeSelfLoopHandleDragHandler('target', sp, tp)}
+                />
+                {!comment && (
+                  <EdgeHandle
+                    x={labelX}
+                    y={labelY}
+                    zoom={zoom}
+                    title={t.flowEdge.dragCurve}
+                    onMouseDown={selfLoopBadgeDragHandlers.onMouseDown}
+                    onDoubleClick={selfLoopBadgeDragHandlers.onDoubleClick}
+                  />
+                )}
+              </>
+            ) : (
+              <>
+                <EdgeHandle
+                  x={sp.x}
+                  y={sp.y}
+                  zoom={zoom}
+                  title={t.flowEdge.dragConnectionPoint}
+                  {...makeDragHandlers('source', sourceNode)}
+                />
+                <EdgeHandle
+                  x={tp.x}
+                  y={tp.y}
+                  zoom={zoom}
+                  title={t.flowEdge.dragConnectionPoint}
+                  {...makeDragHandlers('target', targetNode)}
+                />
+                {!comment && (
+                  <EdgeHandle
+                    x={labelX}
+                    y={labelY}
+                    zoom={zoom}
+                    title={t.flowEdge.dragCurve}
+                    onMouseDown={badgeDragHandlers.onMouseDown}
+                    onDoubleClick={badgeDragHandlers.onDoubleClick}
+                  />
+                )}
+              </>
             )}
           </div>
         )}

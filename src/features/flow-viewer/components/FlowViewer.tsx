@@ -497,6 +497,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
                   onConnect={onConnect}
+                  isValidConnection={() => true}
                   onNodeDragStart={handleNodeDragStart}
                   onNodeDrag={handleNodeDragWithCp}
                   onNodeDragStop={handleNodeDragStopWithCp}
