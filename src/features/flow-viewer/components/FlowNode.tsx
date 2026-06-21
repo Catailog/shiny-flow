@@ -73,6 +73,7 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
 
   const { setNodes } = useReactFlow();
   const zoomCompensation = useZoomCompensation();
+  const handleStyle = { ...zoomCompensation, zIndex: 10 };
 
   const handleParamChange = (key: string, value: string) => {
     const next = { ...paramValues, [key]: value };
@@ -158,6 +159,8 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
             setIsResizing(true);
           }}
           onResizeEnd={() => setIsResizing(false)}
+          lineClassName="!z-0"
+          handleClassName="!z-[1]"
         />
         {/* 접힘 스택 그림자: 메인 카드 뒤에 쌓인 카드처럼 보이도록 offset된 레이어 */}
         {isCollapsed && (
@@ -307,41 +310,41 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
         <Handle
           type="target"
           position={Position.Top}
-          style={zoomCompensation}
+          style={handleStyle}
           className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           position={Position.Bottom}
-          style={zoomCompensation}
+          style={handleStyle}
           className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="target"
           id="target-left"
           position={Position.Left}
-          style={zoomCompensation}
+          style={handleStyle}
           className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           id="source-left"
           position={Position.Left}
-          style={zoomCompensation}
+          style={handleStyle}
           className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="target"
           id="target-right"
           position={Position.Right}
-          style={zoomCompensation}
+          style={handleStyle}
           className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           id="source-right"
           position={Position.Right}
-          style={zoomCompensation}
+          style={handleStyle}
           className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
       </div>
