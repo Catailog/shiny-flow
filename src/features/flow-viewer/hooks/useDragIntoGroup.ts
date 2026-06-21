@@ -74,9 +74,13 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
         // 드래그 노드 + 다른 선택 노드 모두에 적용할 업데이트 계산
         const updates = new Map<string, Partial<Node>>();
 
+        // parentId가 선택된 다른 노드를 가리키면 → 부모와 함께 이동 중이므로 parentId 변경 생략
+        const selectedIds = new Set([draggedNode.id, ...otherSelected.map((n) => n.id)]);
+        const movedWithParent = (n: Node) => !!n.parentId && selectedIds.has(n.parentId);
+
         if (targetGroup) {
           const tAbs = getAbsolutePosition(targetGroup, prev);
-          if (draggedNode.parentId !== targetGroup.id) {
+          if (draggedNode.parentId !== targetGroup.id && !movedWithParent(draggedNode)) {
             updates.set(draggedNode.id, {
               parentId: targetGroup.id,
               extent: undefined,
@@ -85,6 +89,7 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
           }
           for (const n of otherSelected) {
             if (n.parentId === targetGroup.id) continue;
+            if (movedWithParent(n)) continue;
             const nodeAbs = getAbsolutePosition(n, prev);
             updates.set(n.id, {
               parentId: targetGroup.id,
@@ -94,7 +99,7 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
           }
         } else {
           // 그룹 바깥으로 드래그
-          if (draggedNode.parentId) {
+          if (draggedNode.parentId && !movedWithParent(draggedNode)) {
             updates.set(draggedNode.id, {
               parentId: undefined,
               extent: undefined,
@@ -103,6 +108,7 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
           }
           for (const n of otherSelected) {
             if (!n.parentId) continue;
+            if (movedWithParent(n)) continue;
             const nodeAbs = getAbsolutePosition(n, prev);
             updates.set(n.id, { parentId: undefined, extent: undefined, position: nodeAbs });
           }
