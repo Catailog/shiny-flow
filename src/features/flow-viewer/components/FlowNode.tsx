@@ -68,6 +68,8 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
   const [paramValues, setParamValues] = useState<Record<string, string>>(
     () => data.paramValues ?? Object.fromEntries(dynamicParams.map(({ key }) => [key, ''])),
   );
+  const [isHovered, setIsHovered] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
 
   const { setNodes } = useReactFlow();
   const zoomCompensation = useZoomCompensation();
@@ -139,19 +141,24 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
         </span>
       </NodeToolbar>
 
-      <NodeResizer
-        minWidth={280}
-        minHeight={60}
-        isVisible={selected}
-        keepAspectRatio={shiftHeld}
-        onResizeStart={pushSnapshot}
-      />
-
       {/* 핸들이 overflow-hidden에 잘리지 않도록 외부 div와 내부 content wrapper를 분리 */}
       <div
         className="group relative cursor-pointer"
         style={{ width: width || 280, height: height || undefined }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
+        <NodeResizer
+          minWidth={280}
+          minHeight={60}
+          isVisible={isHovered || isResizing}
+          keepAspectRatio={shiftHeld}
+          onResizeStart={() => {
+            pushSnapshot();
+            setIsResizing(true);
+          }}
+          onResizeEnd={() => setIsResizing(false)}
+        />
         {/* 접힘 스택 그림자: 메인 카드 뒤에 쌓인 카드처럼 보이도록 offset된 레이어 */}
         {isCollapsed && (
           <>
