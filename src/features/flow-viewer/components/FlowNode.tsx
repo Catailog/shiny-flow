@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Image from 'next/image';
 
@@ -70,6 +70,13 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
   );
   const [isHovered, setIsHovered] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+
+  useEffect(() => {
+    if (!isResizing) return;
+    const handlePointerUp = () => setIsResizing(false);
+    window.addEventListener('pointerup', handlePointerUp);
+    return () => window.removeEventListener('pointerup', handlePointerUp);
+  }, [isResizing]);
 
   const { setNodes } = useReactFlow();
   const zoomCompensation = useZoomCompensation();
