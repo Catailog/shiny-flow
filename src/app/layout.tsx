@@ -5,6 +5,7 @@ import 'flag-icons/css/flag-icons.min.css';
 
 import { AuthSessionProvider } from '@/components/AuthSessionProvider';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 import './globals.css';
@@ -35,6 +36,7 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthSessionProvider>
             <TooltipProvider>{children}</TooltipProvider>
+            <Toaster />
           </AuthSessionProvider>
         </ThemeProvider>
       </body>

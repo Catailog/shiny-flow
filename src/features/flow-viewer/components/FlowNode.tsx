@@ -12,6 +12,7 @@ import {
   NodeToolbar,
   Position,
   useKeyPress,
+  useReactFlow,
 } from '@xyflow/react';
 import { CameraIcon, LoaderIcon, LogInIcon, SquareStackIcon } from 'lucide-react';
 
@@ -68,12 +69,20 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
     () => data.paramValues ?? Object.fromEntries(dynamicParams.map(({ key }) => [key, ''])),
   );
 
-  const [isCapturing, setIsCapturing] = useState(false);
+  const { setNodes } = useReactFlow();
   const zoomCompensation = useZoomCompensation();
+
+  const handleParamChange = (key: string, value: string) => {
+    const next = { ...paramValues, [key]: value };
+    setParamValues(next);
+    setNodes((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, data: { ...n.data, paramValues: next } } : n)),
+    );
+  };
   const shiftHeld = useKeyPress('Shift');
   const { pushSnapshot } = useHistory();
 
-  const handleCapture = async () => {
+  const handleCapture = () => {
     let resolvedRoute = data.route.replace(
       /\[\.{0,3}([^\]]+)\]/g,
       (_, key) => paramValues[key] ?? key,
@@ -82,12 +91,7 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
       const val = paramValues[data.catchAllParam]?.trim();
       if (val) resolvedRoute = `${resolvedRoute}/${val}`;
     }
-    setIsCapturing(true);
-    try {
-      await captureNode(id, resolvedRoute, paramValues);
-    } finally {
-      setIsCapturing(false);
-    }
+    captureNode(id, resolvedRoute, paramValues);
   };
 
   return (
@@ -193,7 +197,7 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
                   </span>
                   <Input
                     value={paramValues[key] ?? ''}
-                    onChange={(e) => setParamValues((prev) => ({ ...prev, [key]: e.target.value }))}
+                    onChange={(e) => handleParamChange(key, e.target.value)}
                     placeholder={optional ? t.flowNode.optional : t.flowNode.enterValue}
                     className="nodrag h-5 w-20 rounded-sm px-1.5 text-xs"
                   />
@@ -206,14 +210,14 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
                 onClick={available ? handleCapture : validateForCapture}
                 disabled={
                   available &&
-                  (isCapturing ||
+                  (!!data.isCapturing ||
                     dynamicParams.some(
                       ({ key, optional }) => !optional && !paramValues[key]?.trim(),
                     ))
                 }
                 className="nodrag ml-auto"
               >
-                {isCapturing ? (
+                {data.isCapturing ? (
                   <LoaderIcon size={10} className="animate-spin" />
                 ) : (
                   <CameraIcon size={10} />
@@ -237,25 +241,37 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
                   }}
                   unoptimized
                 />
+                {data.isCapturing && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/60">
+                    <LoaderIcon size={24} className="animate-spin text-muted-foreground" />
+                  </div>
+                )}
               </div>
             ) : (
-              <Image
-                src={src}
-                alt={data.label}
-                width={280}
-                height={0}
-                style={{ height: 'auto', width: '100%' }}
-                className="block cursor-pointer border-b border-inherit"
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  openDialog({ type: 'screenshot', src, label: data.label });
-                }}
-                unoptimized
-              />
+              <div className="relative border-b border-inherit">
+                <Image
+                  src={src}
+                  alt={data.label}
+                  width={280}
+                  height={0}
+                  style={{ height: 'auto', width: '100%' }}
+                  className="block cursor-pointer"
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    openDialog({ type: 'screenshot', src, label: data.label });
+                  }}
+                  unoptimized
+                />
+                {data.isCapturing && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/60">
+                    <LoaderIcon size={24} className="animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
             ))}
           {!src && (
             <div className="flex flex-1 items-center justify-center px-4 py-6 text-center text-sm text-muted-foreground">
-              {data.route}
+              {data.isCapturing ? <LoaderIcon size={20} className="animate-spin" /> : data.route}
             </div>
           )}
 

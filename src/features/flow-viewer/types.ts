@@ -13,6 +13,7 @@ export type FlowNodeData = {
   catchAllParam?: string;
   color?: string;
   memo?: string;
+  isCapturing?: boolean;
 };
 
 export type GroupNodeData = {

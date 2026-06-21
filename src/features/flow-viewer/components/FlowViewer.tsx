@@ -29,6 +29,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { LockIcon, Redo2Icon, TagIcon, Undo2Icon, UnlockIcon } from 'lucide-react';
+import { toast } from 'sonner';
 
 import type { AuthInput } from '@/features/project-input';
 
@@ -575,37 +576,53 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   const captureNode = useCallback(
     async (nodeId: string, resolvedRoute: string, paramValues: Record<string, string>) => {
       if (!screenshotOptions) return;
-      const res = await fetch('/api/screenshot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          baseUrl: screenshotOptions.baseUrl,
-          route: resolvedRoute,
-          auth: screenshotOptions.auth,
-          projectPath: screenshotOptions.projectPath,
-        }),
-      });
-      if (!res.ok) return;
-      const { imageBase64, redirected, redirectedImageBase64 } = await res.json();
       setNodes((prev) =>
-        prev.map((n) => {
-          if (n.id !== nodeId) return n;
-          const oldData = n.data as FlowNodeData;
-          const redirectedScreenshot = !redirected
-            ? (redirectedImageBase64 ?? oldData.redirectedScreenshot)
-            : oldData.redirectedScreenshot;
-          return {
-            ...n,
-            data: {
-              ...oldData,
-              screenshot: redirected ? oldData.screenshot : imageBase64,
-              redirected,
-              paramValues,
-              redirectedScreenshot,
-            },
-          };
-        }),
+        prev.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, isCapturing: true } } : n)),
       );
+      const resetCapturing = () =>
+        setNodes((prev) =>
+          prev.map((n) =>
+            n.id === nodeId ? { ...n, data: { ...n.data, isCapturing: false } } : n,
+          ),
+        );
+      try {
+        const res = await fetch('/api/screenshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            baseUrl: screenshotOptions.baseUrl,
+            route: resolvedRoute,
+            auth: screenshotOptions.auth,
+            projectPath: screenshotOptions.projectPath,
+          }),
+        });
+        if (!res.ok) {
+          resetCapturing();
+          toast.error('재캡처 실패');
+          return;
+        }
+        const { imageBase64, redirected } = await res.json();
+        setNodes((prev) =>
+          prev.map((n) => {
+            if (n.id !== nodeId) return n;
+            const oldData = n.data as FlowNodeData;
+            return {
+              ...n,
+              data: {
+                ...oldData,
+                screenshot: redirected ? oldData.screenshot : imageBase64,
+                redirected,
+                paramValues,
+                redirectedScreenshot: redirected ? oldData.redirectedScreenshot : undefined,
+                isCapturing: false,
+              },
+            };
+          }),
+        );
+      } catch {
+        resetCapturing();
+        toast.error('재캡처 실패');
+      }
     },
     [screenshotOptions, setNodes],
   );
