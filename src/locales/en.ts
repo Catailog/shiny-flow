@@ -99,6 +99,7 @@ export const en = {
     editMemo: 'Edit memo',
     deleteMemo: 'Delete memo',
     colorTag: 'Status tag',
+    recapture: 'Recapture',
     viewLarge: 'View full size',
     editGroup: 'Edit group',
     ungroup: 'Ungroup',

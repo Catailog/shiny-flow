@@ -5,6 +5,7 @@ import { Fragment } from 'react';
 import { useReactFlow, useStore } from '@xyflow/react';
 import {
   BoxSelectIcon,
+  CameraIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   MaximizeIcon,
@@ -35,6 +36,7 @@ import { useCollapseContext } from '../collapseContext';
 import { useHistory } from '../historyContext';
 import { STATUS_COLORS, getNodeColorStyle } from '../lib/nodeColors';
 import { getAbsolutePosition, recomputeGroupZIndexes } from '../lib/nodeUtils';
+import { useScreenshotContext } from '../screenshotContext';
 import type { ContextMenuState, DialogRequest } from '../types';
 import type { EdgeLineStyle, FlowEdgeData } from './FlowEdge';
 import type { FlowNodeData } from './FlowNode';
@@ -80,6 +82,7 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
     useReactFlow();
   const { pushSnapshot } = useHistory();
   const t = useT();
+  const { available, captureNode, validateForCapture } = useScreenshotContext();
   const { collapsedIds, toggleCollapse, hasChildren } = useCollapseContext();
   const selectedNodes = useStore((s) =>
     s.nodes.filter((n) => n.selected && (n.type === 'flowNode' || n.type === 'groupNode')),
@@ -201,6 +204,24 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
     const hasMemo = !!nodeData?.memo;
     const hasSrc = !!nodeData?.screenshot;
 
+    const handleRecapture = () => {
+      if (!nodeData) return;
+      if (!available) {
+        validateForCapture();
+        return;
+      }
+      const paramValues = nodeData.paramValues ?? {};
+      let resolvedRoute = nodeData.route.replace(
+        /\[\.{0,3}([^\]]+)\]/g,
+        (_, key: string) => paramValues[key] ?? key,
+      );
+      if (nodeData.catchAllParam) {
+        const val = paramValues[nodeData.catchAllParam]?.trim();
+        if (val) resolvedRoute = `${resolvedRoute}/${val}`;
+      }
+      captureNode(target.nodeId, resolvedRoute, paramValues);
+    };
+
     sections = [
       [
         canCollapse ? (
@@ -298,6 +319,10 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
             })}
           </ContextMenuSubContent>
         </ContextMenuSub>,
+        <MenuItem key="recapture" onClick={handleRecapture}>
+          <CameraIcon className={ICON} />
+          {t.menu.recapture}
+        </MenuItem>,
         hasSrc ? (
           <MenuItem
             key="screenshot"

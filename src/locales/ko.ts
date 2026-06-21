@@ -100,6 +100,7 @@ export const ko: Translations = {
     editMemo: '메모 수정',
     deleteMemo: '메모 삭제',
     colorTag: '상태 태그',
+    recapture: '재캡처',
     viewLarge: '크게 보기',
     editGroup: '그룹 수정',
     ungroup: '그룹 해제',
