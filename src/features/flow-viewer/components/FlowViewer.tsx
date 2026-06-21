@@ -71,6 +71,20 @@ const defaultEdgeOptions = {
   zIndex: Z_INDEX.edge,
 };
 
+// 노드를 배열 끝으로 올려 z-index 상승. groupNode인 경우 자식도 함께 이동 (부모가 자식보다 앞에 있어야 함)
+function bringToFront(nds: Node[], nodeId: string): Node[] {
+  const node = nds.find((n) => n.id === nodeId);
+  if (!node) return nds;
+  if (node.type === 'groupNode') {
+    const rest = nds.filter((n) => n.id !== nodeId && n.parentId !== nodeId);
+    const children = nds.filter((n) => n.parentId === nodeId);
+    return [...rest, node, ...children];
+  }
+  const idx = nds.findIndex((n) => n.id === nodeId);
+  if (idx === -1 || idx === nds.length - 1) return nds;
+  return [...nds.slice(0, idx), ...nds.slice(idx + 1), nds[idx]];
+}
+
 // 노드 바디에 드롭 시 가장 가까운 핸들 ID 반환 (flow 좌표 기준)
 function getNearestHandleId(
   nodeX: number,
@@ -479,11 +493,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     (_e: React.MouseEvent, node: Node) => {
       pushSnapshot();
       onDragStart(node);
-      setNodes((nds) => {
-        const idx = nds.findIndex((n) => n.id === node.id);
-        if (idx === -1 || idx === nds.length - 1) return nds;
-        return [...nds.slice(0, idx), ...nds.slice(idx + 1), nds[idx]];
-      });
+      setNodes((nds) => bringToFront(nds, node.id));
     },
     [pushSnapshot, onDragStart, setNodes],
   );
@@ -538,9 +548,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
       if (e.shiftKey) return;
       setNodes((nds) => {
         const updated = nds.map((n) => ({ ...n, selected: n.id === clickedNode.id }));
-        const idx = updated.findIndex((n) => n.id === clickedNode.id);
-        if (idx === -1 || idx === updated.length - 1) return updated;
-        return [...updated.slice(0, idx), ...updated.slice(idx + 1), updated[idx]];
+        return bringToFront(updated, clickedNode.id);
       });
       setEdges((eds) => eds.map((ed) => ({ ...ed, selected: false })));
     },
