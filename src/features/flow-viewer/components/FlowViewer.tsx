@@ -20,7 +20,6 @@ import {
   MiniMap,
   type Node,
   ReactFlow,
-  addEdge,
   useEdgesState,
   useNodesInitialized,
   useNodesState,
@@ -331,7 +330,10 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   const onConnect = useCallback(
     (connection: Connection) => {
       pushSnapshot();
-      setEdges((eds) => addEdge({ ...connection, type: 'flowEdge' }, eds));
+      setEdges((eds) => [
+        ...eds,
+        { ...connection, id: crypto.randomUUID(), type: 'flowEdge' } as Edge,
+      ]);
     },
     [pushSnapshot, setEdges],
   );
@@ -419,19 +421,17 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
       const neededType = connecting.handleType === 'source' ? 'target' : 'source';
       const nearestId = getNearestHandleId(tl.x, tl.y, nodeW, nodeH, mousePos, neededType);
 
+      const newConnection = {
+        source: connecting.handleType === 'source' ? connecting.nodeId : targetNodeId,
+        sourceHandle: connecting.handleType === 'source' ? connecting.handleId : nearestId,
+        target: connecting.handleType === 'source' ? targetNodeId : connecting.nodeId,
+        targetHandle: connecting.handleType === 'source' ? nearestId : connecting.handleId,
+      };
       pushSnapshot();
-      setEdges((eds) =>
-        addEdge(
-          {
-            source: connecting.handleType === 'source' ? connecting.nodeId : targetNodeId,
-            sourceHandle: connecting.handleType === 'source' ? connecting.handleId : nearestId,
-            target: connecting.handleType === 'source' ? targetNodeId : connecting.nodeId,
-            targetHandle: connecting.handleType === 'source' ? nearestId : connecting.handleId,
-            type: 'flowEdge',
-          },
-          eds,
-        ),
-      );
+      setEdges((eds) => [
+        ...eds,
+        { ...newConnection, id: crypto.randomUUID(), type: 'flowEdge' } as Edge,
+      ]);
     },
     [pushSnapshot, setEdges],
   );
