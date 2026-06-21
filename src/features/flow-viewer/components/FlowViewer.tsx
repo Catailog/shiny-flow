@@ -25,6 +25,7 @@ import {
   useNodesState,
   useReactFlow,
   useStore,
+  useStoreApi,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { LockIcon, Redo2Icon, TagIcon, Undo2Icon, UnlockIcon } from 'lucide-react';
@@ -48,6 +49,11 @@ import { HistoryProvider, useHistory } from '../historyContext';
 import { useDragIntoGroup } from '../hooks/useDragIntoGroup';
 import { useEdgeCpSync } from '../hooks/useEdgeCpSync';
 import { buildChildrenMap, computeHiddenIds, countHiddenSubtree } from '../lib/collapse';
+import {
+  computeHandlePlacement,
+  faceHandlePos,
+  getRectIntersectionFromDir,
+} from '../lib/edgeGeometry';
 import { applyDagreLayout } from '../lib/layout';
 import { graphToFlow } from '../lib/transform';
 import { ScreenshotContext } from '../screenshotContext';
@@ -191,6 +197,196 @@ function KeyboardDeleteHandler() {
   return null;
 }
 
+function ptInRect(x: number, y: number, minX: number, minY: number, maxX: number, maxY: number) {
+  return x >= minX && x <= maxX && y >= minY && y <= maxY;
+}
+
+function segsIntersect(
+  ax1: number,
+  ay1: number,
+  ax2: number,
+  ay2: number,
+  bx1: number,
+  by1: number,
+  bx2: number,
+  by2: number,
+): boolean {
+  const d1x = ax2 - ax1,
+    d1y = ay2 - ay1;
+  const d2x = bx2 - bx1,
+    d2y = by2 - by1;
+  const cross = d1x * d2y - d1y * d2x;
+  if (Math.abs(cross) < 1e-10) return false;
+  const dx = bx1 - ax1,
+    dy = by1 - ay1;
+  const t = (dx * d2y - dy * d2x) / cross;
+  const u = (dx * d1y - dy * d1x) / cross;
+  return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+}
+
+function segIntersectsRect(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  minX: number,
+  minY: number,
+  maxX: number,
+  maxY: number,
+): boolean {
+  if (ptInRect(x1, y1, minX, minY, maxX, maxY) || ptInRect(x2, y2, minX, minY, maxX, maxY))
+    return true;
+  return (
+    segsIntersect(x1, y1, x2, y2, minX, minY, maxX, minY) ||
+    segsIntersect(x1, y1, x2, y2, maxX, minY, maxX, maxY) ||
+    segsIntersect(x1, y1, x2, y2, minX, maxY, maxX, maxY) ||
+    segsIntersect(x1, y1, x2, y2, minX, minY, minX, maxY)
+  );
+}
+
+type NodeLookupMap = ReturnType<ReturnType<typeof useStoreApi>['getState']>['nodeLookup'];
+
+function computeEdgeInBox(
+  edge: Edge,
+  storeEdges: readonly Edge[],
+  nodeLookup: NodeLookupMap,
+  flowMinX: number,
+  flowMinY: number,
+  flowMaxX: number,
+  flowMaxY: number,
+): boolean {
+  if (edge.source === edge.target) return false;
+  const src = nodeLookup.get(edge.source);
+  const tgt = nodeLookup.get(edge.target);
+  if (!src || !tgt) return false;
+
+  const edgeData = edge.data as FlowEdgeData | undefined;
+  const srcPlacement = computeHandlePlacement(edge.source, edge.id, storeEdges, nodeLookup);
+  const tgtPlacement = computeHandlePlacement(edge.target, edge.id, storeEdges, nodeLookup);
+
+  const sp = edgeData?.sourceDir
+    ? getRectIntersectionFromDir(src, edgeData.sourceDir)
+    : faceHandlePos(src, srcPlacement.face, srcPlacement.index, srcPlacement.total);
+  const tp = edgeData?.targetDir
+    ? getRectIntersectionFromDir(tgt, edgeData.targetDir)
+    : faceHandlePos(tgt, tgtPlacement.face, tgtPlacement.index, tgtPlacement.total);
+
+  let inBox = segIntersectsRect(sp.x, sp.y, tp.x, tp.y, flowMinX, flowMinY, flowMaxX, flowMaxY);
+  if (!inBox && edgeData?.cp) {
+    const cp = edgeData.cp;
+    inBox =
+      segIntersectsRect(sp.x, sp.y, cp.x, cp.y, flowMinX, flowMinY, flowMaxX, flowMaxY) ||
+      segIntersectsRect(cp.x, cp.y, tp.x, tp.y, flowMinX, flowMinY, flowMaxX, flowMaxY);
+  }
+  return inBox;
+}
+
+function EdgeRubberBandSync({
+  setEdges,
+  edgesRef,
+}: {
+  setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
+  edgesRef: React.MutableRefObject<Edge[]>;
+}) {
+  const storeApi = useStoreApi();
+  const userSelectionActive = useStore((s) => s.userSelectionActive);
+  const userSelectionRect = useStore((s) => s.userSelectionRect);
+
+  const lastRectRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+  const wasActiveRef = useRef(false);
+  const preSelectionEdgeIdsRef = useRef<Set<string>>(new Set());
+
+  // userSelectionRect becomes null in the same render as userSelectionActive→false,
+  // so we capture the last valid rect during render while it is still non-null
+  if (userSelectionRect) {
+    lastRectRef.current = {
+      x: userSelectionRect.x,
+      y: userSelectionRect.y,
+      width: userSelectionRect.width,
+      height: userSelectionRect.height,
+    };
+  }
+
+  // Handle start/end transitions
+  useEffect(() => {
+    const wasActive = wasActiveRef.current;
+    wasActiveRef.current = userSelectionActive;
+
+    if (!wasActive && userSelectionActive) {
+      // Rubber band just started — snapshot pre-selection
+      preSelectionEdgeIdsRef.current = new Set(
+        edgesRef.current.filter((e) => e.selected).map((e) => e.id),
+      );
+      return;
+    }
+
+    if (!wasActive || userSelectionActive || !lastRectRef.current) return;
+
+    // Rubber band just ended — apply final selection
+    const rect = lastRectRef.current;
+    const { transform, nodeLookup, edges: storeEdges } = storeApi.getState();
+    const [tx, ty, zoom] = transform;
+
+    const flowMinX = (rect.x - tx) / zoom;
+    const flowMinY = (rect.y - ty) / zoom;
+    const flowMaxX = (rect.x + rect.width - tx) / zoom;
+    const flowMaxY = (rect.y + rect.height - ty) / zoom;
+
+    const preSelected = preSelectionEdgeIdsRef.current;
+
+    setEdges((eds) =>
+      eds.map((edge) => {
+        const inBox = computeEdgeInBox(
+          edge,
+          storeEdges,
+          nodeLookup,
+          flowMinX,
+          flowMinY,
+          flowMaxX,
+          flowMaxY,
+        );
+        const selected = preSelected.has(edge.id) || inBox;
+        return selected !== edge.selected ? { ...edge, selected } : edge;
+      }),
+    );
+
+    lastRectRef.current = null;
+  }, [userSelectionActive, storeApi, setEdges, edgesRef]);
+
+  // Real-time highlight while rubber band is active
+  useEffect(() => {
+    if (!userSelectionActive || !userSelectionRect) return;
+
+    const { transform, nodeLookup, edges: storeEdges } = storeApi.getState();
+    const [tx, ty, zoom] = transform;
+
+    const flowMinX = (userSelectionRect.x - tx) / zoom;
+    const flowMinY = (userSelectionRect.y - ty) / zoom;
+    const flowMaxX = (userSelectionRect.x + userSelectionRect.width - tx) / zoom;
+    const flowMaxY = (userSelectionRect.y + userSelectionRect.height - ty) / zoom;
+
+    const preSelected = preSelectionEdgeIdsRef.current;
+
+    setEdges((eds) =>
+      eds.map((edge) => {
+        const inBox = computeEdgeInBox(
+          edge,
+          storeEdges,
+          nodeLookup,
+          flowMinX,
+          flowMinY,
+          flowMaxX,
+          flowMaxY,
+        );
+        const selected = preSelected.has(edge.id) || inBox;
+        return selected !== edge.selected ? { ...edge, selected } : edge;
+      }),
+    );
+  }, [userSelectionActive, userSelectionRect, storeApi, setEdges]);
+
+  return null;
+}
+
 // --- Main component ---
 
 export type FlowViewerHandle = {
@@ -289,6 +485,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
 
   const [isLocked, setIsLocked] = useState(false);
   const [spacebarLocked, setSpacebarLocked] = useState(false);
+  const [isShiftHeld, setIsShiftHeld] = useState(false);
   const isLockedRef = useRef(isLocked);
   useEffect(() => {
     isLockedRef.current = isLocked;
@@ -296,6 +493,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') setIsShiftHeld(true);
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ' && !e.shiftKey) {
         e.preventDefault();
@@ -317,6 +515,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') setIsShiftHeld(false);
       if (e.code === 'Space') setSpacebarLocked(false);
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -556,21 +755,24 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   );
 
   const handleEdgeClick = useCallback(
-    (_e: React.MouseEvent, clickedEdge: Edge) => {
+    (e: React.MouseEvent, clickedEdge: Edge) => {
+      // selection은 multiSelectionKeyCode/selectionKeyCode로 ReactFlow에 위임
+      // 여기서는 z-index 업데이트만
       setEdges((eds) => {
-        const maxZ = Math.max(0, ...eds.map((e) => (e.data as FlowEdgeData)?.labelZIndex ?? 0));
-        const idx = eds.findIndex((e) => e.id === clickedEdge.id);
+        const maxZ = Math.max(0, ...eds.map((ed) => (ed.data as FlowEdgeData)?.labelZIndex ?? 0));
+        const idx = eds.findIndex((ed) => ed.id === clickedEdge.id);
         const reordered =
           idx === -1 || idx === eds.length - 1
             ? eds
             : [...eds.slice(0, idx), ...eds.slice(idx + 1), eds[idx]];
-        return reordered.map((e) => ({
-          ...e,
-          selected: e.id === clickedEdge.id,
-          ...(e.id === clickedEdge.id && { data: { ...(e.data ?? {}), labelZIndex: maxZ + 1 } }),
+        return reordered.map((ed) => ({
+          ...ed,
+          ...(ed.id === clickedEdge.id && { data: { ...(ed.data ?? {}), labelZIndex: maxZ + 1 } }),
         }));
       });
-      setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+      if (!e.shiftKey) {
+        setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+      }
     },
     [setEdges, setNodes],
   );
@@ -686,9 +888,13 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
                   nodesDraggable={nodesDraggable}
                   zoomOnDoubleClick={false}
                   deleteKeyCode={null}
+                  selectionKeyCode="Shift"
                   multiSelectionKeyCode="Shift"
+                  panOnDrag={!isShiftHeld}
+                  selectionOnDrag={isShiftHeld}
                 >
                   <KeyboardDeleteHandler />
+                  <EdgeRubberBandSync setEdges={setEdges} edgesRef={edgesRef} />
                   <ConnectBridge bridgeRef={connectBridgeRef} />
                   <AutoLayout
                     edges={initialEdges}
