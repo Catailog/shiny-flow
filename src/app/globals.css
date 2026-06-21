@@ -259,6 +259,12 @@
   opacity: 1;
 }
 
+/* ── 연결 드래그 중 타겟 노드 바디 호버 하이라이트 ── */
+.react-flow__node.rf-connect-target {
+  outline: 2px solid var(--color-brand-primary);
+  outline-offset: 2px;
+}
+
 /* ── TipTap placeholder (pseudo-element, Tailwind으로 표현 불가) ── */
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
