@@ -528,11 +528,19 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
 
   const onConnect = useCallback(
     (connection: Connection) => {
+      const connecting = connectingRef.current;
+      // 시작 노드가 항상 source가 되도록 보정
+      const conn =
+        connecting && connection.source !== connecting.nodeId
+          ? {
+              source: connection.target!,
+              sourceHandle: connection.targetHandle,
+              target: connection.source,
+              targetHandle: connection.sourceHandle,
+            }
+          : connection;
       pushSnapshot();
-      setEdges((eds) => [
-        ...eds,
-        { ...connection, id: crypto.randomUUID(), type: 'flowEdge' } as Edge,
-      ]);
+      setEdges((eds) => [...eds, { ...conn, id: crypto.randomUUID(), type: 'flowEdge' } as Edge]);
     },
     [pushSnapshot, setEdges],
   );
@@ -541,7 +549,6 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   const connectingRef = useRef<{
     nodeId: string;
     handleId: string | null;
-    handleType: 'source' | 'target';
   } | null>(null);
   const connectHighlightCleanupRef = useRef<(() => void) | null>(null);
 
@@ -558,7 +565,6 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
       connectingRef.current = {
         nodeId: params.nodeId,
         handleId: params.handleId,
-        handleType: params.handleType,
       };
       // 드래그 중 노드 바디 호버 하이라이트
       let highlightedEl: HTMLElement | null = null;
@@ -617,14 +623,14 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
       const nodeW = br.x - tl.x;
       const nodeH = br.y - tl.y;
 
-      const neededType = connecting.handleType === 'source' ? 'target' : 'source';
-      const nearestId = getNearestHandleId(tl.x, tl.y, nodeW, nodeH, mousePos, neededType);
+      // 시작 노드가 항상 source가 되도록: neededType은 항상 'target'
+      const nearestId = getNearestHandleId(tl.x, tl.y, nodeW, nodeH, mousePos, 'target');
 
       const newConnection = {
-        source: connecting.handleType === 'source' ? connecting.nodeId : targetNodeId,
-        sourceHandle: connecting.handleType === 'source' ? connecting.handleId : nearestId,
-        target: connecting.handleType === 'source' ? targetNodeId : connecting.nodeId,
-        targetHandle: connecting.handleType === 'source' ? nearestId : connecting.handleId,
+        source: connecting.nodeId,
+        sourceHandle: connecting.handleId,
+        target: targetNodeId,
+        targetHandle: nearestId,
       };
       pushSnapshot();
       setEdges((eds) => [
