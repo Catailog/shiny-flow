@@ -16,6 +16,7 @@ import {
   ControlButton,
   Controls,
   type Edge,
+  type EdgeChange,
   MarkerType,
   MiniMap,
   type Node,
@@ -214,7 +215,21 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   const layoutedNodes = applyDagreLayout(initialNodes, initialEdges);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(savedRfNodes ?? layoutedNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(savedRfEdges ?? initialEdges);
+  const [edges, setEdges, onEdgesChangeBase] = useEdgesState(savedRfEdges ?? initialEdges);
+
+  const edgeClickInProgressRef = useRef(false);
+  const onEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      onEdgesChangeBase(
+        changes.map((c) =>
+          c.type === 'select' && c.selected && !edgeClickInProgressRef.current
+            ? { ...c, selected: false }
+            : c,
+        ),
+      );
+    },
+    [onEdgesChangeBase],
+  );
 
   useImperativeHandle(ref, () => ({ getNodes: () => nodes, getEdges: () => edges }), [
     nodes,
@@ -568,8 +583,10 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
 
   const handleEdgeClick = useCallback(
     (e: React.MouseEvent, clickedEdge: Edge) => {
-      // selection은 multiSelectionKeyCode/selectionKeyCode로 ReactFlow에 위임
-      // 여기서는 z-index 업데이트만
+      edgeClickInProgressRef.current = true;
+      queueMicrotask(() => {
+        edgeClickInProgressRef.current = false;
+      });
       setEdges((eds) => {
         const maxZ = Math.max(0, ...eds.map((ed) => (ed.data as FlowEdgeData)?.labelZIndex ?? 0));
         const idx = eds.findIndex((ed) => ed.id === clickedEdge.id);
