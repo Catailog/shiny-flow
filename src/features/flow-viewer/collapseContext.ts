@@ -8,12 +8,10 @@ type CollapseContextValue = {
   dragOverGroupId: string | null;
 };
 
-export const CollapseContext = createContext<CollapseContextValue>({
-  collapsedIds: new Set(),
-  toggleCollapse: () => {},
-  hasChildren: () => false,
-  hiddenCount: () => 0,
-  dragOverGroupId: null,
-});
+export const CollapseContext = createContext<CollapseContextValue | null>(null);
 
-export const useCollapseContext = () => useContext(CollapseContext);
+export function useCollapseContext() {
+  const ctx = useContext(CollapseContext);
+  if (!ctx) throw new Error('useCollapseContext must be inside CollapseContext.Provider');
+  return ctx;
+}
