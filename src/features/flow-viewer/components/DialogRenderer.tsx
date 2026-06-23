@@ -1,5 +1,7 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
 import type { Edge, Node } from '@xyflow/react';
 
 import type { DialogRequest } from '../types';
@@ -23,94 +25,60 @@ type Props = {
   onClose: () => void;
 };
 
-export function DialogRenderer({
-  dialogRequest,
-  nodes,
-  setNodes,
-  edges,
-  setEdges,
-  onClose,
-}: Props) {
+type CommonProps = Omit<Props, 'dialogRequest'>;
+
+type RendererMap = {
+  [K in DialogRequest['type']]: (
+    req: Extract<DialogRequest, { type: K }>,
+    props: CommonProps,
+  ) => ReactNode;
+};
+
+const RENDERERS: RendererMap = {
+  screenshot: (req, { onClose }) => (
+    <ScreenshotDialog src={req.src} label={req.label} onClose={onClose} />
+  ),
+  memo: (req, { nodes, setNodes, onClose }) => (
+    <MemoDialog nodeId={req.nodeId} nodes={nodes} setNodes={setNodes} onClose={onClose} />
+  ),
+  comment: (req, { nodes, setNodes, onClose }) => (
+    <CommentNodeDialog nodeId={req.nodeId} nodes={nodes} setNodes={setNodes} onClose={onClose} />
+  ),
+  groupEdit: (req, { nodes, setNodes, onClose }) => (
+    <GroupEditDialog nodeId={req.nodeId} nodes={nodes} setNodes={setNodes} onClose={onClose} />
+  ),
+  groupUngroup: (req, { nodes, setNodes, onClose }) => (
+    <GroupUngroupDialog nodeId={req.nodeId} nodes={nodes} setNodes={setNodes} onClose={onClose} />
+  ),
+  edgeComment: (req, { edges, setEdges, onClose }) => (
+    <EdgeCommentDialog edgeId={req.edgeId} edges={edges} setEdges={setEdges} onClose={onClose} />
+  ),
+  groupCreate: (req, { nodes, setNodes, onClose }) => (
+    <GroupCreateDialog
+      pendingNodes={req.nodes}
+      nodes={nodes}
+      setNodes={setNodes}
+      onClose={onClose}
+    />
+  ),
+  nodeCreate: (req, { setNodes, onClose }) => (
+    <NodeCreateDialog pos={req.pos} setNodes={setNodes} onClose={onClose} />
+  ),
+  labelEdit: (req, { nodes, setNodes, onClose }) => (
+    <LabelEditDialog nodeId={req.nodeId} nodes={nodes} setNodes={setNodes} onClose={onClose} />
+  ),
+  routeEdit: (req, { nodes, setNodes, onClose }) => (
+    <RouteEditDialog nodeId={req.nodeId} nodes={nodes} setNodes={setNodes} onClose={onClose} />
+  ),
+};
+
+export function DialogRenderer({ dialogRequest, ...commonProps }: Props) {
   if (!dialogRequest) return null;
 
-  switch (dialogRequest.type) {
-    case 'screenshot':
-      return (
-        <ScreenshotDialog src={dialogRequest.src} label={dialogRequest.label} onClose={onClose} />
-      );
-    case 'memo':
-      return (
-        <MemoDialog
-          nodeId={dialogRequest.nodeId}
-          nodes={nodes}
-          setNodes={setNodes}
-          onClose={onClose}
-        />
-      );
-    case 'comment':
-      return (
-        <CommentNodeDialog
-          nodeId={dialogRequest.nodeId}
-          nodes={nodes}
-          setNodes={setNodes}
-          onClose={onClose}
-        />
-      );
-    case 'groupEdit':
-      return (
-        <GroupEditDialog
-          nodeId={dialogRequest.nodeId}
-          nodes={nodes}
-          setNodes={setNodes}
-          onClose={onClose}
-        />
-      );
-    case 'groupUngroup':
-      return (
-        <GroupUngroupDialog
-          nodeId={dialogRequest.nodeId}
-          nodes={nodes}
-          setNodes={setNodes}
-          onClose={onClose}
-        />
-      );
-    case 'edgeComment':
-      return (
-        <EdgeCommentDialog
-          edgeId={dialogRequest.edgeId}
-          edges={edges}
-          setEdges={setEdges}
-          onClose={onClose}
-        />
-      );
-    case 'groupCreate':
-      return (
-        <GroupCreateDialog
-          pendingNodes={dialogRequest.nodes}
-          nodes={nodes}
-          setNodes={setNodes}
-          onClose={onClose}
-        />
-      );
-    case 'nodeCreate':
-      return <NodeCreateDialog pos={dialogRequest.pos} setNodes={setNodes} onClose={onClose} />;
-    case 'labelEdit':
-      return (
-        <LabelEditDialog
-          nodeId={dialogRequest.nodeId}
-          nodes={nodes}
-          setNodes={setNodes}
-          onClose={onClose}
-        />
-      );
-    case 'routeEdit':
-      return (
-        <RouteEditDialog
-          nodeId={dialogRequest.nodeId}
-          nodes={nodes}
-          setNodes={setNodes}
-          onClose={onClose}
-        />
-      );
-  }
+  const render = RENDERERS[dialogRequest.type] as (
+    req: DialogRequest,
+    props: CommonProps,
+  ) => ReactNode;
+
+  return render(dialogRequest, commonProps);
 }
