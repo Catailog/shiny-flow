@@ -20,6 +20,7 @@ import { useHistory } from '../historyContext';
 import { useEdgeUpdate } from '../hooks/useEdgeUpdate';
 import {
   type Face,
+  type HandlePlacement,
   type LoopAttachment,
   buildCustomSelfLoopPath,
   buildSelfLoopPath,
@@ -48,6 +49,64 @@ export type FlowEdgeData = {
 };
 
 type Props = EdgeProps<Edge<FlowEdgeData>>;
+
+type EdgeLayout = {
+  path: string;
+  labelX: number;
+  labelY: number;
+  sp: { x: number; y: number };
+  tp: { x: number; y: number };
+};
+
+function computeEdgeLayout(
+  isSelfLoop: boolean,
+  sourceNode: InternalNode,
+  targetNode: InternalNode,
+  data: FlowEdgeData | undefined,
+  loopIndex: number,
+  sourcePlace: HandlePlacement,
+  targetPlace: HandlePlacement,
+): EdgeLayout {
+  if (isSelfLoop) {
+    if (data?.loopSp && data?.loopTp) {
+      const loop = buildCustomSelfLoopPath(sourceNode, data.loopSp, data.loopTp, data.loopCtrl);
+      return {
+        path: loop.path,
+        labelX: loop.labelX,
+        labelY: loop.labelY,
+        sp: loop.spCanvas,
+        tp: loop.tpCanvas,
+      };
+    }
+    const loop = buildSelfLoopPath(sourceNode, loopIndex);
+    return { path: loop.path, labelX: loop.labelX, labelY: loop.labelY, sp: loop.sp, tp: loop.tp };
+  }
+
+  const sp = data?.sourceDir
+    ? getRectIntersectionFromDir(sourceNode, data.sourceDir)
+    : faceHandlePos(sourceNode, sourcePlace.face, sourcePlace.index, sourcePlace.total);
+  const tp = data?.targetDir
+    ? getRectIntersectionFromDir(targetNode, data.targetDir)
+    : faceHandlePos(targetNode, targetPlace.face, targetPlace.index, targetPlace.total);
+
+  if (data?.cp) {
+    return {
+      path: `M ${sp.x} ${sp.y} Q ${data.cp.x} ${data.cp.y} ${tp.x} ${tp.y}`,
+      labelX: 0.25 * sp.x + 0.5 * data.cp.x + 0.25 * tp.x,
+      labelY: 0.25 * sp.y + 0.5 * data.cp.y + 0.25 * tp.y,
+      sp,
+      tp,
+    };
+  }
+
+  return {
+    path: `M ${sp.x} ${sp.y} L ${tp.x} ${tp.y}`,
+    labelX: (sp.x + tp.x) / 2,
+    labelY: (sp.y + tp.y) / 2,
+    sp,
+    tp,
+  };
+}
 
 function EdgeHandle({
   x,
@@ -132,47 +191,46 @@ export function FlowEdge({
   const comment =
     data?.comment !== undefined ? data.comment || undefined : label ? String(label) : undefined;
 
-  let edgePath: string;
-  let labelX: number;
-  let labelY: number;
-  let sp: { x: number; y: number };
-  let tp: { x: number; y: number };
+  const {
+    path: edgePath,
+    labelX,
+    labelY,
+    sp,
+    tp,
+  } = computeEdgeLayout(
+    isSelfLoop,
+    sourceNode,
+    targetNode,
+    data,
+    loopIndex,
+    sourcePlace,
+    targetPlace,
+  );
 
-  if (isSelfLoop) {
-    if (data?.loopSp && data?.loopTp) {
-      const loop = buildCustomSelfLoopPath(sourceNode, data.loopSp, data.loopTp, data.loopCtrl);
-      edgePath = loop.path;
-      labelX = loop.labelX;
-      labelY = loop.labelY;
-      sp = loop.spCanvas;
-      tp = loop.tpCanvas;
-    } else {
-      const loop = buildSelfLoopPath(sourceNode, loopIndex);
-      edgePath = loop.path;
-      labelX = loop.labelX;
-      labelY = loop.labelY;
-      sp = loop.sp;
-      tp = loop.tp;
+  const startEdgeDrag = (selectEdge: boolean) => {
+    pushSnapshot();
+    setEdges((eds) => {
+      const maxZ = Math.max(0, ...eds.map((e) => (e.data as FlowEdgeData)?.labelZIndex ?? 0));
+      const idx = eds.findIndex((ed) => ed.id === id);
+      const reordered =
+        idx === -1 || idx === eds.length - 1
+          ? eds
+          : [...eds.slice(0, idx), ...eds.slice(idx + 1), eds[idx]];
+      if (selectEdge) {
+        return reordered.map((e) => ({
+          ...e,
+          selected: e.id === id,
+          ...(e.id === id && { data: { ...(e.data ?? {}), labelZIndex: maxZ + 1 } }),
+        }));
+      }
+      return reordered.map((e) =>
+        e.id === id ? { ...e, data: { ...(e.data ?? {}), labelZIndex: maxZ + 1 } } : e,
+      );
+    });
+    if (selectEdge) {
+      setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
     }
-  } else {
-    sp = data?.sourceDir
-      ? getRectIntersectionFromDir(sourceNode, data.sourceDir)
-      : faceHandlePos(sourceNode, sourcePlace.face, sourcePlace.index, sourcePlace.total);
-
-    tp = data?.targetDir
-      ? getRectIntersectionFromDir(targetNode, data.targetDir)
-      : faceHandlePos(targetNode, targetPlace.face, targetPlace.index, targetPlace.total);
-
-    if (data?.cp) {
-      edgePath = `M ${sp.x} ${sp.y} Q ${data.cp.x} ${data.cp.y} ${tp.x} ${tp.y}`;
-      labelX = 0.25 * sp.x + 0.5 * data.cp.x + 0.25 * tp.x;
-      labelY = 0.25 * sp.y + 0.5 * data.cp.y + 0.25 * tp.y;
-    } else {
-      edgePath = `M ${sp.x} ${sp.y} L ${tp.x} ${tp.y}`;
-      labelX = (sp.x + tp.x) / 2;
-      labelY = (sp.y + tp.y) / 2;
-    }
-  }
+  };
 
   const showHandles = selected || hovered;
 
@@ -185,21 +243,7 @@ export function FlowEdge({
       if (e.button !== 0) return;
       e.stopPropagation();
       e.preventDefault();
-      pushSnapshot();
-      setEdges((eds) => {
-        const maxZ = Math.max(0, ...eds.map((e) => (e.data as FlowEdgeData)?.labelZIndex ?? 0));
-        const idx = eds.findIndex((ed) => ed.id === id);
-        const reordered =
-          idx === -1 || idx === eds.length - 1
-            ? eds
-            : [...eds.slice(0, idx), ...eds.slice(idx + 1), eds[idx]];
-        return reordered.map((e) => ({
-          ...e,
-          selected: e.id === id,
-          ...(e.id === id && { data: { ...(e.data ?? {}), labelZIndex: maxZ + 1 } }),
-        }));
-      });
-      setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+      startEdgeDrag(true);
       // 드래그 시작 시점의 양쪽 attachment를 스냅샷으로 고정
       const initSp: LoopAttachment = data?.loopSp ?? snapToNodePerimeter(sourceNode, currentSp);
       const initTp: LoopAttachment = data?.loopTp ?? snapToNodePerimeter(sourceNode, currentTp);
@@ -233,21 +277,7 @@ export function FlowEdge({
         if (e.button !== 0) return;
         e.stopPropagation();
         e.preventDefault();
-        pushSnapshot();
-        setEdges((eds) => {
-          const maxZ = Math.max(0, ...eds.map((e) => (e.data as FlowEdgeData)?.labelZIndex ?? 0));
-          const idx = eds.findIndex((ed) => ed.id === id);
-          const reordered =
-            idx === -1 || idx === eds.length - 1
-              ? eds
-              : [...eds.slice(0, idx), ...eds.slice(idx + 1), eds[idx]];
-          return reordered.map((e) => ({
-            ...e,
-            selected: e.id === id,
-            ...(e.id === id && { data: { ...(e.data ?? {}), labelZIndex: maxZ + 1 } }),
-          }));
-        });
-        setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+        startEdgeDrag(true);
         const onMove = (ev: MouseEvent) => {
           const mousePos = screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
           const center = getCenter(node);
@@ -277,18 +307,7 @@ export function FlowEdge({
       if (e.button !== 0) return;
       e.stopPropagation();
       e.preventDefault();
-      pushSnapshot();
-      setEdges((eds) => {
-        const maxZ = Math.max(0, ...eds.map((e) => (e.data as FlowEdgeData)?.labelZIndex ?? 0));
-        const idx = eds.findIndex((ed) => ed.id === id);
-        const reordered =
-          idx === -1 || idx === eds.length - 1
-            ? eds
-            : [...eds.slice(0, idx), ...eds.slice(idx + 1), eds[idx]];
-        return reordered.map((e) =>
-          e.id === id ? { ...e, data: { ...(e.data ?? {}), labelZIndex: maxZ + 1 } } : e,
-        );
-      });
+      startEdgeDrag(false);
       // 드래그 시작 시점의 루프 기하 정보 고정
       const midX = (sp.x + tp.x) / 2;
       const midY = (sp.y + tp.y) / 2;
@@ -319,18 +338,7 @@ export function FlowEdge({
       if (e.button !== 0) return;
       e.stopPropagation();
       e.preventDefault();
-      pushSnapshot();
-      setEdges((eds) => {
-        const maxZ = Math.max(0, ...eds.map((e) => (e.data as FlowEdgeData)?.labelZIndex ?? 0));
-        const idx = eds.findIndex((ed) => ed.id === id);
-        const reordered =
-          idx === -1 || idx === eds.length - 1
-            ? eds
-            : [...eds.slice(0, idx), ...eds.slice(idx + 1), eds[idx]];
-        return reordered.map((e) =>
-          e.id === id ? { ...e, data: { ...(e.data ?? {}), labelZIndex: maxZ + 1 } } : e,
-        );
-      });
+      startEdgeDrag(false);
       const spSnap = { ...sp };
       const tpSnap = { ...tp };
       const onMove = (ev: MouseEvent) => {
