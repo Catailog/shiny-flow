@@ -318,41 +318,41 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
           type="target"
           position={Position.Top}
           style={handleStyle}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
+          className="border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           position={Position.Bottom}
           style={handleStyle}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
+          className="border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="target"
           id="target-left"
           position={Position.Left}
           style={handleStyle}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
+          className="border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           id="source-left"
           position={Position.Left}
           style={handleStyle}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
+          className="border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="target"
           id="target-right"
           position={Position.Right}
           style={handleStyle}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
+          className="border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
         <Handle
           type="source"
           id="source-right"
           position={Position.Right}
           style={handleStyle}
-          className="h-3! w-3! border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
+          className="border-2! border-brand-secondary! bg-background! opacity-0 transition-opacity group-hover:opacity-100"
         />
       </div>
     </>

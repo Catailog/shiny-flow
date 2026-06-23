@@ -12,7 +12,10 @@ import { useStore } from '@xyflow/react';
  * - FlowNode edge handles (Handle components)
  * Note: NodeResizer handles use autoScale internally - do NOT pass handleStyle here.
  */
+const BASE_HANDLE_SIZE = 12;
+
 export function useZoomCompensation(): React.CSSProperties {
   const zoom = useStore((s) => s.transform[2]);
-  return { scale: String(Math.max(1 / zoom, 1)) };
+  const size = BASE_HANDLE_SIZE / Math.min(zoom, 1);
+  return { width: size, height: size };
 }
