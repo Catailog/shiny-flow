@@ -12,11 +12,9 @@ import {
 
 import {
   Background,
-  type Connection,
   ControlButton,
   Controls,
   type Edge,
-  type EdgeChange,
   MarkerType,
   MiniMap,
   type Node,
@@ -48,6 +46,9 @@ import { CollapseContext } from '../collapseContext';
 import { HistoryProvider, useHistory } from '../historyContext';
 import { useDragIntoGroup } from '../hooks/useDragIntoGroup';
 import { useEdgeCpSync } from '../hooks/useEdgeCpSync';
+import { type ConnectBridgeFns, useFlowConnect } from '../hooks/useFlowConnect';
+import { useFlowEdgeSelect } from '../hooks/useFlowEdgeSelect';
+import { useFlowKeyboard } from '../hooks/useFlowKeyboard';
 import { buildChildrenMap, computeHiddenIds, countHiddenSubtree } from '../lib/collapse';
 import { applyDagreLayout } from '../lib/layout';
 import { graphToFlow } from '../lib/transform';
@@ -56,7 +57,7 @@ import type { ContextMenuState, ContextMenuTarget, DialogRequest } from '../type
 import { ContextMenuController } from './ContextMenuController';
 import { DialogRenderer } from './DialogRenderer';
 import { FlowCommentNode } from './FlowCommentNode';
-import { FlowEdge, type FlowEdgeData } from './FlowEdge';
+import { FlowEdge } from './FlowEdge';
 import { FlowGroupNode } from './FlowGroupNode';
 import { FlowNode, type FlowNodeData } from './FlowNode';
 
@@ -84,41 +85,6 @@ function bringToFront(nds: Node[], nodeId: string): Node[] {
   if (idx === -1 || idx === nds.length - 1) return nds;
   return [...nds.slice(0, idx), ...nds.slice(idx + 1), nds[idx]];
 }
-
-// 노드 바디에 드롭 시 가장 가까운 핸들 ID 반환 (flow 좌표 기준)
-function getNearestHandleId(
-  nodeX: number,
-  nodeY: number,
-  nodeW: number,
-  nodeH: number,
-  mousePos: { x: number; y: number },
-  handleType: 'source' | 'target',
-): string | null {
-  const cx = nodeX + nodeW / 2;
-  const cy = nodeY + nodeH / 2;
-  const candidates =
-    handleType === 'target'
-      ? [
-          { id: null as string | null, x: cx, y: nodeY },
-          { id: 'target-left', x: nodeX, y: cy },
-          { id: 'target-right', x: nodeX + nodeW, y: cy },
-        ]
-      : [
-          { id: null as string | null, x: cx, y: nodeY + nodeH },
-          { id: 'source-left', x: nodeX, y: cy },
-          { id: 'source-right', x: nodeX + nodeW, y: cy },
-        ];
-  return candidates.reduce((best, c) =>
-    Math.hypot(mousePos.x - c.x, mousePos.y - c.y) <
-    Math.hypot(mousePos.x - best.x, mousePos.y - best.y)
-      ? c
-      : best,
-  ).id;
-}
-
-type ConnectBridgeFns = {
-  screenToFlowPosition: (pos: { x: number; y: number }) => { x: number; y: number };
-};
 
 function ConnectBridge({ bridgeRef }: { bridgeRef: React.RefObject<ConnectBridgeFns | null> }) {
   const { screenToFlowPosition } = useReactFlow();
@@ -217,19 +183,11 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   const [nodes, setNodes, onNodesChange] = useNodesState(savedRfNodes ?? layoutedNodes);
   const [edges, setEdges, onEdgesChangeBase] = useEdgesState(savedRfEdges ?? initialEdges);
 
-  const edgeClickInProgressRef = useRef(false);
-  const onEdgesChange = useCallback(
-    (changes: EdgeChange[]) => {
-      onEdgesChangeBase(
-        changes.map((c) =>
-          c.type === 'select' && c.selected && !edgeClickInProgressRef.current
-            ? { ...c, selected: false }
-            : c,
-        ),
-      );
-    },
-    [onEdgesChangeBase],
-  );
+  const { onEdgesChange, handleEdgeClick } = useFlowEdgeSelect({
+    onEdgesChangeBase,
+    setEdges,
+    setNodes,
+  });
 
   useImperativeHandle(ref, () => ({ getNodes: () => nodes, getEdges: () => edges }), [
     nodes,
@@ -296,173 +254,11 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     setCanRedo(future.current.length > 0);
   }, [setNodes, setEdges, setCollapsedIds]);
 
-  const undoRef = useRef(undo);
-  const redoRef = useRef(redo);
-  const pushSnapshotRef = useRef(pushSnapshot);
-  useEffect(() => {
-    undoRef.current = undo;
-    redoRef.current = redo;
-    pushSnapshotRef.current = pushSnapshot;
+  const { isLocked, spacebarLocked, isShiftHeld, toggleLock } = useFlowKeyboard({ undo, redo });
+  const { onConnect, onConnectStart, onConnectEnd, connectBridgeRef } = useFlowConnect({
+    pushSnapshot,
+    setEdges,
   });
-
-  const [isLocked, setIsLocked] = useState(false);
-  const [spacebarLocked, setSpacebarLocked] = useState(false);
-  const [isShiftHeld, setIsShiftHeld] = useState(false);
-  const isLockedRef = useRef(isLocked);
-  useEffect(() => {
-    isLockedRef.current = isLocked;
-  }, [isLocked]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') setIsShiftHeld(true);
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ' && !e.shiftKey) {
-        e.preventDefault();
-        undoRef.current();
-        return;
-      }
-      if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey))) {
-        e.preventDefault();
-        redoRef.current();
-        return;
-      }
-      if (e.code === 'KeyL' && !e.repeat) {
-        setIsLocked((v) => !v);
-        setSpacebarLocked(false);
-      }
-      if (e.code === 'Space' && !e.repeat && !isLockedRef.current) {
-        e.preventDefault();
-        setSpacebarLocked(true);
-      }
-    };
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') setIsShiftHeld(false);
-      if (e.code === 'Space') setSpacebarLocked(false);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
-
-  const connectingRef = useRef<{
-    nodeId: string;
-    handleId: string | null;
-  } | null>(null);
-
-  const onConnect = useCallback(
-    (connection: Connection) => {
-      const connecting = connectingRef.current;
-      // 시작 노드가 항상 source가 되도록 보정
-      const conn =
-        connecting && connection.source !== connecting.nodeId
-          ? {
-              source: connection.target!,
-              sourceHandle: connection.targetHandle,
-              target: connection.source,
-              targetHandle: connection.sourceHandle,
-            }
-          : connection;
-      pushSnapshot();
-      setEdges((eds) => [...eds, { ...conn, id: crypto.randomUUID(), type: 'flowEdge' } as Edge]);
-    },
-    [pushSnapshot, setEdges],
-  );
-
-  const connectBridgeRef = useRef<ConnectBridgeFns | null>(null);
-  const connectHighlightCleanupRef = useRef<(() => void) | null>(null);
-
-  const onConnectStart = useCallback(
-    (
-      _event: MouseEvent | TouchEvent,
-      params: {
-        nodeId: string | null;
-        handleId: string | null;
-        handleType: 'source' | 'target' | null;
-      },
-    ) => {
-      if (!params.nodeId || !params.handleType) return;
-      connectingRef.current = {
-        nodeId: params.nodeId,
-        handleId: params.handleId,
-      };
-      // 드래그 중 노드 바디 호버 하이라이트
-      let highlightedEl: HTMLElement | null = null;
-      const onMouseMove = (e: MouseEvent) => {
-        // 드래그 중 ReactFlow가 이벤트 캡처 레이어를 올리므로
-        // event.target 대신 elementsFromPoint로 실제 노드 엘리먼트를 탐색
-        const stack = document.elementsFromPoint(e.clientX, e.clientY);
-        const hasHandle = stack.some((el) => el.classList.contains('react-flow__handle'));
-        const nodeEl = stack.find((el) =>
-          el.classList.contains('react-flow__node'),
-        ) as HTMLElement | null;
-        const newTarget = hasHandle ? null : (nodeEl ?? null);
-        if (highlightedEl !== newTarget) {
-          highlightedEl?.classList.remove('rf-connect-target');
-          newTarget?.classList.add('rf-connect-target');
-          highlightedEl = newTarget;
-        }
-      };
-      window.addEventListener('mousemove', onMouseMove);
-      connectHighlightCleanupRef.current = () => {
-        window.removeEventListener('mousemove', onMouseMove);
-        highlightedEl?.classList.remove('rf-connect-target');
-      };
-    },
-    [],
-  );
-
-  const onConnectEnd = useCallback(
-    (event: MouseEvent | TouchEvent) => {
-      connectHighlightCleanupRef.current?.();
-      connectHighlightCleanupRef.current = null;
-      const connecting = connectingRef.current;
-      connectingRef.current = null;
-      if (!connecting || !connectBridgeRef.current) return;
-
-      const clientX = 'clientX' in event ? event.clientX : event.changedTouches[0].clientX;
-      const clientY = 'clientY' in event ? event.clientY : event.changedTouches[0].clientY;
-      const stack = document.elementsFromPoint(clientX, clientY);
-      // 핸들 위에 드롭 → onConnect가 이미 처리
-      if (stack.some((el) => el.classList.contains('react-flow__handle'))) return;
-      // 노드 바디 위에 드롭?
-      const nodeEl = stack.find((el) =>
-        el.classList.contains('react-flow__node'),
-      ) as HTMLElement | null;
-      if (!nodeEl) return;
-      const targetNodeId = nodeEl.getAttribute('data-id');
-      if (!targetNodeId) return;
-
-      const { screenToFlowPosition } = connectBridgeRef.current;
-      const mousePos = screenToFlowPosition({ x: clientX, y: clientY });
-
-      // 노드 DOM에서 flow 좌표 계산
-      const rect = nodeEl.getBoundingClientRect();
-      const tl = screenToFlowPosition({ x: rect.left, y: rect.top });
-      const br = screenToFlowPosition({ x: rect.right, y: rect.bottom });
-      const nodeW = br.x - tl.x;
-      const nodeH = br.y - tl.y;
-
-      // 시작 노드가 항상 source가 되도록: neededType은 항상 'target'
-      const nearestId = getNearestHandleId(tl.x, tl.y, nodeW, nodeH, mousePos, 'target');
-
-      const newConnection = {
-        source: connecting.nodeId,
-        sourceHandle: connecting.handleId,
-        target: targetNodeId,
-        targetHandle: nearestId,
-      };
-      pushSnapshot();
-      setEdges((eds) => [
-        ...eds,
-        { ...newConnection, id: crypto.randomUUID(), type: 'flowEdge' } as Edge,
-      ]);
-    },
-    [pushSnapshot, setEdges],
-  );
 
   // --- Collapse ---
   const childrenMap = useMemo(() => buildChildrenMap(edges), [edges]);
@@ -579,31 +375,6 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
       setEdges((eds) => eds.map((ed) => ({ ...ed, selected: false })));
     },
     [setNodes, setEdges],
-  );
-
-  const handleEdgeClick = useCallback(
-    (e: React.MouseEvent, clickedEdge: Edge) => {
-      edgeClickInProgressRef.current = true;
-      queueMicrotask(() => {
-        edgeClickInProgressRef.current = false;
-      });
-      setEdges((eds) => {
-        const maxZ = Math.max(0, ...eds.map((ed) => (ed.data as FlowEdgeData)?.labelZIndex ?? 0));
-        const idx = eds.findIndex((ed) => ed.id === clickedEdge.id);
-        const reordered =
-          idx === -1 || idx === eds.length - 1
-            ? eds
-            : [...eds.slice(0, idx), ...eds.slice(idx + 1), eds[idx]];
-        return reordered.map((ed) => ({
-          ...ed,
-          ...(ed.id === clickedEdge.id && { data: { ...(ed.data ?? {}), labelZIndex: maxZ + 1 } }),
-        }));
-      });
-      if (!e.shiftKey) {
-        setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
-      }
-    },
-    [setEdges, setNodes],
   );
 
   const handleContextMenuOpen = useCallback((e: React.MouseEvent) => {
@@ -746,10 +517,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
                       <Redo2Icon size={12} style={{ fill: 'none' }} />
                     </ControlButton>
                     <ControlButton
-                      onClick={() => {
-                        setIsLocked((v) => !v);
-                        setSpacebarLocked(false);
-                      }}
+                      onClick={toggleLock}
                       title={nodesDraggable ? 'Lock (L)' : 'Unlock (L)'}
                     >
                       {nodesDraggable ? (
