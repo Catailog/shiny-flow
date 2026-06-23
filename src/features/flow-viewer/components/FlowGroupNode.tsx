@@ -17,7 +17,7 @@ export type { GroupNodeData };
 
 type Props = NodeProps<Node<GroupNodeData>>;
 
-export function FlowGroupNode({ id, data, width, height }: Props) {
+export function FlowGroupNode({ id, data, width, height, selected }: Props) {
   const colorStyle = getGroupColorStyle(data.color);
   const { dragOverGroupId } = useCollapseContext();
   const isDragOver = dragOverGroupId === id;
@@ -54,6 +54,7 @@ export function FlowGroupNode({ id, data, width, height }: Props) {
           'rounded-2xl border-2 border-dashed transition-shadow',
           colorStyle.border,
           colorStyle.bg,
+          selected && 'ring-2 ring-brand-primary ring-offset-1',
           isDragOver && 'ring-2 ring-blue-400 ring-offset-2',
         )}
       >
