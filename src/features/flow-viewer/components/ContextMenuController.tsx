@@ -34,6 +34,7 @@ import { useT } from '@/hooks/useT';
 
 import { useCollapseContext } from '../collapseContext';
 import { useHistory } from '../historyContext';
+import { useEdgeUpdate } from '../hooks/useEdgeUpdate';
 import { useNodeUpdate } from '../hooks/useNodeUpdate';
 import { STATUS_COLORS, getNodeColorStyle } from '../lib/nodeColors';
 import { getAbsolutePosition, recomputeGroupZIndexes } from '../lib/nodeUtils';
@@ -83,6 +84,7 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
     useReactFlow();
   const { pushSnapshot } = useHistory();
   const updateNode = useNodeUpdate();
+  const updateEdge = useEdgeUpdate();
   const t = useT();
   const { available, captureNode, validateForCapture } = useScreenshotContext();
   const { collapsedIds, toggleCollapse, hasChildren } = useCollapseContext();
@@ -440,17 +442,7 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
                 key={value}
                 onClick={() => {
                   pushSnapshot();
-                  setEdges((prev) =>
-                    prev.map((e) =>
-                      e.id === target.edgeId
-                        ? {
-                            ...e,
-                            animated: false,
-                            data: { ...e.data, lineStyle: value },
-                          }
-                        : e,
-                    ),
-                  );
+                  updateEdge(target.edgeId, { lineStyle: value }, { animated: false });
                 }}
               >
                 <span className={cn('inline-block shrink-0', dotClass)} />
@@ -471,11 +463,7 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
             variant="destructive"
             onClick={() => {
               pushSnapshot();
-              setEdges((prev) =>
-                prev.map((e) =>
-                  e.id === target.edgeId ? { ...e, data: { ...e.data, comment: '' } } : e,
-                ),
-              );
+              updateEdge(target.edgeId, { comment: '' });
             }}
           >
             <Trash2Icon className={ICON} />

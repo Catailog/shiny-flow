@@ -17,6 +17,7 @@ import { useT } from '@/hooks/useT';
 import { Z_INDEX } from '@/constants/zIndex';
 
 import { useHistory } from '../historyContext';
+import { useEdgeUpdate } from '../hooks/useEdgeUpdate';
 import {
   type Face,
   type LoopAttachment,
@@ -94,6 +95,7 @@ export function FlowEdge({
 }: Props) {
   const zoom = useStore((s) => s.transform[2]);
   const { setEdges, setNodes, screenToFlowPosition } = useReactFlow();
+  const updateEdge = useEdgeUpdate();
   const { pushSnapshot } = useHistory();
   const t = useT();
   const sourceNode = useStore(useCallback((s) => s.nodeLookup.get(source), [source]));
@@ -204,20 +206,10 @@ export function FlowEdge({
       const onMove = (ev: MouseEvent) => {
         const mousePos = screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
         const attachment = snapToNodePerimeter(sourceNode, mousePos);
-        setEdges((eds) =>
-          eds.map((edge) =>
-            edge.id === id
-              ? {
-                  ...edge,
-                  data: {
-                    ...(edge.data ?? {}),
-                    loopSp: type === 'source' ? attachment : initSp,
-                    loopTp: type === 'target' ? attachment : initTp,
-                  },
-                }
-              : edge,
-          ),
-        );
+        updateEdge(id, {
+          loopSp: type === 'source' ? attachment : initSp,
+          loopTp: type === 'target' ? attachment : initTp,
+        });
       };
       const onUp = () => {
         window.removeEventListener('mousemove', onMove);
@@ -230,13 +222,7 @@ export function FlowEdge({
     onDoubleClick: (e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
       pushSnapshot();
-      setEdges((eds) =>
-        eds.map((edge) =>
-          edge.id === id
-            ? { ...edge, data: { ...(edge.data ?? {}), loopSp: undefined, loopTp: undefined } }
-            : edge,
-        ),
-      );
+      updateEdge(id, { loopSp: undefined, loopTp: undefined });
     },
   });
 
@@ -268,16 +254,7 @@ export function FlowEdge({
           const dx = mousePos.x - center.x;
           const dy = mousePos.y - center.y;
           const len = Math.sqrt(dx * dx + dy * dy) || 1;
-          setEdges((eds) =>
-            eds.map((edge) =>
-              edge.id === id
-                ? {
-                    ...edge,
-                    data: { ...(edge.data ?? {}), [key]: { dx: dx / len, dy: dy / len } },
-                  }
-                : edge,
-            ),
-          );
+          updateEdge(id, { [key]: { dx: dx / len, dy: dy / len } });
         };
         const onUp = () => {
           window.removeEventListener('mousemove', onMove);
@@ -290,11 +267,7 @@ export function FlowEdge({
       onDoubleClick: (e: React.MouseEvent<HTMLDivElement>) => {
         e.stopPropagation();
         pushSnapshot();
-        setEdges((eds) =>
-          eds.map((edge) =>
-            edge.id === id ? { ...edge, data: { ...(edge.data ?? {}), [key]: undefined } } : edge,
-          ),
-        );
+        updateEdge(id, { [key]: undefined });
       },
     };
   };
@@ -325,16 +298,7 @@ export function FlowEdge({
         const B = screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
         // 라벨 위치 = midXY + 0.75 * ctrl → ctrl 역산
         const loopCtrl = { x: (B.x - midX) / 0.75, y: (B.y - midY) / 0.75 };
-        setEdges((eds) =>
-          eds.map((edge) =>
-            edge.id === id
-              ? {
-                  ...edge,
-                  data: { ...(edge.data ?? {}), loopSp: initSp, loopTp: initTp, loopCtrl },
-                }
-              : edge,
-          ),
-        );
+        updateEdge(id, { loopSp: initSp, loopTp: initTp, loopCtrl });
       };
       const onUp = () => {
         window.removeEventListener('mousemove', onMove);
@@ -346,11 +310,7 @@ export function FlowEdge({
     onDoubleClick: (e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
       pushSnapshot();
-      setEdges((eds) =>
-        eds.map((edge) =>
-          edge.id === id ? { ...edge, data: { ...(edge.data ?? {}), loopCtrl: undefined } } : edge,
-        ),
-      );
+      updateEdge(id, { loopCtrl: undefined });
     },
   };
 
@@ -376,22 +336,12 @@ export function FlowEdge({
       const onMove = (ev: MouseEvent) => {
         const B = screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
         // 뱃지가 베지어 t=0.5 위에 오도록 cp 역산: B = 0.25*sp + 0.5*cp + 0.25*tp
-        setEdges((eds) =>
-          eds.map((edge) =>
-            edge.id === id
-              ? {
-                  ...edge,
-                  data: {
-                    ...(edge.data ?? {}),
-                    cp: {
-                      x: 2 * B.x - 0.5 * (spSnap.x + tpSnap.x),
-                      y: 2 * B.y - 0.5 * (spSnap.y + tpSnap.y),
-                    },
-                  },
-                }
-              : edge,
-          ),
-        );
+        updateEdge(id, {
+          cp: {
+            x: 2 * B.x - 0.5 * (spSnap.x + tpSnap.x),
+            y: 2 * B.y - 0.5 * (spSnap.y + tpSnap.y),
+          },
+        });
       };
       const onUp = () => {
         window.removeEventListener('mousemove', onMove);
@@ -403,11 +353,7 @@ export function FlowEdge({
     onDoubleClick: (e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
       pushSnapshot();
-      setEdges((eds) =>
-        eds.map((edge) =>
-          edge.id === id ? { ...edge, data: { ...(edge.data ?? {}), cp: undefined } } : edge,
-        ),
-      );
+      updateEdge(id, { cp: undefined });
     },
   };
 
