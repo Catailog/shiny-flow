@@ -1,6 +1,13 @@
 'use client';
 
-import { type Node, type NodeProps, NodeResizer, NodeToolbar, Position } from '@xyflow/react';
+import {
+  type Node,
+  type NodeProps,
+  NodeResizer,
+  NodeToolbar,
+  Position,
+  useStore,
+} from '@xyflow/react';
 
 import { cn } from '@/lib/utils';
 
@@ -20,6 +27,7 @@ export function FlowGroupNode({ id, data, width, height, selected }: Props) {
   const { dragOverGroupId } = useCollapseContext();
   const isDragOver = dragOverGroupId === id;
   const { pushSnapshot } = useHistory();
+  const isMultiSelected = useStore((s) => s.nodes.filter((n) => n.selected).length > 1);
 
   return (
     <>
@@ -36,7 +44,7 @@ export function FlowGroupNode({ id, data, width, height, selected }: Props) {
       </NodeToolbar>
 
       <NodeResizer
-        isVisible={selected}
+        isVisible={selected && !isMultiSelected}
         minWidth={120}
         minHeight={80}
         onResizeStart={pushSnapshot}
