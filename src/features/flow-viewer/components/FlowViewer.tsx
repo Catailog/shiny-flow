@@ -773,6 +773,9 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
                         : 'var(--color-brand-primary)'
                     }
                     maskColor="color-mix(in srgb, var(--background) 70%, transparent)"
+                    maskStrokeColor="var(--color-brand-primary)"
+                    maskStrokeWidth={3}
+                    pannable
                     className="rounded-lg border border-border shadow-sm"
                   />
                   <ContextMenuContent>
