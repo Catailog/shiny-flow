@@ -1,13 +1,8 @@
 'use client';
 
-import {
-  type Node,
-  type NodeProps,
-  NodeResizer,
-  NodeToolbar,
-  Position,
-  useStore,
-} from '@xyflow/react';
+import { useEffect, useState } from 'react';
+
+import { type Node, type NodeProps, NodeResizer, NodeToolbar, Position } from '@xyflow/react';
 
 import { cn } from '@/lib/utils';
 
@@ -22,12 +17,20 @@ export type { GroupNodeData };
 
 type Props = NodeProps<Node<GroupNodeData>>;
 
-export function FlowGroupNode({ id, data, width, height, selected }: Props) {
+export function FlowGroupNode({ id, data, width, height }: Props) {
   const colorStyle = getGroupColorStyle(data.color);
   const { dragOverGroupId } = useCollapseContext();
   const isDragOver = dragOverGroupId === id;
   const { pushSnapshot } = useHistory();
-  const isMultiSelected = useStore((s) => s.nodes.filter((n) => n.selected).length > 1);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+
+  useEffect(() => {
+    if (!isResizing) return;
+    const handlePointerUp = () => setIsResizing(false);
+    window.addEventListener('pointerup', handlePointerUp);
+    return () => window.removeEventListener('pointerup', handlePointerUp);
+  }, [isResizing]);
 
   return (
     <>
@@ -43,22 +46,28 @@ export function FlowGroupNode({ id, data, width, height, selected }: Props) {
         </span>
       </NodeToolbar>
 
-      <NodeResizer
-        isVisible={selected && !isMultiSelected}
-        minWidth={120}
-        minHeight={80}
-        onResizeStart={pushSnapshot}
-      />
-
       <div
         style={{ width, height }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         className={cn(
           'rounded-2xl border-2 border-dashed transition-shadow',
           colorStyle.border,
           colorStyle.bg,
           isDragOver && 'ring-2 ring-blue-400 ring-offset-2',
         )}
-      />
+      >
+        <NodeResizer
+          isVisible={isHovered || isResizing}
+          minWidth={120}
+          minHeight={80}
+          onResizeStart={() => {
+            pushSnapshot();
+            setIsResizing(true);
+          }}
+          onResizeEnd={() => setIsResizing(false)}
+        />
+      </div>
     </>
   );
 }
