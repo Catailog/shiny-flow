@@ -12,7 +12,6 @@ import {
   NodeToolbar,
   Position,
   useKeyPress,
-  useReactFlow,
 } from '@xyflow/react';
 import { CameraIcon, LoaderIcon, LogInIcon, SquareStackIcon } from 'lucide-react';
 
@@ -29,6 +28,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useFlowActions } from '../actionsContext';
 import { useCollapseContext } from '../collapseContext';
 import { useHistory } from '../historyContext';
+import { useNodeUpdate } from '../hooks/useNodeUpdate';
 import { useZoomCompensation } from '../hooks/useZoomCompensation';
 import { getNodeColorStyle } from '../lib/nodeColors';
 import { useScreenshotContext } from '../screenshotContext';
@@ -78,16 +78,14 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
     return () => window.removeEventListener('pointerup', handlePointerUp);
   }, [isResizing]);
 
-  const { setNodes } = useReactFlow();
+  const updateNode = useNodeUpdate();
   const zoomCompensation = useZoomCompensation();
   const handleStyle = { ...zoomCompensation, zIndex: 10 };
 
   const handleParamChange = (key: string, value: string) => {
     const next = { ...paramValues, [key]: value };
     setParamValues(next);
-    setNodes((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, data: { ...n.data, paramValues: next } } : n)),
-    );
+    updateNode(id, { paramValues: next });
   };
   const shiftHeld = useKeyPress('Shift');
   const { pushSnapshot } = useHistory();

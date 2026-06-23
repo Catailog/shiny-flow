@@ -34,6 +34,7 @@ import { useT } from '@/hooks/useT';
 
 import { useCollapseContext } from '../collapseContext';
 import { useHistory } from '../historyContext';
+import { useNodeUpdate } from '../hooks/useNodeUpdate';
 import { STATUS_COLORS, getNodeColorStyle } from '../lib/nodeColors';
 import { getAbsolutePosition, recomputeGroupZIndexes } from '../lib/nodeUtils';
 import { useScreenshotContext } from '../screenshotContext';
@@ -81,6 +82,7 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
   const { setNodes, setEdges, deleteElements, getNode, getEdge, screenToFlowPosition } =
     useReactFlow();
   const { pushSnapshot } = useHistory();
+  const updateNode = useNodeUpdate();
   const t = useT();
   const { available, captureNode, validateForCapture } = useScreenshotContext();
   const { collapsedIds, toggleCollapse, hasChildren } = useCollapseContext();
@@ -274,11 +276,7 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
             variant="destructive"
             onClick={() => {
               pushSnapshot();
-              setNodes((prev) =>
-                prev.map((n) =>
-                  n.id === target.nodeId ? { ...n, data: { ...n.data, memo: undefined } } : n,
-                ),
-              );
+              updateNode(target.nodeId, { memo: undefined });
             }}
           >
             <Trash2Icon className={ICON} />
@@ -299,11 +297,7 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
                   key={value ?? 'default'}
                   onClick={() => {
                     pushSnapshot();
-                    setNodes((prev) =>
-                      prev.map((n) =>
-                        n.id === target.nodeId ? { ...n, data: { ...n.data, color: value } } : n,
-                      ),
-                    );
+                    updateNode(target.nodeId, { color: value });
                   }}
                 >
                   <span
