@@ -25,7 +25,6 @@ import {
   useNodesState,
   useReactFlow,
   useStore,
-  useStoreApi,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { LockIcon, Redo2Icon, TagIcon, Undo2Icon, UnlockIcon } from 'lucide-react';
@@ -49,11 +48,6 @@ import { HistoryProvider, useHistory } from '../historyContext';
 import { useDragIntoGroup } from '../hooks/useDragIntoGroup';
 import { useEdgeCpSync } from '../hooks/useEdgeCpSync';
 import { buildChildrenMap, computeHiddenIds, countHiddenSubtree } from '../lib/collapse';
-import {
-  computeHandlePlacement,
-  faceHandlePos,
-  getRectIntersectionFromDir,
-} from '../lib/edgeGeometry';
 import { applyDagreLayout } from '../lib/layout';
 import { graphToFlow } from '../lib/transform';
 import { ScreenshotContext } from '../screenshotContext';
@@ -125,13 +119,11 @@ type ConnectBridgeFns = {
   screenToFlowPosition: (pos: { x: number; y: number }) => { x: number; y: number };
 };
 
-function ConnectBridge({
-  bridgeRef,
-}: {
-  bridgeRef: React.MutableRefObject<ConnectBridgeFns | null>;
-}) {
+function ConnectBridge({ bridgeRef }: { bridgeRef: React.RefObject<ConnectBridgeFns | null> }) {
   const { screenToFlowPosition } = useReactFlow();
-  bridgeRef.current = { screenToFlowPosition };
+  useEffect(() => {
+    bridgeRef.current = { screenToFlowPosition };
+  });
   return null;
 }
 
@@ -169,13 +161,14 @@ function KeyboardDeleteHandler() {
   const selectedEdges = useStore((s) => s.edges.filter((e) => e.selected));
   const selectedNodesRef = useRef(selectedNodes);
   const selectedEdgesRef = useRef(selectedEdges);
-  selectedNodesRef.current = selectedNodes;
-  selectedEdgesRef.current = selectedEdges;
-
   const pushSnapshotRef = useRef(pushSnapshot);
-  pushSnapshotRef.current = pushSnapshot;
   const deleteElementsRef = useRef(deleteElements);
-  deleteElementsRef.current = deleteElements;
+  useEffect(() => {
+    selectedNodesRef.current = selectedNodes;
+    selectedEdgesRef.current = selectedEdges;
+    pushSnapshotRef.current = pushSnapshot;
+    deleteElementsRef.current = deleteElements;
+  });
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -193,196 +186,6 @@ function KeyboardDeleteHandler() {
     window.addEventListener('keydown', handler, true);
     return () => window.removeEventListener('keydown', handler, true);
   }, []);
-
-  return null;
-}
-
-function ptInRect(x: number, y: number, minX: number, minY: number, maxX: number, maxY: number) {
-  return x >= minX && x <= maxX && y >= minY && y <= maxY;
-}
-
-function segsIntersect(
-  ax1: number,
-  ay1: number,
-  ax2: number,
-  ay2: number,
-  bx1: number,
-  by1: number,
-  bx2: number,
-  by2: number,
-): boolean {
-  const d1x = ax2 - ax1,
-    d1y = ay2 - ay1;
-  const d2x = bx2 - bx1,
-    d2y = by2 - by1;
-  const cross = d1x * d2y - d1y * d2x;
-  if (Math.abs(cross) < 1e-10) return false;
-  const dx = bx1 - ax1,
-    dy = by1 - ay1;
-  const t = (dx * d2y - dy * d2x) / cross;
-  const u = (dx * d1y - dy * d1x) / cross;
-  return t >= 0 && t <= 1 && u >= 0 && u <= 1;
-}
-
-function segIntersectsRect(
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  minX: number,
-  minY: number,
-  maxX: number,
-  maxY: number,
-): boolean {
-  if (ptInRect(x1, y1, minX, minY, maxX, maxY) || ptInRect(x2, y2, minX, minY, maxX, maxY))
-    return true;
-  return (
-    segsIntersect(x1, y1, x2, y2, minX, minY, maxX, minY) ||
-    segsIntersect(x1, y1, x2, y2, maxX, minY, maxX, maxY) ||
-    segsIntersect(x1, y1, x2, y2, minX, maxY, maxX, maxY) ||
-    segsIntersect(x1, y1, x2, y2, minX, minY, minX, maxY)
-  );
-}
-
-type NodeLookupMap = ReturnType<ReturnType<typeof useStoreApi>['getState']>['nodeLookup'];
-
-function computeEdgeInBox(
-  edge: Edge,
-  storeEdges: readonly Edge[],
-  nodeLookup: NodeLookupMap,
-  flowMinX: number,
-  flowMinY: number,
-  flowMaxX: number,
-  flowMaxY: number,
-): boolean {
-  if (edge.source === edge.target) return false;
-  const src = nodeLookup.get(edge.source);
-  const tgt = nodeLookup.get(edge.target);
-  if (!src || !tgt) return false;
-
-  const edgeData = edge.data as FlowEdgeData | undefined;
-  const srcPlacement = computeHandlePlacement(edge.source, edge.id, storeEdges, nodeLookup);
-  const tgtPlacement = computeHandlePlacement(edge.target, edge.id, storeEdges, nodeLookup);
-
-  const sp = edgeData?.sourceDir
-    ? getRectIntersectionFromDir(src, edgeData.sourceDir)
-    : faceHandlePos(src, srcPlacement.face, srcPlacement.index, srcPlacement.total);
-  const tp = edgeData?.targetDir
-    ? getRectIntersectionFromDir(tgt, edgeData.targetDir)
-    : faceHandlePos(tgt, tgtPlacement.face, tgtPlacement.index, tgtPlacement.total);
-
-  let inBox = segIntersectsRect(sp.x, sp.y, tp.x, tp.y, flowMinX, flowMinY, flowMaxX, flowMaxY);
-  if (!inBox && edgeData?.cp) {
-    const cp = edgeData.cp;
-    inBox =
-      segIntersectsRect(sp.x, sp.y, cp.x, cp.y, flowMinX, flowMinY, flowMaxX, flowMaxY) ||
-      segIntersectsRect(cp.x, cp.y, tp.x, tp.y, flowMinX, flowMinY, flowMaxX, flowMaxY);
-  }
-  return inBox;
-}
-
-function EdgeRubberBandSync({
-  setEdges,
-  edgesRef,
-}: {
-  setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
-  edgesRef: React.MutableRefObject<Edge[]>;
-}) {
-  const storeApi = useStoreApi();
-  const userSelectionActive = useStore((s) => s.userSelectionActive);
-  const userSelectionRect = useStore((s) => s.userSelectionRect);
-
-  const lastRectRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
-  const wasActiveRef = useRef(false);
-  const preSelectionEdgeIdsRef = useRef<Set<string>>(new Set());
-
-  // userSelectionRect becomes null in the same render as userSelectionActive→false,
-  // so we capture the last valid rect during render while it is still non-null
-  if (userSelectionRect) {
-    lastRectRef.current = {
-      x: userSelectionRect.x,
-      y: userSelectionRect.y,
-      width: userSelectionRect.width,
-      height: userSelectionRect.height,
-    };
-  }
-
-  // Handle start/end transitions
-  useEffect(() => {
-    const wasActive = wasActiveRef.current;
-    wasActiveRef.current = userSelectionActive;
-
-    if (!wasActive && userSelectionActive) {
-      // Rubber band just started — snapshot pre-selection
-      preSelectionEdgeIdsRef.current = new Set(
-        edgesRef.current.filter((e) => e.selected).map((e) => e.id),
-      );
-      return;
-    }
-
-    if (!wasActive || userSelectionActive || !lastRectRef.current) return;
-
-    // Rubber band just ended — apply final selection
-    const rect = lastRectRef.current;
-    const { transform, nodeLookup, edges: storeEdges } = storeApi.getState();
-    const [tx, ty, zoom] = transform;
-
-    const flowMinX = (rect.x - tx) / zoom;
-    const flowMinY = (rect.y - ty) / zoom;
-    const flowMaxX = (rect.x + rect.width - tx) / zoom;
-    const flowMaxY = (rect.y + rect.height - ty) / zoom;
-
-    const preSelected = preSelectionEdgeIdsRef.current;
-
-    setEdges((eds) =>
-      eds.map((edge) => {
-        const inBox = computeEdgeInBox(
-          edge,
-          storeEdges,
-          nodeLookup,
-          flowMinX,
-          flowMinY,
-          flowMaxX,
-          flowMaxY,
-        );
-        const selected = preSelected.has(edge.id) || inBox;
-        return selected !== edge.selected ? { ...edge, selected } : edge;
-      }),
-    );
-
-    lastRectRef.current = null;
-  }, [userSelectionActive, storeApi, setEdges, edgesRef]);
-
-  // Real-time highlight while rubber band is active
-  useEffect(() => {
-    if (!userSelectionActive || !userSelectionRect) return;
-
-    const { transform, nodeLookup, edges: storeEdges } = storeApi.getState();
-    const [tx, ty, zoom] = transform;
-
-    const flowMinX = (userSelectionRect.x - tx) / zoom;
-    const flowMinY = (userSelectionRect.y - ty) / zoom;
-    const flowMaxX = (userSelectionRect.x + userSelectionRect.width - tx) / zoom;
-    const flowMaxY = (userSelectionRect.y + userSelectionRect.height - ty) / zoom;
-
-    const preSelected = preSelectionEdgeIdsRef.current;
-
-    setEdges((eds) =>
-      eds.map((edge) => {
-        const inBox = computeEdgeInBox(
-          edge,
-          storeEdges,
-          nodeLookup,
-          flowMinX,
-          flowMinY,
-          flowMaxX,
-          flowMaxY,
-        );
-        const selected = preSelected.has(edge.id) || inBox;
-        return selected !== edge.selected ? { ...edge, selected } : edge;
-      }),
-    );
-  }, [userSelectionActive, userSelectionRect, storeApi, setEdges]);
 
   return null;
 }
@@ -425,10 +228,16 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   const future = useRef<Array<{ nodes: Node[]; edges: Edge[]; collapsedIds: Set<string> }>>([]);
 
   const nodesRef = useRef(nodes);
-  nodesRef.current = nodes;
   const edgesRef = useRef(edges);
-  edgesRef.current = edges;
+  useEffect(() => {
+    nodesRef.current = nodes;
+    edgesRef.current = edges;
+  });
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const collapsedIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    collapsedIdsRef.current = collapsedIds;
+  });
 
   const pushSnapshot = useCallback(() => {
     past.current.push({
@@ -455,9 +264,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     setCollapsedIds(new Set(snapshot.collapsedIds));
     setCanUndo(past.current.length > 0);
     setCanRedo(true);
-    // setCollapsedIds is a stable React setter, safe to omit from deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, setCollapsedIds]);
 
   const redo = useCallback(() => {
     const snapshot = future.current.pop();
@@ -472,16 +279,16 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     setCollapsedIds(new Set(snapshot.collapsedIds));
     setCanUndo(true);
     setCanRedo(future.current.length > 0);
-    // setCollapsedIds is a stable React setter, safe to omit from deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, setCollapsedIds]);
 
   const undoRef = useRef(undo);
-  undoRef.current = undo;
   const redoRef = useRef(redo);
-  redoRef.current = redo;
   const pushSnapshotRef = useRef(pushSnapshot);
-  pushSnapshotRef.current = pushSnapshot;
+  useEffect(() => {
+    undoRef.current = undo;
+    redoRef.current = redo;
+    pushSnapshotRef.current = pushSnapshot;
+  });
 
   const [isLocked, setIsLocked] = useState(false);
   const [spacebarLocked, setSpacebarLocked] = useState(false);
@@ -526,6 +333,11 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     };
   }, []);
 
+  const connectingRef = useRef<{
+    nodeId: string;
+    handleId: string | null;
+  } | null>(null);
+
   const onConnect = useCallback(
     (connection: Connection) => {
       const connecting = connectingRef.current;
@@ -546,10 +358,6 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   );
 
   const connectBridgeRef = useRef<ConnectBridgeFns | null>(null);
-  const connectingRef = useRef<{
-    nodeId: string;
-    handleId: string | null;
-  } | null>(null);
   const connectHighlightCleanupRef = useRef<(() => void) | null>(null);
 
   const onConnectStart = useCallback(
@@ -642,8 +450,6 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   );
 
   // --- Collapse ---
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
-  collapsedIdsRef.current = collapsedIds;
   const childrenMap = useMemo(() => buildChildrenMap(edges), [edges]);
   const hiddenIds = useMemo(
     () => computeHiddenIds(nodes, edges, collapsedIds),
@@ -659,7 +465,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
         return next;
       });
     },
-    [pushSnapshot],
+    [pushSnapshot, setCollapsedIds],
   );
   const hasChildren = useCallback(
     (id: string) => (childrenMap.get(id)?.length ?? 0) > 0,
@@ -900,7 +706,6 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
                   selectionOnDrag={isShiftHeld}
                 >
                   <KeyboardDeleteHandler />
-                  <EdgeRubberBandSync setEdges={setEdges} edgesRef={edgesRef} />
                   <ConnectBridge bridgeRef={connectBridgeRef} />
                   <AutoLayout
                     edges={initialEdges}
