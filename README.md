@@ -45,17 +45,20 @@ Visualize your Next.js App Router project as an interactive page-flow graph.
 Run inside your Next.js project directory with the dev server already running:
 
 ```bash
-# Analyze the current directory and open with screenshots
+# Analyze the current directory (no screenshots)
 npx shiny-flow .
 
+# Analyze and capture screenshots
+npx shiny-flow . -s
+
 # Specify a path explicitly
-npx shiny-flow <path/to/your/project>
+npx shiny-flow <path/to/your/project> -s
 
 # Open the viewer only, without analysis or screenshots
 npx shiny-flow
 ```
 
-Passing a path (including `.`) automatically enables screenshot capture and project analysis. Without a path, only the viewer opens.
+Passing a path enables project analysis. Add `-s` to also capture screenshots. Without a path, only the viewer opens.
 
 ### Options
 
@@ -63,7 +66,7 @@ Passing a path (including `.`) automatically enables screenshot capture and proj
 | -------------- | ----- | ----------------------- | ---------------------------------------------------- |
 | `--url`        | `-u`  | `http://localhost:3000` | URL of the target dev server                         |
 | `--port`       | `-p`  | `3000`                  | Port for the shiny-flow server                       |
-| `--screenshot` | `-s`  | —                       | Enable screenshots (auto-enabled when path is given) |
+| `--screenshot` | `-s`  | —                       | Enable screenshots                                   |
 | `--lang`       | `-l`  | `en`                    | Language (`en` / `ko`)                               |
 | `--version`    | `-v`  | —                       | Print version                                        |
 

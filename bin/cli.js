@@ -307,8 +307,7 @@ else {
   const rawProjectPath = positionalArgs[0];
   const projectPath = rawProjectPath ? nodePath.resolve(rawProjectPath) : '';
 
-  // path가 주어지면 screenshot 기본값 true
-  const screenshot = hasFlag(['--screenshot', '-s']) || !!rawProjectPath;
+  const screenshot = hasFlag(['--screenshot', '-s']);
 
   // auth 자동 감지
   let authType = 'none';
