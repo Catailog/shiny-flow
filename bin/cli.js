@@ -184,12 +184,14 @@ module.exports = async function authenticate(page, baseUrl) {
           const segment = entry.name.startsWith('(') ? null : entry.name;
           walk(nodePath.join(dir, entry.name), segment ? [...segments, segment] : segments);
         } else if (entry.isFile() && /^page\.(tsx?|jsx?)$/.test(entry.name)) {
-          const params = segments
-            .filter((s) => s.startsWith('[') && s.endsWith(']'))
-            .map((s) => s.slice(1, -1).replace(/^\.\.\./, ''));
-          if (params.length > 0) {
+          const dynamicSegments = segments.filter((s) => s.startsWith('[') && s.endsWith(']'));
+          if (dynamicSegments.length > 0) {
             const route = '/' + segments.join('/');
-            result[route] = Object.fromEntries(params.map((p) => [p, '']));
+            const paramSet = Object.fromEntries(
+              dynamicSegments.map((s) => [s.replace(/^\[+\.{0,3}/, '').replace(/\]+$/, ''), '']),
+            );
+            const isCatchAll = dynamicSegments.some((s) => /^\[{1,2}\.\.\./.test(s));
+            result[route] = isCatchAll ? [paramSet] : paramSet;
           }
         }
       }
