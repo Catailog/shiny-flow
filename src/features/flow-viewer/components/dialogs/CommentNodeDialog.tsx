@@ -15,6 +15,7 @@ import { useAuthorPreference } from '@/hooks/useAuthorPreference';
 import { useCloudAuthorName } from '@/hooks/useCloudAuthorName';
 import { useT } from '@/hooks/useT';
 
+import { useFlowActions } from '../../actionsContext';
 import { useHistory } from '../../historyContext';
 import type { CommentNodeData } from '../FlowCommentNode';
 import { BaseDialog } from './BaseDialog';
@@ -46,6 +47,7 @@ export function CommentNodeDialog({
 
   const [value, setValue] = useState(existing?.content ?? '');
   const t = useT();
+  const { readOnly } = useFlowActions();
   const { data: session } = useSession();
 
   const { authorId, authorName, options, setName } = useAuthorPreference();
@@ -173,7 +175,7 @@ export function CommentNodeDialog({
               >
                 {displayName ?? t.dialog.comment.authorUnset}
               </span>
-              {canEditAuthor && (
+              {canEditAuthor && !readOnly && (
                 <Button
                   size="sm"
                   variant="ghost"
@@ -246,7 +248,8 @@ export function CommentNodeDialog({
         </div>
 
         <Textarea
-          autoFocus
+          autoFocus={!readOnly}
+          readOnly={readOnly}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={t.dialog.comment.placeholder}
@@ -256,7 +259,7 @@ export function CommentNodeDialog({
           <Button variant="outline" onClick={onClose}>
             {t.dialog.cancel}
           </Button>
-          <Button onClick={save}>{t.dialog.save}</Button>
+          {!readOnly && <Button onClick={save}>{t.dialog.save}</Button>}
         </DialogFooter>
       </DialogContent>
     </BaseDialog>

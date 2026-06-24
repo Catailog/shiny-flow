@@ -1,21 +1,29 @@
 'use client';
 
-import { useStore } from '@xyflow/react';
+import { useReactFlow, useStore } from '@xyflow/react';
+import { MaximizeIcon } from 'lucide-react';
+
+import { useT } from '@/hooks/useT';
 
 import type { ContextMenuState, DialogRequest } from '../types';
+import type { FlowNodeData } from './FlowNode';
 import { CommentNodeMenu } from './menus/CommentNodeMenu';
 import { EdgeMenu } from './menus/EdgeMenu';
 import { FlowNodeMenu } from './menus/FlowNodeMenu';
 import { GroupNodeMenu } from './menus/GroupNodeMenu';
 import { GroupSelectMenu } from './menus/GroupSelectMenu';
 import { PaneMenu } from './menus/PaneMenu';
+import { ICON, MenuItem } from './menus/shared';
 
 type Props = {
   state: ContextMenuState;
   onOpenDialog: (req: DialogRequest) => void;
+  readOnly?: boolean;
 };
 
-export function ContextMenuController({ state, onOpenDialog }: Props) {
+export function ContextMenuController({ state, onOpenDialog, readOnly }: Props) {
+  const { getNode } = useReactFlow();
+  const t = useT();
   const selectedNodes = useStore((s) =>
     s.nodes.filter((n) => n.selected && (n.type === 'flowNode' || n.type === 'groupNode')),
   );
@@ -25,6 +33,29 @@ export function ContextMenuController({ state, onOpenDialog }: Props) {
 
   if (!state) return null;
   const { screenX, screenY, target } = state;
+
+  if (readOnly) {
+    if (target.type === 'flowNode') {
+      const node = getNode(target.nodeId);
+      const nodeData = node?.data as FlowNodeData | undefined;
+      if (!nodeData?.screenshot) return null;
+      return (
+        <MenuItem
+          onClick={() =>
+            onOpenDialog({
+              type: 'screenshot',
+              src: `data:image/png;base64,${nodeData.screenshot}`,
+              label: nodeData.label,
+            })
+          }
+        >
+          <MaximizeIcon className={ICON} />
+          {t.menu.viewLarge}
+        </MenuItem>
+      );
+    }
+    return null;
+  }
 
   if (canGroupSelected) {
     return (

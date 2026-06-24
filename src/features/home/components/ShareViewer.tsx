@@ -24,6 +24,7 @@ export function ShareViewer({ name, data }: Props) {
           screenshotOptions={null}
           savedRfNodes={data.rfNodes}
           savedRfEdges={data.rfEdges}
+          readOnly
         />
       </main>
     </div>

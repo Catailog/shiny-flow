@@ -43,7 +43,7 @@ function relativeTime(isoString: string, tn: Translations['commentNode']): strin
 type Props = NodeProps<Node<CommentNodeData>>;
 
 export function FlowCommentNode({ id, data, selected }: Props) {
-  const { openDialog } = useFlowActions();
+  const { openDialog, readOnly } = useFlowActions();
   const t = useT();
   const { setNodes } = useReactFlow();
   const [hovered, setHovered] = useState(false);

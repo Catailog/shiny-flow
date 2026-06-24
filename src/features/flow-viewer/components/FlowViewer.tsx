@@ -171,10 +171,11 @@ type Props = {
   savedRfNodes?: Node[];
   savedRfEdges?: Edge[];
   onValidateForCapture?: () => Promise<void>;
+  readOnly?: boolean;
 };
 
 export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewer(
-  { graph, screenshotOptions, savedRfNodes, savedRfEdges, onValidateForCapture },
+  { graph, screenshotOptions, savedRfNodes, savedRfEdges, onValidateForCapture, readOnly },
   ref,
 ) {
   const t = useT();
@@ -379,11 +380,19 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     [setNodes, setEdges],
   );
 
-  const handleContextMenuOpen = useCallback((e: React.MouseEvent) => {
-    const target = pendingTargetRef.current;
-    pendingTargetRef.current = { type: 'pane' };
-    setContextMenuState({ screenX: e.clientX, screenY: e.clientY, target });
-  }, []);
+  const handleContextMenuOpen = useCallback(
+    (e: React.MouseEvent) => {
+      const target = pendingTargetRef.current;
+      pendingTargetRef.current = { type: 'pane' };
+      if (readOnly) {
+        if (target.type !== 'flowNode') return;
+        const node = nodesRef.current.find((n) => n.id === target.nodeId);
+        if (!(node?.data as FlowNodeData | undefined)?.screenshot) return;
+      }
+      setContextMenuState({ screenX: e.clientX, screenY: e.clientY, target });
+    },
+    [readOnly],
+  );
 
   const captureNode = useCallback(
     async (nodeId: string, resolvedRoute: string, paramValues: Record<string, string>) => {
@@ -450,8 +459,8 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
   );
 
   const historyValue = useMemo(() => ({ pushSnapshot }), [pushSnapshot]);
-  const flowActionsValue = useMemo(() => ({ openDialog: setDialogRequest }), []);
-  const nodesDraggable = !isLocked && !spacebarLocked;
+  const flowActionsValue = useMemo(() => ({ openDialog: setDialogRequest, readOnly }), [readOnly]);
+  const nodesDraggable = !readOnly && !isLocked && !spacebarLocked;
   const { showNodeLabels, toggleNodeLabels } = useUIStore();
 
   return (
@@ -460,7 +469,8 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
         <ScreenshotContext.Provider value={screenshotContextValue}>
           <CollapseContext.Provider value={collapseContext}>
             <ContextMenu
-              onOpenChangeComplete={(open) => {
+              open={readOnly ? !!contextMenuState : undefined}
+              onOpenChange={(open) => {
                 if (!open) setContextMenuState(null);
               }}
             >
@@ -470,13 +480,19 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
                   edges={displayEdges}
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
-                  onConnect={onConnect}
-                  onConnectStart={onConnectStart}
-                  onConnectEnd={onConnectEnd}
+                  {...(!readOnly && {
+                    onConnect,
+                    onConnectStart,
+                    onConnectEnd,
+                  })}
                   isValidConnection={() => true}
                   onNodeDragStart={handleNodeDragStart}
                   onNodeDrag={handleNodeDragWithCp}
                   onNodeDragStop={handleNodeDragStopWithCp}
+                  onPaneClick={() => {
+                    setNodes((prev) => prev.map((n) => ({ ...n, selected: false })));
+                    setEdges((prev) => prev.map((e) => ({ ...e, selected: false })));
+                  }}
                   onNodeClick={handleNodeClick}
                   onEdgeClick={handleEdgeClick}
                   onNodeContextMenu={handleNodeContextMenu}
@@ -488,6 +504,9 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
                   minZoom={0.05}
                   maxZoom={2}
                   nodesDraggable={nodesDraggable}
+                  nodesConnectable={!readOnly}
+                  edgesReconnectable={!readOnly}
+                  elementsSelectable={!readOnly}
                   zoomOnDoubleClick={false}
                   deleteKeyCode={null}
                   selectionKeyCode="Shift"
@@ -495,7 +514,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
                   panOnDrag={!isShiftHeld}
                   selectionOnDrag={isShiftHeld}
                 >
-                  <KeyboardDeleteHandler />
+                  {!readOnly && <KeyboardDeleteHandler />}
                   <ConnectBridge bridgeRef={connectBridgeRef} />
                   <AutoLayout
                     edges={initialEdges}
@@ -504,30 +523,34 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
                   />
                   <Background />
                   <Controls showInteractive={false}>
-                    <ControlButton
-                      onClick={undo}
-                      title={t.menu.undo}
-                      style={{ opacity: canUndo ? 1 : 0.4 }}
-                    >
-                      <Undo2Icon size={12} style={{ fill: 'none' }} />
-                    </ControlButton>
-                    <ControlButton
-                      onClick={redo}
-                      title={t.menu.redo}
-                      style={{ opacity: canRedo ? 1 : 0.4 }}
-                    >
-                      <Redo2Icon size={12} style={{ fill: 'none' }} />
-                    </ControlButton>
-                    <ControlButton
-                      onClick={toggleLock}
-                      title={nodesDraggable ? 'Lock (L)' : 'Unlock (L)'}
-                    >
-                      {nodesDraggable ? (
-                        <UnlockIcon size={12} style={{ fill: 'none' }} />
-                      ) : (
-                        <LockIcon size={12} style={{ fill: 'none' }} />
-                      )}
-                    </ControlButton>
+                    {!readOnly && (
+                      <>
+                        <ControlButton
+                          onClick={undo}
+                          title={t.menu.undo}
+                          style={{ opacity: canUndo ? 1 : 0.4 }}
+                        >
+                          <Undo2Icon size={12} style={{ fill: 'none' }} />
+                        </ControlButton>
+                        <ControlButton
+                          onClick={redo}
+                          title={t.menu.redo}
+                          style={{ opacity: canRedo ? 1 : 0.4 }}
+                        >
+                          <Redo2Icon size={12} style={{ fill: 'none' }} />
+                        </ControlButton>
+                        <ControlButton
+                          onClick={toggleLock}
+                          title={nodesDraggable ? 'Lock (L)' : 'Unlock (L)'}
+                        >
+                          {nodesDraggable ? (
+                            <UnlockIcon size={12} style={{ fill: 'none' }} />
+                          ) : (
+                            <LockIcon size={12} style={{ fill: 'none' }} />
+                          )}
+                        </ControlButton>
+                      </>
+                    )}
                     <ControlButton
                       onClick={toggleNodeLabels}
                       title={t.menu.toggleNodeLabels}
@@ -552,6 +575,7 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
                     <ContextMenuController
                       state={contextMenuState}
                       onOpenDialog={setDialogRequest}
+                      readOnly={readOnly}
                     />
                   </ContextMenuContent>
                 </ReactFlow>

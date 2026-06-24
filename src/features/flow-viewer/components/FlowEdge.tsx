@@ -16,6 +16,7 @@ import { useT } from '@/hooks/useT';
 
 import { Z_INDEX } from '@/constants/zIndex';
 
+import { useFlowActions } from '../actionsContext';
 import { useHistory } from '../historyContext';
 import { useEdgeUpdate } from '../hooks/useEdgeUpdate';
 import {
@@ -152,6 +153,7 @@ export function FlowEdge({
   style,
   selected,
 }: Props) {
+  const { readOnly } = useFlowActions();
   const zoom = useStore((s) => s.transform[2]);
   const { setEdges, setNodes, screenToFlowPosition } = useReactFlow();
   const updateEdge = useEdgeUpdate();
@@ -232,7 +234,7 @@ export function FlowEdge({
     }
   };
 
-  const showHandles = selected || hovered;
+  const showHandles = !readOnly && (selected || hovered);
 
   const makeSelfLoopHandleDragHandler = (
     type: 'source' | 'target',
@@ -402,10 +404,10 @@ export function FlowEdge({
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) scale(${1 / zoom})`,
               zIndex: data?.labelZIndex ?? Z_INDEX.edgeLabel,
               pointerEvents: 'all',
-              cursor: 'grab',
+              cursor: readOnly ? 'default' : 'grab',
             }}
-            title={t.flowEdge.dragCurve}
-            {...(isSelfLoop ? selfLoopBadgeDragHandlers : badgeDragHandlers)}
+            title={readOnly ? undefined : t.flowEdge.dragCurve}
+            {...(!readOnly && (isSelfLoop ? selfLoopBadgeDragHandlers : badgeDragHandlers))}
           >
             <div className="rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground shadow-sm dark:border-foreground/20">
               {comment}

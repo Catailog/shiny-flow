@@ -6,6 +6,7 @@ import type { DialogRequest } from './types';
 
 export type FlowActionsContextValue = {
   openDialog: (req: DialogRequest) => void;
+  readOnly?: boolean;
 };
 
 const FlowActionsContext = createContext<FlowActionsContextValue | null>(null);
