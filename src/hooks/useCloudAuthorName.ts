@@ -6,6 +6,7 @@ const resolved = new Map<string, string | null>();
 const inflight = new Map<string, Promise<string | null>>();
 
 function fetchAuthorName(accountId: string): Promise<string | null> {
+  if (resolved.has(accountId)) return Promise.resolve(resolved.get(accountId) ?? null);
   const existing = inflight.get(accountId);
   if (existing) return existing;
 
@@ -30,10 +31,6 @@ export function useCloudAuthorName(accountId: string | undefined): string | null
 
   useEffect(() => {
     if (!accountId) return;
-    if (resolved.has(accountId)) {
-      setName(resolved.get(accountId) ?? null);
-      return;
-    }
     fetchAuthorName(accountId).then(setName);
   }, [accountId]);
 

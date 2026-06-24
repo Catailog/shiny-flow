@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { startTransition, useEffect, useRef, useState } from 'react';
 
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
@@ -56,8 +56,10 @@ function FlowTitle({ name, onRename, focusTrigger, disabled }: CloudTitleProps) 
   useEffect(() => {
     if (!focusTrigger) return;
     cancelledRef.current = false;
-    setEditValue('');
-    setIsEditing(true);
+    startTransition(() => {
+      setEditValue('');
+      setIsEditing(true);
+    });
   }, [focusTrigger]);
 
   const confirm = () => {

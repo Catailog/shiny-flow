@@ -45,20 +45,19 @@ export function useFlowAnalyze({ onLoading, onSuccess, onError, onCancelled }: O
     : null;
 
   useEffect(() => {
-    if (!isLoading || overlayError) {
-      if (!isLoading) {
-        slowWarningRef.current = false;
-        setSlowWarning(false);
-      }
-      return;
-    }
+    if (!isLoading || overlayError) return;
+
     slowWarningRef.current = false;
-    setSlowWarning(false);
     const timer = setTimeout(() => {
       slowWarningRef.current = true;
       setSlowWarning(true);
     }, SLOW_TIMEOUT_MS);
-    return () => clearTimeout(timer);
+
+    return () => {
+      clearTimeout(timer);
+      slowWarningRef.current = false;
+      setSlowWarning(false);
+    };
   }, [isLoading, analyzeProgressKey, screenshotProgressKey, staleTimerKey, overlayError]);
 
   const handleAnalyze = async ({ path, screenshot, baseUrl, auth }: AnalyzeOptions) => {

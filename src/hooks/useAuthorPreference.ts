@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 const KEY_ID = 'sf_author_id';
 const KEY_NAME = 'sf_author_name';
@@ -19,24 +19,28 @@ export type AuthorPreference = {
   setName: (name: string) => void;
 };
 
-export function useAuthorPreference(): AuthorPreference {
-  const [authorId, setAuthorId] = useState('');
-  const [authorName, setAuthorName] = useState<string | null>(null);
-  const [options, setOptions] = useState<AuthorOptions>({ author: null, device: null });
+function readAuthorId(): string {
+  if (typeof window === 'undefined') return '';
+  const stored = localStorage.getItem(KEY_ID);
+  if (stored) return stored;
+  const id = crypto.randomUUID();
+  localStorage.setItem(KEY_ID, id);
+  return id;
+}
 
-  useEffect(() => {
-    let id = localStorage.getItem(KEY_ID);
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem(KEY_ID, id);
-    }
-    setAuthorId(id);
-    setAuthorName(localStorage.getItem(KEY_NAME));
-    setOptions({
-      author: localStorage.getItem(KEY_CLI_AUTHOR),
-      device: localStorage.getItem(KEY_CLI_DEVICE),
-    });
-  }, []);
+export function useAuthorPreference(): AuthorPreference {
+  const [authorId] = useState(readAuthorId);
+  const [authorName, setAuthorName] = useState<string | null>(() =>
+    typeof window === 'undefined' ? null : localStorage.getItem(KEY_NAME),
+  );
+  const [options] = useState<AuthorOptions>(() =>
+    typeof window === 'undefined'
+      ? { author: null, device: null }
+      : {
+          author: localStorage.getItem(KEY_CLI_AUTHOR),
+          device: localStorage.getItem(KEY_CLI_DEVICE),
+        },
+  );
 
   const setName = useCallback((name: string) => {
     const trimmed = name.trim();
