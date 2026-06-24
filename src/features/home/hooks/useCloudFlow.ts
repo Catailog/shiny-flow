@@ -9,12 +9,14 @@ import type { AnalyzeFormValues } from '@/features/project-input';
 import { type FlowData, type FlowMeta, cloudFlowAdapter } from '@/lib/adapters';
 import type { FlowGraph } from '@/lib/analyzer';
 
+import { refreshCommentAuthorNames } from '../services/refreshCommentAuthorNames';
+
 export type CloudFlowState = {
   cloudFlowId: string | null;
   cloudFlowName: string;
   myFlowsOpen: boolean;
   flowsList: FlowMeta[];
-  busyAction: 'save' | 'myFlows' | 'share' | null;
+  busyAction: 'save' | 'myFlows' | 'share' | 'refresh' | null;
   shareCopied: boolean;
   rowBusy: { id: string; action: 'share' | 'delete' | 'rename' } | null;
   copiedFlowId: string | null;
@@ -38,10 +40,13 @@ export type CloudFlowActions = {
   handleDeleteFlow: (id: string) => Promise<void>;
   handleStartRename: (id: string, currentName: string) => void;
   handleRenameConfirm: (id: string) => Promise<void>;
+  handleRefreshCommentAuthors: () => Promise<void>;
 };
 
 type Deps = {
   getCurrentFlowData: () => FlowData | null;
+  getViewerNodes: () => Node[];
+  setViewerNodes: (nodes: Node[]) => void;
   onFlowLoaded: (params: {
     graph: FlowGraph;
     rfNodes: Node[];
@@ -53,7 +58,13 @@ type Deps = {
   onMissingTitle?: () => void;
 };
 
-export function useCloudFlow({ getCurrentFlowData, onFlowLoaded, onMissingTitle }: Deps): {
+export function useCloudFlow({
+  getCurrentFlowData,
+  getViewerNodes,
+  setViewerNodes,
+  onFlowLoaded,
+  onMissingTitle,
+}: Deps): {
   state: CloudFlowState;
   actions: CloudFlowActions;
 } {
@@ -61,7 +72,9 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded, onMissingTitle 
   const [cloudFlowName, setCloudFlowName] = useState('');
   const [myFlowsOpen, setMyFlowsOpen] = useState(false);
   const [flowsList, setFlowsList] = useState<FlowMeta[]>([]);
-  const [busyAction, setBusyAction] = useState<'save' | 'myFlows' | 'share' | null>(null);
+  const [busyAction, setBusyAction] = useState<'save' | 'myFlows' | 'share' | 'refresh' | null>(
+    null,
+  );
   const [shareCopied, setShareCopied] = useState(false);
   const [rowBusy, setRowBusy] = useState<{
     id: string;
@@ -94,10 +107,12 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded, onMissingTitle 
     }
     try {
       setBusyAction('save');
+      const rfNodes = await refreshCommentAuthorNames(data.rfNodes);
+      const refreshedData = { ...data, rfNodes };
       if (cloudFlowId) {
-        await cloudFlowAdapter.save(cloudFlowId, data);
+        await cloudFlowAdapter.save(cloudFlowId, refreshedData);
       } else {
-        const id = await cloudFlowAdapter.create(cloudFlowName, data);
+        const id = await cloudFlowAdapter.create(cloudFlowName, refreshedData);
         setCloudFlowId(id);
       }
     } finally {
@@ -205,6 +220,16 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded, onMissingTitle 
     }
   };
 
+  const handleRefreshCommentAuthors = async () => {
+    try {
+      setBusyAction('refresh');
+      const refreshed = await refreshCommentAuthorNames(getViewerNodes());
+      setViewerNodes(refreshed);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
   return {
     state: {
       cloudFlowId,
@@ -234,6 +259,7 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded, onMissingTitle 
       handleDeleteFlow,
       handleStartRename,
       handleRenameConfirm,
+      handleRefreshCommentAuthors,
     },
   };
 }

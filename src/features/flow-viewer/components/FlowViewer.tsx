@@ -162,6 +162,7 @@ function KeyboardDeleteHandler() {
 export type FlowViewerHandle = {
   getNodes: () => Node[];
   getEdges: () => Edge[];
+  setNodes: (nodes: Node[]) => void;
 };
 
 type Props = {
@@ -189,9 +190,10 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     setNodes,
   });
 
-  useImperativeHandle(ref, () => ({ getNodes: () => nodes, getEdges: () => edges }), [
+  useImperativeHandle(ref, () => ({ getNodes: () => nodes, getEdges: () => edges, setNodes }), [
     nodes,
     edges,
+    setNodes,
   ]);
 
   // --- History ---

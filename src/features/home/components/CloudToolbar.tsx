@@ -8,6 +8,7 @@ import {
   FolderOpenIcon,
   Loader2Icon,
   PencilIcon,
+  RefreshCwIcon,
   Share2Icon,
   Trash2Icon,
   XIcon,
@@ -60,6 +61,7 @@ export function CloudToolbar({ hasFlow, state, actions, isAnalyzing }: Props) {
     handleDeleteFlow,
     handleStartRename,
     handleRenameConfirm,
+    handleRefreshCommentAuthors,
   } = actions;
 
   const isLoggedIn = !!session?.user;
@@ -165,6 +167,32 @@ export function CloudToolbar({ hasFlow, state, actions, isAnalyzing }: Props) {
             {shareDisabledTip ?? (busyAction === 'share' ? t.cloud.serverSaving : t.cloud.copyLink)}
           </TooltipContent>
         </Tooltip>
+
+        {/* refresh comment author names */}
+        {hasFlow && isLoggedIn && (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="inline-flex">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={busyAction === 'refresh'}
+                    onClick={() => void handleRefreshCommentAuthors()}
+                  >
+                    {busyAction === 'refresh' ? (
+                      <Loader2Icon size={14} className="animate-spin" />
+                    ) : (
+                      <RefreshCwIcon size={14} />
+                    )}
+                  </Button>
+                </span>
+              }
+            />
+            <TooltipContent>{t.cloud.refreshAuthors}</TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
       {/* my flows dialog */}

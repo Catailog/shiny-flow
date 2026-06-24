@@ -12,6 +12,7 @@ import type { FlowGraph } from '@/lib/analyzer';
 
 import { useT } from '@/hooks/useT';
 
+import { refreshCommentAuthorNames } from '../services/refreshCommentAuthorNames';
 import type { RfSnapshot, ScreenshotOptions } from '../types';
 
 type PendingImport = {
@@ -57,10 +58,11 @@ export function useFlowFile({
   const [pendingConvert, setPendingConvert] = useState<PendingConvert | null>(null);
   const [convertSelectedUuids, setConvertSelectedUuids] = useState<string[]>([]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const data = getCurrentFlowData();
     if (!data) return;
-    const json = JSON.stringify(data, null, 2);
+    const rfNodes = await refreshCommentAuthorNames(data.rfNodes);
+    const json = JSON.stringify({ ...data, rfNodes }, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

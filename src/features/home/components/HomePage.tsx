@@ -130,6 +130,8 @@ export function HomePage({ isCloudMode }: Props) {
 
   const { state: cloudState, actions: cloudActions } = useCloudFlow({
     getCurrentFlowData,
+    getViewerNodes: () => viewerRef.current?.getNodes() ?? [],
+    setViewerNodes: (nodes) => viewerRef.current?.setNodes(nodes),
     onFlowLoaded: ({ graph, rfNodes, rfEdges, analyzeConfig }) => {
       setState({ status: 'success', graph, snapshot: { rfNodes, rfEdges } });
       setGraphKey((k) => k + 1);
@@ -241,55 +243,50 @@ export function HomePage({ isCloudMode }: Props) {
 
           {state.status === 'loading' && (
             <div className="flex flex-col items-center gap-3">
-              {!analyze.overlayError && (
-                <>
-                  <Loader2Icon size={36} className="animate-spin text-brand-primary" />
-                  {analyze.screenshotProgress ? (
-                    <div className="flex w-64 flex-col gap-1.5">
-                      <Progress
-                        value={Math.round(
-                          (analyze.screenshotProgress.done / analyze.screenshotProgress.total) *
-                            100,
-                        )}
-                      />
-                      <p className="text-center text-xs text-muted-foreground">
-                        {t.home.capturingScreenshots(
-                          analyze.screenshotProgress.done,
-                          analyze.screenshotProgress.total,
-                        )}
-                      </p>
-                      {analyze.screenshotProgress.currentRoute && (
-                        <p className="text-center text-xs break-all text-muted-foreground/60">
-                          {analyze.screenshotProgress.currentRoute}
-                        </p>
-                      )}
-                    </div>
-                  ) : analyze.analyzeProgress &&
-                    analyze.analyzeProgress.done === analyze.analyzeProgress.total ? (
-                    <p className="text-sm text-muted-foreground">{t.home.analysisDone}</p>
-                  ) : analyze.analyzeProgress ? (
-                    <div className="flex w-64 flex-col gap-1.5">
-                      <Progress
-                        value={Math.round(
-                          (analyze.analyzeProgress.done / analyze.analyzeProgress.total) * 100,
-                        )}
-                      />
-                      <p className="text-center text-xs text-muted-foreground">
-                        {t.home.analyzingFiles(
-                          analyze.analyzeProgress.done,
-                          analyze.analyzeProgress.total,
-                        )}
-                      </p>
-                      {analyze.analyzeProgress.currentFile && (
-                        <p className="text-center text-xs break-all text-muted-foreground/60">
-                          {analyze.analyzeProgress.currentFile}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">{t.home.analyzing}</p>
+              <Loader2Icon size={36} className="animate-spin text-brand-primary" />
+              {analyze.screenshotProgress ? (
+                <div className="flex w-64 flex-col gap-1.5">
+                  <Progress
+                    value={Math.round(
+                      (analyze.screenshotProgress.done / analyze.screenshotProgress.total) * 100,
+                    )}
+                  />
+                  <p className="text-center text-xs text-muted-foreground">
+                    {t.home.capturingScreenshots(
+                      analyze.screenshotProgress.done,
+                      analyze.screenshotProgress.total,
+                    )}
+                  </p>
+                  {analyze.screenshotProgress.currentRoute && (
+                    <p className="text-center text-xs break-all text-muted-foreground/60">
+                      {analyze.screenshotProgress.currentRoute}
+                    </p>
                   )}
-                </>
+                </div>
+              ) : analyze.analyzeProgress &&
+                analyze.analyzeProgress.done === analyze.analyzeProgress.total ? (
+                <p className="text-sm text-muted-foreground">{t.home.analysisDone}</p>
+              ) : analyze.analyzeProgress ? (
+                <div className="flex w-64 flex-col gap-1.5">
+                  <Progress
+                    value={Math.round(
+                      (analyze.analyzeProgress.done / analyze.analyzeProgress.total) * 100,
+                    )}
+                  />
+                  <p className="text-center text-xs text-muted-foreground">
+                    {t.home.analyzingFiles(
+                      analyze.analyzeProgress.done,
+                      analyze.analyzeProgress.total,
+                    )}
+                  </p>
+                  {analyze.analyzeProgress.currentFile && (
+                    <p className="text-center text-xs break-all text-muted-foreground/60">
+                      {analyze.analyzeProgress.currentFile}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">{t.home.analyzing}</p>
               )}
 
               <Button

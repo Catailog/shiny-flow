@@ -49,6 +49,7 @@ export const en = {
     copyLink: 'Copy link',
     cancel: 'Cancel',
     noFlows: 'No saved flows.',
+    refreshAuthors: 'Refresh author names',
     confirmDelete: 'Delete?',
     delete: 'Delete',
     copyShareLink: 'Copy share link',
