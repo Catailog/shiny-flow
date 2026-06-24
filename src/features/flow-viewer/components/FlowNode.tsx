@@ -170,8 +170,8 @@ export function FlowNode({ id, data, selected, width, height }: Props) {
         {/* 접힘 스택 그림자: 메인 카드 뒤에 쌓인 카드처럼 보이도록 offset된 레이어 */}
         {isCollapsed && (
           <>
-            <div className="absolute inset-x-2 top-2 bottom-[-10px] rounded-lg border border-brand-secondary bg-brand-light dark:bg-card" />
-            <div className="absolute inset-x-1 top-1 bottom-[-5px] rounded-lg border border-brand-secondary bg-brand-light dark:bg-card" />
+            <div className="absolute inset-x-2 top-2 -bottom-2.5 rounded-lg border border-brand-secondary bg-brand-light dark:bg-card" />
+            <div className="absolute inset-x-1 top-1 -bottom-1.25 rounded-lg border border-brand-secondary bg-brand-light dark:bg-card" />
           </>
         )}
         <div
