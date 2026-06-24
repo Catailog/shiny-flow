@@ -186,7 +186,7 @@ export const ko: Translations = {
     monthsAgo: (n: number) => `${n}개월 전`,
     yearsAgo: (n: number) => `${n}년 전`,
     edited: '(수정됨)',
-    clickToAdd: '클릭하여 댓글 추가',
+    clickToAdd: '더블 클릭하여 댓글 추가',
   },
 
   // Flow node

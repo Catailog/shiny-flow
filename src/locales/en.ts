@@ -185,7 +185,7 @@ export const en = {
     monthsAgo: (n: number) => `${n}mo ago`,
     yearsAgo: (n: number) => `${n}y ago`,
     edited: '(edited)',
-    clickToAdd: 'Click to add a comment',
+    clickToAdd: 'Double-click to add a comment',
   },
 
   // Flow node

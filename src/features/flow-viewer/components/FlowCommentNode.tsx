@@ -42,7 +42,7 @@ function relativeTime(isoString: string, tn: Translations['commentNode']): strin
 
 type Props = NodeProps<Node<CommentNodeData>>;
 
-export function FlowCommentNode({ id, data }: Props) {
+export function FlowCommentNode({ id, data, selected }: Props) {
   const { openDialog } = useFlowActions();
   const t = useT();
   const { setNodes } = useReactFlow();
@@ -72,7 +72,7 @@ export function FlowCommentNode({ id, data }: Props) {
         className="relative overflow-visible"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        onClick={() => openDialog({ type: 'comment', nodeId: id })}
+        onDoubleClick={() => openDialog({ type: 'comment', nodeId: id })}
       >
         <div
           className="absolute inset-0 overflow-visible"
@@ -85,6 +85,7 @@ export function FlowCommentNode({ id, data }: Props) {
                 hasContent
                   ? 'border-blue-400 bg-blue-50 dark:bg-blue-950'
                   : 'border-border dark:border-foreground/30',
+                selected && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
               )}
             >
               <MessageCircleIcon
