@@ -6,7 +6,6 @@ import { Extension } from '@tiptap/core';
 import { Color } from '@tiptap/extension-color';
 import Placeholder from '@tiptap/extension-placeholder';
 import { TextStyle } from '@tiptap/extension-text-style';
-import Underline from '@tiptap/extension-underline';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { BoldIcon, ItalicIcon, ListIcon, ListOrderedIcon, UnderlineIcon } from 'lucide-react';
@@ -103,9 +102,9 @@ export function MemoEditor({ value, onChange }: Props) {
   }));
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
-      Underline,
       TextStyle,
       FontSize,
       Color,

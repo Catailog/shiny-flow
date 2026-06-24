@@ -16,7 +16,7 @@ export type CloudFlowState = {
   cloudFlowName: string;
   myFlowsOpen: boolean;
   flowsList: FlowMeta[];
-  busyAction: 'save' | 'myFlows' | 'share' | 'refresh' | null;
+  busyAction: 'save' | 'myFlows' | 'share' | null;
   shareCopied: boolean;
   rowBusy: { id: string; action: 'share' | 'delete' | 'rename' } | null;
   copiedFlowId: string | null;
@@ -72,9 +72,7 @@ export function useCloudFlow({
   const [cloudFlowName, setCloudFlowName] = useState('');
   const [myFlowsOpen, setMyFlowsOpen] = useState(false);
   const [flowsList, setFlowsList] = useState<FlowMeta[]>([]);
-  const [busyAction, setBusyAction] = useState<'save' | 'myFlows' | 'share' | 'refresh' | null>(
-    null,
-  );
+  const [busyAction, setBusyAction] = useState<'save' | 'myFlows' | 'share' | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [rowBusy, setRowBusy] = useState<{
     id: string;
@@ -221,13 +219,8 @@ export function useCloudFlow({
   };
 
   const handleRefreshCommentAuthors = async () => {
-    try {
-      setBusyAction('refresh');
-      const refreshed = await refreshCommentAuthorNames(getViewerNodes());
-      setViewerNodes(refreshed);
-    } finally {
-      setBusyAction(null);
-    }
+    const refreshed = await refreshCommentAuthorNames(getViewerNodes());
+    setViewerNodes(refreshed);
   };
 
   return {

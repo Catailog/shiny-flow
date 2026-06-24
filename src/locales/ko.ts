@@ -50,7 +50,7 @@ export const ko: Translations = {
     copyLink: '링크 복사',
     cancel: '취소',
     noFlows: '저장된 플로우가 없습니다.',
-    refreshAuthors: '작성자 이름 최신화',
+    refreshAuthors: '댓글 작성자 이름 최신화',
     confirmDelete: '삭제할까요?',
     delete: '삭제',
     copyShareLink: '공유 링크 복사',

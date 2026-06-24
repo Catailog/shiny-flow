@@ -155,6 +155,8 @@ export function HomePage({ isCloudMode }: Props) {
     <div className="flex h-screen flex-col bg-background">
       <AppHeader
         isCloudMode={isCloudMode}
+        onRefreshCommentAuthors={isCloudMode ? cloudActions.handleRefreshCommentAuthors : undefined}
+        isAnalyzing={isLoading}
         cloudTitle={
           isCloudMode && hasFlow
             ? {

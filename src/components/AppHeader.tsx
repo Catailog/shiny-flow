@@ -5,7 +5,14 @@ import { startTransition, useEffect, useRef, useState } from 'react';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 
-import { ChevronDownIcon, LogOutIcon, MoonIcon, SunIcon } from 'lucide-react';
+import {
+  ChevronDownIcon,
+  Loader2Icon,
+  LogOutIcon,
+  MoonIcon,
+  RefreshCwIcon,
+  SunIcon,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -38,6 +45,8 @@ type CloudTitleProps = {
 type Props = {
   isCloudMode: boolean;
   cloudTitle?: CloudTitleProps;
+  onRefreshCommentAuthors?: () => Promise<void>;
+  isAnalyzing?: boolean;
 };
 
 function FlowTitle({ name, onRename, focusTrigger, disabled }: CloudTitleProps) {
@@ -125,9 +134,15 @@ function FlowTitle({ name, onRename, focusTrigger, disabled }: CloudTitleProps) 
   );
 }
 
-export function AppHeader({ isCloudMode, cloudTitle }: Props) {
+export function AppHeader({
+  isCloudMode,
+  cloudTitle,
+  onRefreshCommentAuthors,
+  isAnalyzing,
+}: Props) {
   const { data: session, update: updateSession } = useSession();
   const isLoggedIn = !!session?.user;
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -228,6 +243,36 @@ export function AppHeader({ isCloudMode, cloudTitle }: Props) {
             <div className="mx-2 h-4 w-px bg-border" />
             {isLoggedIn ? (
               <>
+                {onRefreshCommentAuthors && (
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <span
+                          className={isAnalyzing ? 'inline-flex cursor-not-allowed' : 'inline-flex'}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={isAnalyzing || isRefreshing}
+                            onClick={() => {
+                              setIsRefreshing(true);
+                              void onRefreshCommentAuthors().finally(() => setIsRefreshing(false));
+                            }}
+                          >
+                            {isRefreshing ? (
+                              <Loader2Icon size={15} className="animate-spin" />
+                            ) : (
+                              <RefreshCwIcon size={15} />
+                            )}
+                          </Button>
+                        </span>
+                      }
+                    />
+                    <TooltipContent>
+                      {isAnalyzing ? t.home.analyzeDisabled : t.cloud.refreshAuthors}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
                 <span className="text-xs text-muted-foreground">{session.user.name}</span>
                 <Tooltip>
                   <TooltipTrigger
