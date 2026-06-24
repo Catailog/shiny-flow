@@ -30,51 +30,56 @@ if (hasFlag(['--version', '-v'])) {
 
 // ─── 언어 감지 (전체 공통) ───────────────────────────────────────────────────
 
-const lang = flagValue(['--lang', '-l']) ?? 'en';
+const cliLang = flagValue(['--lang', '-l']);
+const lang = cliLang ?? 'en';
 
 // ─── 메시지 ──────────────────────────────────────────────────────────────────
 
 const MESSAGES = {
   en: {
     init: {
-      overwritePrompt: 'shiny-flow.auth.js already exists. Overwrite? (y/N) ',
+      overwritePrompt: '.shiny-flow/auth.js already exists. Overwrite? (y/N) ',
       overwriteSkipped: 'Skipped.',
-      overwritten: 'Overwritten shiny-flow.auth.js',
-      created: 'Created shiny-flow.auth.js',
-      gitignoreAlready: '.gitignore already includes shiny-flow.auth.js, skipping.',
-      gitignorePrompt: 'Add shiny-flow.auth.js to .gitignore? (Y/n) ',
+      overwritten: 'Overwritten .shiny-flow/auth.js',
+      created: 'Created .shiny-flow/auth.js',
+      paramsCreated: 'Created .shiny-flow/params.json',
+      paramsSkipped: '.shiny-flow/params.json already exists, skipping.',
+      gitignoreAlready: '.gitignore already includes .shiny-flow/auth.js, skipping.',
+      gitignorePrompt: 'Add .shiny-flow/auth.js to .gitignore? (Y/n) ',
       gitignoreSkipped: 'Skipped.',
-      gitignoreAdded: 'Added shiny-flow.auth.js to .gitignore',
+      gitignoreAdded: 'Added .shiny-flow/auth.js to .gitignore',
     },
     server: {
       portInUse: (p, a) => `Port ${p} is in use, using ${a} instead.`,
-      authNotFound: (path) => `\n[shiny-flow] shiny-flow.auth.js not found in ${path}`,
+      authNotFound: (path) => `\n[shiny-flow] .shiny-flow/auth.js not found in ${path}`,
       noAuth: '[shiny-flow] Continuing without authentication.\n',
       authSetup: '[shiny-flow] To set up script authentication:',
       authStep1: '[shiny-flow]   1. Run `npx shiny-flow init` in your project directory',
-      authStep2: '[shiny-flow]   2. Edit shiny-flow.auth.js with your login logic',
+      authStep2: '[shiny-flow]   2. Edit .shiny-flow/auth.js with your login logic',
       authStep3: '[shiny-flow]   3. Re-run `npx shiny-flow .`\n',
       authManual: '[shiny-flow] Or open the app and set a custom script path in Auth settings.\n',
     },
   },
   ko: {
     init: {
-      overwritePrompt: 'shiny-flow.auth.js가 이미 존재합니다. 덮어쓸까요? (y/N) ',
+      overwritePrompt: '.shiny-flow/auth.js가 이미 존재합니다. 덮어쓸까요? (y/N) ',
       overwriteSkipped: '건너뜁니다.',
-      overwritten: 'shiny-flow.auth.js를 덮어썼습니다.',
-      created: 'shiny-flow.auth.js를 생성했습니다.',
-      gitignoreAlready: '.gitignore에 shiny-flow.auth.js가 이미 포함되어 있습니다. 건너뜁니다.',
-      gitignorePrompt: '.gitignore에 shiny-flow.auth.js를 추가할까요? (Y/n) ',
+      overwritten: '.shiny-flow/auth.js를 덮어썼습니다.',
+      created: '.shiny-flow/auth.js를 생성했습니다.',
+      paramsCreated: '.shiny-flow/params.json을 생성했습니다.',
+      paramsSkipped: '.shiny-flow/params.json이 이미 존재합니다. 건너뜁니다.',
+      gitignoreAlready: '.gitignore에 .shiny-flow/auth.js가 이미 포함되어 있습니다. 건너뜁니다.',
+      gitignorePrompt: '.gitignore에 .shiny-flow/auth.js를 추가할까요? (Y/n) ',
       gitignoreSkipped: '건너뜁니다.',
-      gitignoreAdded: '.gitignore에 shiny-flow.auth.js를 추가했습니다.',
+      gitignoreAdded: '.gitignore에 .shiny-flow/auth.js를 추가했습니다.',
     },
     server: {
       portInUse: (p, a) => `포트 ${p}이(가) 사용 중입니다. ${a} 포트를 사용합니다.`,
-      authNotFound: (path) => `\n[shiny-flow] ${path}에서 shiny-flow.auth.js를 찾을 수 없습니다.`,
+      authNotFound: (path) => `\n[shiny-flow] ${path}에서 .shiny-flow/auth.js를 찾을 수 없습니다.`,
       noAuth: '[shiny-flow] 인증 없이 계속합니다.\n',
       authSetup: '[shiny-flow] 스크립트 인증을 설정하려면:',
       authStep1: '[shiny-flow]   1. 프로젝트 디렉토리에서 `npx shiny-flow init --lang ko` 실행',
-      authStep2: '[shiny-flow]   2. shiny-flow.auth.js에 로그인 로직 작성',
+      authStep2: '[shiny-flow]   2. .shiny-flow/auth.js에 로그인 로직 작성',
       authStep3: '[shiny-flow]   3. `npx shiny-flow .` 다시 실행\n',
       authManual: '[shiny-flow] 또는 앱을 열어 인증 설정에서 스크립트 경로를 직접 입력하세요.\n',
     },
@@ -87,7 +92,7 @@ const msg = MESSAGES[lang] ?? MESSAGES.en;
 
 if (args[0] === 'init') {
   const snippets = {
-    en: `// shiny-flow.auth.js
+    en: `// .shiny-flow/auth.js
 // Edit this file to handle authentication for your project.
 // It is automatically loaded when running: npx shiny-flow .
 
@@ -119,7 +124,7 @@ module.exports = async function authenticate(page, baseUrl) {
   await page.waitForURL('**/dashboard');
 };
 `,
-    ko: `// shiny-flow.auth.js
+    ko: `// .shiny-flow/auth.js
 // 이 파일을 수정해서 프로젝트의 인증(로그인) 로직을 작성하세요.
 // npx shiny-flow . 실행 시 자동으로 불러옵니다.
 
@@ -155,11 +160,92 @@ module.exports = async function authenticate(page, baseUrl) {
 
   const authSnippet = snippets[lang] ?? snippets.en;
 
-  const authFile = nodePath.join(process.cwd(), 'shiny-flow.auth.js');
+  const shinyFlowDir = nodePath.join(process.cwd(), '.shiny-flow');
+  const authFile = nodePath.join(shinyFlowDir, 'auth.js');
+  const paramsFile = nodePath.join(shinyFlowDir, 'params.json');
+
+  function scanDynamicRoutes(projectPath) {
+    const appDirs = [nodePath.join(projectPath, 'app'), nodePath.join(projectPath, 'src', 'app')];
+    const appDir = appDirs.find((d) => fs.existsSync(d));
+    if (!appDir) return null;
+
+    const result = {};
+
+    function walk(dir, segments) {
+      let entries;
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          if (entry.name.startsWith('@') || entry.name.startsWith('_')) continue;
+          const segment = entry.name.startsWith('(') ? null : entry.name;
+          walk(nodePath.join(dir, entry.name), segment ? [...segments, segment] : segments);
+        } else if (entry.isFile() && /^page\.(tsx?|jsx?)$/.test(entry.name)) {
+          const dynamicSegments = segments.filter((s) => s.startsWith('[') && s.endsWith(']'));
+          if (dynamicSegments.length > 0) {
+            const route = '/' + segments.join('/');
+            const paramSet = Object.fromEntries(
+              dynamicSegments.map((s) => [s.replace(/^\[+\.{0,3}/, '').replace(/\]+$/, ''), '']),
+            );
+            const isCatchAll = dynamicSegments.some((s) => /^\[{1,2}\.\.\./.test(s));
+            result[route] = isCatchAll ? [paramSet] : paramSet;
+          }
+        }
+      }
+    }
+
+    walk(appDir, []);
+    return Object.keys(result).length > 0 ? result : null;
+  }
+
+  const scanned = scanDynamicRoutes(process.cwd());
+  const paramsSnippet = JSON.stringify(
+    scanned ?? { '/[dynamic]/[route]': { dynamic: '', route: '' } },
+    null,
+    2,
+  );
+
+  if (!fs.existsSync(shinyFlowDir)) {
+    fs.mkdirSync(shinyFlowDir);
+  }
+
+  if (fs.existsSync(paramsFile)) {
+    console.log(msg.init.paramsSkipped);
+  } else {
+    fs.writeFileSync(paramsFile, paramsSnippet + '\n');
+    console.log(msg.init.paramsCreated);
+  }
+
+  function askKey(question, defaultYes, callback) {
+    process.stdout.write(question);
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(true);
+    }
+    process.stdin.resume();
+    process.stdin.setEncoding('utf8');
+    process.stdin.once('data', (key) => {
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(false);
+      }
+      process.stdin.pause();
+      if (key === '') {
+        process.stdout.write('\n');
+        process.exit(1);
+      }
+      const ch = key[0].toLowerCase();
+      process.stdout.write(key[0] + '\n');
+      if (ch === 'y') callback(true);
+      else if (ch === 'n') callback(false);
+      else callback(defaultYes);
+    });
+  }
 
   function promptGitignore() {
     const gitignoreFile = nodePath.join(process.cwd(), '.gitignore');
-    const entry = 'shiny-flow.auth.js';
+    const entry = '.shiny-flow/auth.js';
     const alreadyIgnored =
       fs.existsSync(gitignoreFile) && fs.readFileSync(gitignoreFile, 'utf8').includes(entry);
 
@@ -168,13 +254,8 @@ module.exports = async function authenticate(page, baseUrl) {
       process.exit(0);
     }
 
-    const rl = require('readline').createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-    rl.question(msg.init.gitignorePrompt, (answer) => {
-      rl.close();
-      if (answer.trim().toLowerCase() === 'n') {
+    askKey(msg.init.gitignorePrompt, true, (yes) => {
+      if (!yes) {
         console.log(msg.init.gitignoreSkipped);
         process.exit(0);
       }
@@ -189,13 +270,8 @@ module.exports = async function authenticate(page, baseUrl) {
   }
 
   if (fs.existsSync(authFile)) {
-    const rl = require('readline').createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-    rl.question(msg.init.overwritePrompt, (answer) => {
-      rl.close();
-      if (answer.trim().toLowerCase() === 'y') {
+    askKey(msg.init.overwritePrompt, false, (yes) => {
+      if (yes) {
         fs.writeFileSync(authFile, authSnippet);
         console.log(msg.init.overwritten);
       } else {
@@ -233,14 +309,13 @@ else {
   const rawProjectPath = positionalArgs[0];
   const projectPath = rawProjectPath ? nodePath.resolve(rawProjectPath) : '';
 
-  // path가 주어지면 screenshot 기본값 true
-  const screenshot = hasFlag(['--screenshot', '-s']) || !!rawProjectPath;
+  const screenshot = hasFlag(['--screenshot', '-s']);
 
   // auth 자동 감지
   let authType = 'none';
-  const scriptPath = 'shiny-flow.auth.js';
+  const scriptPath = '.shiny-flow/auth.js';
   if (projectPath && screenshot) {
-    const authFile = nodePath.join(projectPath, 'shiny-flow.auth.js');
+    const authFile = nodePath.join(projectPath, '.shiny-flow', 'auth.js');
     if (fs.existsSync(authFile)) {
       authType = 'script';
     } else {
@@ -274,11 +349,35 @@ else {
       query.set('authType', authType);
       query.set('scriptPath', scriptPath);
     }
+    if (cliLang) query.set('lang', cliLang);
+    try {
+      const os = require('os');
+      const username = os.userInfo().username;
+      if (username) query.set('author', username);
+      const hostname = os.hostname();
+      if (hostname) query.set('device', hostname);
+    } catch {}
     const queryString = query.toString() ? `?${query.toString()}` : '';
 
     process.env.PORT = String(port);
     process.env.HOSTNAME = hostname;
     process.env.NODE_ENV = 'production';
+    process.env.AUTH_URL = `http://localhost:${port}`;
+    process.env.NEXTAUTH_URL = `http://localhost:${port}`;
+
+    if (!process.env.AUTH_SECRET) {
+      const packageRoot = nodePath.join(__dirname, '..');
+      for (const envFile of ['.env.local', '.env']) {
+        try {
+          const content = fs.readFileSync(nodePath.join(packageRoot, envFile), 'utf-8');
+          const match = content.match(/^AUTH_SECRET=(.+)$/m);
+          if (match) {
+            process.env.AUTH_SECRET = match[1].trim();
+            break;
+          }
+        } catch {}
+      }
+    }
 
     const serverPath = nodePath.join(__dirname, '..', '.next', 'standalone', 'server.js');
 

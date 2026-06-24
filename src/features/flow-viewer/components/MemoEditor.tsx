@@ -6,16 +6,18 @@ import { Extension } from '@tiptap/core';
 import { Color } from '@tiptap/extension-color';
 import Placeholder from '@tiptap/extension-placeholder';
 import { TextStyle } from '@tiptap/extension-text-style';
-import Underline from '@tiptap/extension-underline';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { BoldIcon, ItalicIcon, ListIcon, ListOrderedIcon, UnderlineIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { cn } from '@/lib/utils';
 
 import { useT } from '@/hooks/useT';
+
+import { FONT_SIZES, TEXT_COLOR_VALUES } from '../constants/memoEditor';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -58,34 +60,6 @@ const FontSize = Extension.create({
   },
 });
 
-const FONT_SIZES = [
-  { label: 'S', size: '12px' },
-  { label: 'M', size: '14px' },
-  { label: 'L', size: '18px' },
-  { label: 'XL', size: '24px' },
-] as const;
-
-type MemoColorKey =
-  | 'colorDefault'
-  | 'colorRed'
-  | 'colorOrange'
-  | 'colorYellow'
-  | 'colorGreen'
-  | 'colorBlue'
-  | 'colorPurple'
-  | 'colorGray';
-
-const TEXT_COLOR_VALUES: { key: MemoColorKey; value: string }[] = [
-  { key: 'colorDefault', value: 'inherit' },
-  { key: 'colorRed', value: '#ef4444' },
-  { key: 'colorOrange', value: '#f97316' },
-  { key: 'colorYellow', value: '#eab308' },
-  { key: 'colorGreen', value: '#22c55e' },
-  { key: 'colorBlue', value: '#3b82f6' },
-  { key: 'colorPurple', value: '#a855f7' },
-  { key: 'colorGray', value: '#6b7280' },
-];
-
 type Props = {
   value: string;
   onChange: (html: string) => void;
@@ -102,16 +76,19 @@ function ToolbarButton({
   children: React.ReactNode;
   title?: string;
 }) {
-  return (
-    <Button
-      type="button"
-      variant={active ? 'secondary' : 'ghost'}
-      size="icon-sm"
-      onClick={onClick}
-      title={title}
-    >
+  const button = (
+    <Button type="button" variant={active ? 'secondary' : 'ghost'} size="icon-sm" onClick={onClick}>
       {children}
     </Button>
+  );
+
+  if (!title) return button;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={button} />
+      <TooltipContent>{title}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -125,9 +102,9 @@ export function MemoEditor({ value, onChange }: Props) {
   }));
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
-      Underline,
       TextStyle,
       FontSize,
       Color,
@@ -159,7 +136,8 @@ export function MemoEditor({ value, onChange }: Props) {
 
   if (!editor) return null;
 
-  const currentFontSize = editor.getAttributes('textStyle').fontSize as string | undefined;
+  const currentFontSize =
+    (editor.getAttributes('textStyle').fontSize as string | undefined) ?? FONT_SIZES[1].size;
 
   // 브라우저 DOM이 HTML 파싱 시 hex → rgb(r, g, b) 로 정규화하므로 두 형식 모두 비교
   const hexToRgb = (hex: string) => {
@@ -217,21 +195,26 @@ export function MemoEditor({ value, onChange }: Props) {
 
         {/* 폰트 크기 */}
         {FONT_SIZES.map(({ label, size }) => (
-          <Button
-            key={label}
-            type="button"
-            variant={currentFontSize === size ? 'secondary' : 'ghost'}
-            size="icon-sm"
-            onClick={() =>
-              currentFontSize === size
-                ? editor.chain().focus().unsetFontSize().run()
-                : editor.chain().focus().setFontSize(size).run()
-            }
-            className="w-7 text-xs"
-            title={t.memoEditor.fontSize(label)}
-          >
-            {label}
-          </Button>
+          <Tooltip key={label}>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  variant={currentFontSize === size ? 'secondary' : 'ghost'}
+                  size="icon-sm"
+                  onClick={() =>
+                    currentFontSize === size
+                      ? editor.chain().focus().unsetFontSize().run()
+                      : editor.chain().focus().setFontSize(size).run()
+                  }
+                  className="w-7 text-xs"
+                >
+                  {label}
+                </Button>
+              }
+            />
+            <TooltipContent>{t.memoEditor.fontSize(label)}</TooltipContent>
+          </Tooltip>
         ))}
 
         <div className="mx-1 h-4 w-px bg-border" />
@@ -244,32 +227,37 @@ export function MemoEditor({ value, onChange }: Props) {
                 ? !storedColor
                 : storedColor === color || storedColor === hexToRgb(color);
             return (
-              <Button
-                key={label}
-                type="button"
-                variant="ghost"
-                title={label}
-                onClick={() =>
-                  color === 'inherit'
-                    ? editor.chain().focus().setMark('textStyle', { color: null }).run()
-                    : editor.chain().focus().setColor(color).run()
-                }
-                className={cn(
-                  'size-4 min-h-0 min-w-0 rounded-full border p-0 transition-transform hover:scale-110 hover:bg-transparent',
-                  isActive
-                    ? 'scale-110 ring-2 ring-foreground ring-offset-1 ring-offset-background'
-                    : 'border-transparent',
-                  color === 'inherit' && 'border-border',
-                )}
-                style={
-                  color === 'inherit'
-                    ? {
-                        background:
-                          'linear-gradient(to bottom right, #fff 40%, #ef4444 40%, #ef4444 60%, #fff 60%)',
+              <Tooltip key={label}>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() =>
+                        color === 'inherit'
+                          ? editor.chain().focus().setMark('textStyle', { color: null }).run()
+                          : editor.chain().focus().setColor(color).run()
                       }
-                    : { backgroundColor: color }
-                }
-              />
+                      className={cn(
+                        'size-4 min-h-0 min-w-0 rounded-full border p-0 transition-transform hover:scale-110 hover:bg-transparent',
+                        isActive
+                          ? 'scale-110 ring-2 ring-foreground ring-offset-1 ring-offset-background'
+                          : 'border-transparent',
+                        color === 'inherit' && 'border-border',
+                      )}
+                      style={
+                        color === 'inherit'
+                          ? {
+                              background:
+                                'linear-gradient(to bottom right, #fff 40%, #ef4444 40%, #ef4444 60%, #fff 60%)',
+                            }
+                          : { backgroundColor: color }
+                      }
+                    />
+                  }
+                />
+                <TooltipContent>{label}</TooltipContent>
+              </Tooltip>
             );
           })}
         </div>

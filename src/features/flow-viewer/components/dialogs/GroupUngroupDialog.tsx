@@ -7,6 +7,7 @@ import { DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/compon
 
 import { useT } from '@/hooks/useT';
 
+import { useHistory } from '../../historyContext';
 import { getAbsolutePosition, recomputeGroupZIndexes } from '../../lib/nodeUtils';
 import { BaseDialog } from './BaseDialog';
 
@@ -24,8 +25,10 @@ export function GroupUngroupDialog({
   const group = nodes.find((n) => n.id === nodeId);
   const parentGroupId = group?.parentId ?? null;
   const t = useT();
+  const { pushSnapshot } = useHistory();
 
   const ungroup = (keepInParent: boolean) => {
+    pushSnapshot();
     setNodes((prev) => {
       const result = prev
         .filter((n) => n.id !== nodeId)

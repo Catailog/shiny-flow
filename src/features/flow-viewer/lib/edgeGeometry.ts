@@ -2,6 +2,7 @@ import type { Edge, InternalNode } from '@xyflow/react';
 
 export type Face = 'top' | 'bottom' | 'left' | 'right';
 export type HandlePlacement = { face: Face; index: number; total: number };
+export type LoopAttachment = { rx: number; ry: number };
 
 export const LOOP_BASE_HEIGHT = 80;
 export const LOOP_BASE_SPREAD = 48;
@@ -117,4 +118,80 @@ export function buildSelfLoopPath(node: InternalNode, loopIndex: number) {
     sp: { x: cx - spread / 3, y: topY },
     tp: { x: cx + spread / 3, y: topY },
   };
+}
+
+function attachmentToCanvas(node: InternalNode, a: LoopAttachment): { x: number; y: number } {
+  const { x, y } = node.internals.positionAbsolute;
+  const w = node.measured?.width ?? 0;
+  const h = node.measured?.height ?? 0;
+  return { x: x + a.rx * w, y: y + a.ry * h };
+}
+
+export function buildCustomSelfLoopPath(
+  node: InternalNode,
+  loopSp: LoopAttachment,
+  loopTp: LoopAttachment,
+  loopCtrl?: { x: number; y: number },
+) {
+  const { x, y } = node.internals.positionAbsolute;
+  const w = node.measured?.width ?? 0;
+  const h = node.measured?.height ?? 0;
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+
+  const sp = attachmentToCanvas(node, loopSp);
+  const tp = attachmentToCanvas(node, loopTp);
+
+  const midX = (sp.x + tp.x) / 2;
+  const midY = (sp.y + tp.y) / 2;
+  const dx = midX - cx;
+  const dy = midY - cy;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const outX = dx / len;
+  const outY = dy / len;
+
+  const dist = Math.sqrt((tp.x - sp.x) ** 2 + (tp.y - sp.y) ** 2);
+  const defaultLen = Math.max(LOOP_BASE_HEIGHT, dist * 1.5);
+  // loopCtrl: sp·tp에 동일하게 더해지는 2D 오프셋. 라벨 위치 = midCanvas + 0.75 * ctrl
+  const ctrl = loopCtrl ?? { x: outX * defaultLen, y: outY * defaultLen };
+
+  const cp1 = { x: sp.x + ctrl.x, y: sp.y + ctrl.y };
+  const cp2 = { x: tp.x + ctrl.x, y: tp.y + ctrl.y };
+
+  // cubic bezier at t=0.5: 0.125*sp + 0.375*cp1 + 0.375*cp2 + 0.125*tp
+  // = 0.5*(sp+tp)/2 + 0.75*ctrl = midXY + 0.75*ctrl
+  const labelX = midX + 0.75 * ctrl.x;
+  const labelY = midY + 0.75 * ctrl.y;
+
+  return {
+    path: `M ${sp.x} ${sp.y} C ${cp1.x} ${cp1.y} ${cp2.x} ${cp2.y} ${tp.x} ${tp.y}`,
+    labelX,
+    labelY,
+    spCanvas: sp,
+    tpCanvas: tp,
+  };
+}
+
+export function snapToNodePerimeter(
+  node: InternalNode,
+  canvasPos: { x: number; y: number },
+): LoopAttachment {
+  const { x, y } = node.internals.positionAbsolute;
+  const w = node.measured?.width ?? 0;
+  const h = node.measured?.height ?? 0;
+
+  const px = Math.max(x, Math.min(x + w, canvasPos.x));
+  const py = Math.max(y, Math.min(y + h, canvasPos.y));
+
+  const dLeft = Math.abs(canvasPos.x - x);
+  const dRight = Math.abs(canvasPos.x - (x + w));
+  const dTop = Math.abs(canvasPos.y - y);
+  const dBottom = Math.abs(canvasPos.y - (y + h));
+
+  const minD = Math.min(dLeft, dRight, dTop, dBottom);
+
+  if (minD === dTop) return { rx: w > 0 ? (px - x) / w : 0.5, ry: 0 };
+  if (minD === dBottom) return { rx: w > 0 ? (px - x) / w : 0.5, ry: 1 };
+  if (minD === dLeft) return { rx: 0, ry: h > 0 ? (py - y) / h : 0.5 };
+  return { rx: 1, ry: h > 0 ? (py - y) / h : 0.5 };
 }

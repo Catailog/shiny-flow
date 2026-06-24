@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     'next-env.d.ts',
     // Claude Code 훅 스크립트 (CommonJS)
     '.claude/**',
+    // Node.js CLI 진입점 (CommonJS require 사용)
+    'bin/**',
   ]),
 ]);
 

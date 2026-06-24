@@ -9,6 +9,7 @@ import { DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/compon
 
 import { useT } from '@/hooks/useT';
 
+import { useHistory } from '../../historyContext';
 import type { FlowNodeData } from '../../types';
 import { MemoEditor } from '../MemoEditor';
 import { BaseDialog } from './BaseDialog';
@@ -27,9 +28,11 @@ export function MemoDialog({
   const node = nodes.find((n) => n.id === nodeId);
   const [value, setValue] = useState((node?.data as FlowNodeData | undefined)?.memo ?? '');
   const t = useT();
+  const { pushSnapshot } = useHistory();
 
   const save = () => {
     const isEmpty = value === '' || value === '<p></p>';
+    pushSnapshot();
     setNodes((prev) =>
       prev.map((n) =>
         n.id === nodeId ? { ...n, data: { ...n.data, memo: isEmpty ? undefined : value } } : n,

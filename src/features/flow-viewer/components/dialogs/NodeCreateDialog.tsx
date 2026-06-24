@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 
 import { useT } from '@/hooks/useT';
 
+import { useHistory } from '../../historyContext';
 import { BaseDialog } from './BaseDialog';
 
 export function NodeCreateDialog({
@@ -23,9 +24,11 @@ export function NodeCreateDialog({
 }) {
   const [label, setLabel] = useState('');
   const t = useT();
+  const { pushSnapshot } = useHistory();
 
   const confirm = () => {
     const trimmed = label.trim() || t.dialog.nodeCreate.defaultName;
+    pushSnapshot();
     setNodes((prev) => [
       ...prev,
       {

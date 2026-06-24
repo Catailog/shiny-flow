@@ -10,8 +10,10 @@ export type FlowNodeData = {
   redirected?: boolean;
   redirectedScreenshot?: string;
   paramValues?: Record<string, string>;
+  catchAllParam?: string;
   color?: string;
   memo?: string;
+  isCapturing?: boolean;
 };
 
 export type GroupNodeData = {
@@ -40,4 +42,6 @@ export type DialogRequest =
   | { type: 'groupUngroup'; nodeId: string }
   | { type: 'edgeComment'; edgeId: string }
   | { type: 'groupCreate'; nodes: Node[] }
-  | { type: 'nodeCreate'; pos: { x: number; y: number } };
+  | { type: 'nodeCreate'; pos: { x: number; y: number } }
+  | { type: 'labelEdit'; nodeId: string }
+  | { type: 'routeEdit'; nodeId: string };

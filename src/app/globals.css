@@ -200,17 +200,69 @@
   }
 }
 
-/* ── Input background — bg-transparent 오버라이드, 페이지 배경과 구분 ── */
-input[data-slot='input'],
-div[data-slot='input-group'] {
+/* ── React Flow: 다크모드 엣지 색상 ──
+   React Flow는 .react-flow { --xy-edge-stroke-default } 로 설정(특이도 0,1,0).
+   .dark { } 만으로는 덮어쓰이므로 .dark .react-flow (특이도 0,2,0)로 재정의 */
+.dark .react-flow {
+  --xy-edge-stroke-default: #4a5e53;
+  --xy-edge-stroke-selected-default: #a3b5a3;
+  --xy-controls-button-background-color-default: var(--card);
+  --xy-controls-button-background-color-hover-default: var(--accent);
+  --xy-controls-button-color-default: var(--foreground);
+  --xy-controls-button-color-hover-default: var(--accent-foreground);
+  --xy-controls-button-border-color-default: var(--border);
+  --xy-minimap-background-color-default: var(--card);
+  --xy-minimap-mask-background-color-default: color-mix(
+    in srgb,
+    var(--background) 70%,
+    transparent
+  );
+  --xy-minimap-node-background-color-default: var(--muted-foreground);
+}
+
+/* ── React Flow: 엣지 라벨 컨테이너를 노드/엣지 레이어 위로 올림 ──
+   그룹 노드 소속 엣지는 z-index 1001+ (positive) 로 올라가 edgelabel-renderer를 덮음.
+   Z_INDEX.commentNodeHover(9999) 와 동일한 값 — src/constants/zIndex.ts 참조 */
+.react-flow__edgelabel-renderer {
+  z-index: 9999 !important;
+}
+
+/* ── React Flow: NodeResizer 핸들 레이어 및 크기 ──
+   ReactFlow 스타일이 FlowViewer.tsx에서 컴포넌트 레벨로 import되어
+   globals.css 이후에 주입됨 → !important로 우선순위 확보.
+   NodeResizer 핸들은 노드 DOM 내부에서 content div보다 먼저 렌더링되므로
+   position: relative인 content div에 DOM 순서상 가려짐. z-index로 올려줌.
+   핸들 크기: 기본 4x4px → 20x20px. */
+.react-flow__resize-control {
+  z-index: 10;
+}
+
+.react-flow__resize-control.handle {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+/* ── Input/Textarea background — bg-transparent 오버라이드, 페이지 배경과 구분 ──
+   :root prefix로 특이성을 (0,2,1)로 높여 Tailwind dark: 변형(0,2,0)을 확실히 이김 */
+:root input[data-slot='input'],
+:root div[data-slot='input-group'],
+:root textarea[data-slot='textarea'] {
   background-color: var(--input-background);
 }
 
-/* ── Input placeholder — Tailwind의 placeholder:text-muted-foreground 재정의 ── */
-[data-slot='input']::placeholder,
-[data-slot='input-group-control']::placeholder {
+/* ── Input/Textarea placeholder — Tailwind placeholder: 유틸리티 재정의 ──
+   같은 특이성(0,1,0)이면 Tailwind가 뒤에 주입돼 이기므로 :root로 (0,2,0)까지 올림 */
+:root [data-slot='input']::placeholder,
+:root [data-slot='input-group-control']::placeholder,
+:root [data-slot='textarea']::placeholder {
   color: var(--placeholder-foreground);
   opacity: 1;
+}
+
+/* ── 연결 드래그 중 타겟 노드 바디 호버 하이라이트 ── */
+.react-flow__node.rf-connect-target {
+  outline: 2px solid var(--color-brand-primary);
+  outline-offset: 2px;
 }
 
 /* ── TipTap placeholder (pseudo-element, Tailwind으로 표현 불가) ── */

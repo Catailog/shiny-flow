@@ -90,12 +90,9 @@ export async function setupBrowserSession({
   viewportWidth = 1280,
   viewportHeight = 800,
   deviceScaleFactor = 2,
-  waitUntil = 'networkidle',
-  timeoutMs = 30000,
 }: SessionOptions): Promise<BrowserSession> {
   await checkServerAvailable(baseUrl, 5000);
 
-  // eslint-disable-next-line no-eval
   const { chromium } = eval('require')('playwright') as typeof import('playwright');
   const browser = await chromium.launch();
   try {
@@ -112,9 +109,24 @@ export async function setupBrowserSession({
       const mod = await import(/* webpackIgnore: true */ pathToFileURL(auth.scriptPath).href);
       const authFn: unknown = mod.default ?? mod;
       if (typeof authFn !== 'function') {
-        throw new Error('shiny-flow.auth.js가 함수를 export하지 않습니다.');
+        throw new Error('.shiny-flow/auth.js가 함수를 export하지 않습니다.');
       }
-      await authFn(page, baseUrl);
+      page.setDefaultTimeout(0);
+      const guardedPage = new Proxy(page, {
+        get(target, prop, receiver) {
+          if (prop !== 'goto') return Reflect.get(target, prop, receiver);
+          return async (...args: Parameters<typeof target.goto>) => {
+            const response = await target.goto(...args);
+            if (response && response.status() >= 400) {
+              throw new Error(
+                `페이지를 찾지 못했습니다: ${String(args[0])} (HTTP ${response.status()})`,
+              );
+            }
+            return response;
+          };
+        },
+      });
+      await authFn(guardedPage, baseUrl);
     }
 
     return { browser, page };
@@ -128,9 +140,15 @@ export async function captureRoutesOnPage(
   page: Page,
   routes: string[],
   baseUrl: string,
-  { waitUntil = 'networkidle' }: Pick<SessionOptions, 'waitUntil'> = {},
+  {
+    waitUntil = 'networkidle',
+    onProgress,
+  }: Pick<SessionOptions, 'waitUntil'> & {
+    onProgress?: (done: number, total: number, currentRoute: string) => void;
+  } = {},
 ): Promise<ScreenshotResult[]> {
   const results: ScreenshotResult[] = [];
+  let done = 0;
 
   for (const route of routes) {
     try {
@@ -149,6 +167,8 @@ export async function captureRoutesOnPage(
     } catch {
       // 캡처 실패 시 해당 라우트는 건너뜀
     }
+    done++;
+    onProgress?.(done, routes.length, route);
   }
 
   return results;

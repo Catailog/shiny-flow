@@ -8,13 +8,19 @@ import { MessageCircleIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
+import { useCloudAuthorName } from '@/hooks/useCloudAuthorName';
 import { useT } from '@/hooks/useT';
+
+import { Z_INDEX } from '@/constants/zIndex';
 
 import { useFlowActions } from '../actionsContext';
 
 export type CommentNodeData = {
   content: string;
   author?: string;
+  authorId?: string;
+  accountId?: string;
+  isLocal?: true;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -36,11 +42,12 @@ function relativeTime(isoString: string, tn: Translations['commentNode']): strin
 
 type Props = NodeProps<Node<CommentNodeData>>;
 
-export function FlowCommentNode({ id, data }: Props) {
-  const { openDialog } = useFlowActions();
+export function FlowCommentNode({ id, data, selected }: Props) {
+  const { openDialog, readOnly } = useFlowActions();
   const t = useT();
   const { setNodes } = useReactFlow();
   const [hovered, setHovered] = useState(false);
+  const cloudAuthorName = useCloudAuthorName(data.accountId);
   const hasContent = !!data.content;
   const zoom = useStore((s) => s.transform[2]);
 
@@ -48,12 +55,14 @@ export function FlowCommentNode({ id, data }: Props) {
 
   const handleMouseEnter = () => {
     setHovered(true);
-    setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, zIndex: 9999 } : n)));
+    setNodes((nds) =>
+      nds.map((n) => (n.id === id ? { ...n, zIndex: Z_INDEX.commentNodeHover } : n)),
+    );
   };
 
   const handleMouseLeave = () => {
     setHovered(false);
-    setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, zIndex: 0 } : n)));
+    setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, zIndex: Z_INDEX.nodeBase } : n)));
   };
 
   return (
@@ -63,7 +72,7 @@ export function FlowCommentNode({ id, data }: Props) {
         className="relative overflow-visible"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        onClick={() => openDialog({ type: 'comment', nodeId: id })}
+        onDoubleClick={() => openDialog({ type: 'comment', nodeId: id })}
       >
         <div
           className="absolute inset-0 overflow-visible"
@@ -73,7 +82,10 @@ export function FlowCommentNode({ id, data }: Props) {
             <div
               className={cn(
                 'flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 bg-background shadow-md transition-colors',
-                hasContent ? 'border-blue-400 bg-blue-50 dark:bg-blue-950' : 'border-border',
+                hasContent
+                  ? 'border-blue-400 bg-blue-50 dark:bg-blue-950'
+                  : 'border-border dark:border-foreground/30',
+                selected && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
               )}
             >
               <MessageCircleIcon
@@ -85,10 +97,18 @@ export function FlowCommentNode({ id, data }: Props) {
 
           {hovered && (
             <div className="absolute top-0 left-14 z-50 w-max max-w-52 rounded-lg border border-border bg-popover px-3 py-2 text-sm shadow-lg">
-              {(data.author || timeRef) && (
+              {(data.author || cloudAuthorName || timeRef) && (
                 <>
                   <p className="text-xs text-muted-foreground">
-                    {data.author}
+                    {data.accountId ? (
+                      (cloudAuthorName ?? data.author)
+                    ) : data.authorId ? (
+                      <span className="cursor-default" title={data.authorId}>
+                        {data.author}
+                      </span>
+                    ) : (
+                      data.author
+                    )}
                     {data.author && timeRef && ' · '}
                     {timeRef && relativeTime(timeRef, t.commentNode)}
                     {data.updatedAt && ' ' + t.commentNode.edited}

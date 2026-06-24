@@ -160,7 +160,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
       baseUrl: '',
       authType: 'none',
       cookiesJson: '',
-      scriptPath: 'shiny-flow.auth.js',
+      scriptPath: '',
     },
   });
 
@@ -183,6 +183,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
     getConfig: () => getValues(),
     restoreConfig: (values: AnalyzeFormValues) => {
       reset(values);
+      setValue('authType', values.authType);
     },
   }));
 
@@ -198,7 +199,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
       if (values.authType === 'cookies')
         auth = { type: 'cookies', cookiesJson: values.cookiesJson };
       else if (values.authType === 'script')
-        auth = { type: 'script', scriptPath: values.scriptPath.trim() || 'shiny-flow.auth.js' };
+        auth = { type: 'script', scriptPath: values.scriptPath.trim() || '.shiny-flow/auth.js' };
     }
     onAnalyze({
       path: values.path.trim(),
@@ -215,12 +216,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
       <div className="flex flex-col gap-1">
         <span className="text-xs text-muted-foreground">{t.input.projectPath}</span>
         <div className="flex items-center gap-2">
-          <Input
-            {...register('path')}
-            placeholder={t.input.projectPathPlaceholder}
-            aria-invalid={!!errors.path}
-            className="flex-1"
-          />
+          <Input {...register('path')} aria-invalid={!!errors.path} className="flex-1" />
           {onImport && (
             <ActionButton
               type="button"
@@ -268,7 +264,6 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
               <InputGroup className="w-full">
                 <InputGroupInput
                   {...register('baseUrl')}
-                  placeholder={t.input.serverUrlPlaceholder}
                   aria-invalid={!!errors.baseUrl}
                   className="text-sm"
                 />
@@ -289,7 +284,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">{t.input.auth}</span>
-                {(['none', 'cookies', 'script'] as const).map((at) => (
+                {(['none', 'script'] as const).map((at) => (
                   <ActionButton
                     key={at}
                     type="button"
@@ -299,11 +294,7 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
                     onClick={() => setValue('authType', at)}
                     tooltip={loadingTip}
                   >
-                    {at === 'none'
-                      ? t.input.authNone
-                      : at === 'cookies'
-                        ? t.input.authCookies
-                        : t.input.authScript}
+                    {at === 'none' ? t.input.authNone : t.input.authScript}
                   </ActionButton>
                 ))}
               </div>
@@ -314,15 +305,14 @@ export const ProjectInput = forwardRef<ProjectInputHandle, Props>(function Proje
                   <InputGroup className="w-full">
                     <InputGroupInput
                       {...register('scriptPath')}
-                      placeholder="shiny-flow.auth.js"
                       aria-invalid={!!errors.scriptPath}
                       className="text-sm"
                     />
                     {!scriptPath && (
                       <ExampleFill
-                        label="shiny-flow.auth.js"
+                        label=".shiny-flow/auth.js"
                         onClick={() =>
-                          setValue('scriptPath', 'shiny-flow.auth.js', { shouldValidate: true })
+                          setValue('scriptPath', '.shiny-flow/auth.js', { shouldValidate: true })
                         }
                         tooltip={loadingTip}
                         eg={t.input.eg}

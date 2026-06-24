@@ -32,37 +32,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'baseUrl과 route가 필요합니다.' }, { status: 400 });
   }
 
-  try {
-    // 1차 시도: 인증 없이 캡처
-    const first = await captureScreenshots({ baseUrl, routes: [route] });
-    const firstResult = first[0];
-
-    // 리다이렉트되지 않았거나 auth가 없으면 그대로 반환
-    if (!firstResult?.redirected || !auth) {
-      if (!firstResult) return NextResponse.json({ error: '스크린샷 캡처 실패' }, { status: 500 });
-      return NextResponse.json(firstResult);
-    }
-
-    // 2차 시도: 리다이렉트 감지 → auth로 로그인 후 재캡처
-    let parsedAuth: AuthOptions | undefined;
+  let parsedAuth: AuthOptions | undefined;
+  if (auth) {
     if (auth.type === 'script' && projectPath) {
       const relScript = auth.scriptPath.replace(/^[/\\]+/, '');
       parsedAuth = { type: 'script', scriptPath: path.join(normalizePath(projectPath), relScript) };
     } else {
       parsedAuth = parseAuth(auth);
     }
-    const retry = await captureScreenshots({ baseUrl, routes: [route], auth: parsedAuth });
-    const retryResult = retry[0];
+  }
 
-    if (!retryResult || retryResult.redirected) {
-      return NextResponse.json(retryResult ?? firstResult);
-    }
-
-    // 재캡처 성공 → 1차 시도(리다이렉트 대상) 스크린샷도 함께 반환
-    return NextResponse.json({
-      ...retryResult,
-      redirectedImageBase64: firstResult.imageBase64,
-    });
+  try {
+    const results = await captureScreenshots({ baseUrl, routes: [route], auth: parsedAuth });
+    const result = results[0];
+    if (!result) return NextResponse.json({ error: '스크린샷 캡처 실패' }, { status: 500 });
+    return NextResponse.json(result);
   } catch (err) {
     if (err instanceof ServerUnavailableError) {
       return NextResponse.json({ error: err.message }, { status: 503 });

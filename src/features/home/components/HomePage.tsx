@@ -2,23 +2,23 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import type { Edge, Node } from '@xyflow/react';
-import { ChevronRightIcon, Loader2Icon, PinIcon, PinOffIcon } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+
+import { AlertCircleIcon, ChevronRightIcon, Loader2Icon, PinIcon, PinOffIcon } from 'lucide-react';
 
 import { FlowViewer, type FlowViewerHandle } from '@/features/flow-viewer';
 import {
   type AnalyzeFormValues,
-  type AnalyzeOptions,
-  type AuthInput,
   ProjectInput,
   type ProjectInputHandle,
 } from '@/features/project-input';
 
 import { AppHeader } from '@/components/AppHeader';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
 
 import type { FlowData } from '@/lib/adapters';
-import type { FlowGraph } from '@/lib/analyzer';
 import { cn } from '@/lib/utils';
 
 import { useT } from '@/hooks/useT';
@@ -26,207 +26,68 @@ import { useT } from '@/hooks/useT';
 import { useUIStore } from '@/store/uiStore';
 
 import { useCloudFlow } from '../hooks/useCloudFlow';
+import { useFlowAnalyze } from '../hooks/useFlowAnalyze';
+import { useFlowFile } from '../hooks/useFlowFile';
+import type { HomeState, ScreenshotOptions } from '../types';
 import { CloudToolbar } from './CloudToolbar';
-
-const SLOW_TIMEOUT_MS = 20000;
-
-type RfSnapshot = { rfNodes: Node[]; rfEdges: Edge[] };
-
-type State =
-  | { status: 'idle' }
-  | { status: 'loading' }
-  | { status: 'success'; graph: FlowGraph; snapshot?: RfSnapshot }
-  | { status: 'error'; message: string };
-
-type PendingImport = {
-  graph: FlowGraph;
-  snapshot?: RfSnapshot;
-  analyzeConfig: AnalyzeFormValues;
-};
 
 type Props = {
   isCloudMode: boolean;
 };
 
 export function HomePage({ isCloudMode }: Props) {
-  const [state, setState] = useState<State>({ status: 'idle' });
+  const [state, setState] = useState<HomeState>({ status: 'idle' });
   const [graphKey, setGraphKey] = useState(0);
-  const [slowWarning, setSlowWarning] = useState(false);
-  const [overlayError, setOverlayError] = useState<string | null>(null);
-  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
-  const [screenshotOptions, setScreenshotOptions] = useState<{
-    baseUrl: string;
-    auth?: AuthInput;
-    projectPath: string;
-  } | null>(null);
+  const [screenshotOptions, setScreenshotOptions] = useState<ScreenshotOptions | null>(null);
+  const { data: session } = useSession();
 
   const t = useT();
   const setLocale = useUIStore((s) => s.setLocale);
 
-  const abortRef = useRef<AbortController | null>(null);
   const viewerRef = useRef<FlowViewerHandle>(null);
   const projectInputRef = useRef<ProjectInputHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const slowWarningRef = useRef(false);
 
-  const clearTimers = () => {
-    if (slowTimerRef.current) {
-      clearTimeout(slowTimerRef.current);
-      slowTimerRef.current = null;
-    }
-  };
-
-  const setSlowWarningSync = (val: boolean) => {
-    slowWarningRef.current = val;
-    setSlowWarning(val);
-  };
-
-  const startSlowTimer = () => {
-    clearTimers();
-    slowTimerRef.current = setTimeout(() => {
-      slowWarningRef.current = true;
-      setSlowWarning(true);
-    }, SLOW_TIMEOUT_MS);
-  };
-
-  const handleCancel = () => {
-    clearTimers();
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setSlowWarningSync(false);
-    setOverlayError(null);
-    setState({ status: 'idle' });
-  };
-
-  const handleKeepWaiting = () => {
-    setSlowWarningSync(false);
-    startSlowTimer();
-  };
-
-  const handleOverlayErrorDismiss = () => {
-    setOverlayError(null);
-    setState({ status: 'idle' });
-  };
-
-  const handleExport = () => {
-    if (state.status !== 'success') return;
-    const rfNodes = viewerRef.current?.getNodes() ?? [];
-    const rfEdges = viewerRef.current?.getEdges() ?? [];
-    const analyzeConfig = projectInputRef.current?.getConfig();
-    const payload = { graph: state.graph, rfNodes, rfEdges, analyzeConfig };
-    const json = JSON.stringify(payload, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const projectName = state.graph.projectPath.split(/[\\/]/).at(-1) ?? 'flow';
-    a.download = `${projectName}.flow.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const parsed = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
-        const graphRaw = parsed.graph as Record<string, unknown> | undefined;
-        const analyzeConfig = parsed.analyzeConfig as AnalyzeFormValues | undefined;
-
-        let graph: FlowGraph;
-        let snapshot: RfSnapshot | undefined;
-
-        if (graphRaw && Array.isArray(graphRaw.nodes) && Array.isArray(graphRaw.edges)) {
-          graph = graphRaw as FlowGraph;
-          snapshot =
-            Array.isArray(parsed.rfNodes) && Array.isArray(parsed.rfEdges)
-              ? { rfNodes: parsed.rfNodes as Node[], rfEdges: parsed.rfEdges as Edge[] }
-              : undefined;
-        } else if (Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
-          graph = parsed as FlowGraph;
-        } else {
-          throw new Error(t.home.invalidJson);
-        }
-
-        setScreenshotOptions(null);
-
-        if (analyzeConfig) {
-          setPendingImport({ graph, snapshot, analyzeConfig });
-        } else {
-          setState({ status: 'success', graph, snapshot });
-          setGraphKey((k) => k + 1);
-        }
-      } catch (err) {
-        setState({
-          status: 'error',
-          message: err instanceof Error ? err.message : t.home.jsonParseFailed,
-        });
-      }
+  const getCurrentFlowData = (): FlowData | null => {
+    if (state.status !== 'success') return null;
+    return {
+      graph: state.graph,
+      rfNodes: viewerRef.current?.getNodes() ?? [],
+      rfEdges: viewerRef.current?.getEdges() ?? [],
+      analyzeConfig: projectInputRef.current?.getConfig() as Record<string, unknown> | undefined,
     };
-    reader.readAsText(file);
   };
 
-  const handleAnalyze = async ({ path, screenshot, baseUrl, auth }: AnalyzeOptions) => {
-    clearTimers();
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setSlowWarningSync(false);
-    setOverlayError(null);
-    setState({ status: 'loading' });
-    setScreenshotOptions(screenshot && baseUrl ? { baseUrl, auth, projectPath: path } : null);
-    startSlowTimer();
-
-    try {
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path, screenshot, baseUrl, auth }),
-        signal: controller.signal,
-      });
-
-      if (controller.signal.aborted) return;
-      clearTimers();
-      setSlowWarningSync(false);
-
-      const data = await res.json();
-      if (controller.signal.aborted) return;
-
-      if (!res.ok) throw new Error(data.error ?? t.home.analyzeFailed);
-      setState({ status: 'success', graph: data });
+  const analyze = useFlowAnalyze({
+    onLoading: (opts) => {
+      setState({ status: 'loading' });
+      setScreenshotOptions(opts);
+    },
+    onSuccess: (graph) => {
+      setState({ status: 'success', graph });
       setGraphKey((k) => k + 1);
-    } catch (err) {
-      if (controller.signal.aborted) return;
-      clearTimers();
-      const message = err instanceof Error ? err.message : t.home.unknownError;
+    },
+    onError: (message) => setState({ status: 'error', message }),
+    onCancelled: () => setState({ status: 'idle' }),
+  });
 
-      if (slowWarningRef.current) {
-        setSlowWarningSync(false);
-        setOverlayError(message);
-      } else {
-        setSlowWarningSync(false);
-        setState({ status: 'error', message });
-      }
-    }
-  };
+  const fileFlow = useFlowFile({
+    isCloudMode,
+    session,
+    projectInputRef,
+    getCurrentFlowData,
+    onSuccess: (graph, snapshot) => {
+      setState({ status: 'success', graph, snapshot });
+      setGraphKey((k) => k + 1);
+      setScreenshotOptions(null);
+    },
+    onError: (message) => setState({ status: 'error', message }),
+    setScreenshotOptions,
+  });
 
-  const applyPendingImport = (restoreConfig: boolean) => {
-    if (!pendingImport) return;
-    const { graph, snapshot, analyzeConfig } = pendingImport;
-    if (restoreConfig) projectInputRef.current?.restoreConfig(analyzeConfig);
-    setState({ status: 'success', graph, snapshot });
-    setGraphKey((k) => k + 1);
-    setPendingImport(null);
-  };
-
-  const handleAnalyzeRef = useRef(handleAnalyze);
+  const handleAnalyzeRef = useRef(analyze.handleAnalyze);
   useEffect(() => {
-    handleAnalyzeRef.current = handleAnalyze;
+    handleAnalyzeRef.current = analyze.handleAnalyze;
   });
 
   useEffect(() => {
@@ -235,13 +96,18 @@ export function HomePage({ isCloudMode }: Props) {
     const cliLang = params.get('lang');
     if (cliLang === 'ko' || cliLang === 'en') setLocale(cliLang);
 
+    const cliAuthor = params.get('author');
+    const cliDevice = params.get('device');
+    if (cliAuthor) localStorage.setItem('sf_cli_author', cliAuthor);
+    if (cliDevice) localStorage.setItem('sf_cli_device', cliDevice);
+
     const cliPath = params.get('path');
     if (!cliPath) return;
 
     const cliScreenshot = params.get('screenshot') === 'true';
     const cliUrl = params.get('url') ?? '';
     const cliAuthType = (params.get('authType') ?? 'none') as 'none' | 'cookies' | 'script';
-    const cliScriptPath = params.get('scriptPath') ?? 'shiny-flow.auth.js';
+    const cliScriptPath = params.get('scriptPath') ?? '.shiny-flow/auth.js';
 
     window.history.replaceState({}, '', '/');
 
@@ -258,28 +124,23 @@ export function HomePage({ isCloudMode }: Props) {
       cliAuthType === 'script' ? { type: 'script' as const, scriptPath: cliScriptPath } : undefined;
 
     handleAnalyzeRef.current({ path: cliPath, screenshot: cliScreenshot, baseUrl: cliUrl, auth });
-  }, []);
+  }, [setLocale]);
 
-  const getCurrentFlowData = (): FlowData | null => {
-    if (state.status !== 'success') return null;
-    return {
-      graph: state.graph,
-      rfNodes: viewerRef.current?.getNodes() ?? [],
-      rfEdges: viewerRef.current?.getEdges() ?? [],
-      analyzeConfig: projectInputRef.current?.getConfig() as Record<string, unknown> | undefined,
-    };
-  };
+  const [titleFocusTrigger, setTitleFocusTrigger] = useState(0);
 
   const { state: cloudState, actions: cloudActions } = useCloudFlow({
     getCurrentFlowData,
-    onFlowLoaded: ({ graph, rfNodes, rfEdges, analyzeConfig, id: _id, name: _name }) => {
+    getViewerNodes: () => viewerRef.current?.getNodes() ?? [],
+    setViewerNodes: (nodes) => viewerRef.current?.setNodes(nodes),
+    onFlowLoaded: ({ graph, rfNodes, rfEdges, analyzeConfig }) => {
       setState({ status: 'success', graph, snapshot: { rfNodes, rfEdges } });
       setGraphKey((k) => k + 1);
       setScreenshotOptions(null);
       if (analyzeConfig) {
-        projectInputRef.current?.restoreConfig(analyzeConfig);
+        projectInputRef.current?.restoreConfig(analyzeConfig as AnalyzeFormValues);
       }
     },
+    onMissingTitle: () => setTitleFocusTrigger((v) => v + 1),
   });
 
   const isLoading = state.status === 'loading';
@@ -292,7 +153,21 @@ export function HomePage({ isCloudMode }: Props) {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <AppHeader isCloudMode={isCloudMode} />
+      <AppHeader
+        isCloudMode={isCloudMode}
+        onRefreshCommentAuthors={isCloudMode ? cloudActions.handleRefreshCommentAuthors : undefined}
+        isAnalyzing={isLoading}
+        cloudTitle={
+          isCloudMode && hasFlow
+            ? {
+                name: cloudState.cloudFlowName,
+                onRename: cloudActions.handleRenameTitle,
+                focusTrigger: titleFocusTrigger,
+                disabled: isLoading,
+              }
+            : undefined
+        }
+      />
 
       <div className="flex flex-1 overflow-hidden">
         {/* 좌측 사이드 패널 */}
@@ -337,19 +212,27 @@ export function HomePage({ isCloudMode }: Props) {
               type="file"
               accept=".json"
               className="hidden"
-              onChange={handleImportFile}
+              onChange={fileFlow.handleImportFile}
             />
             <ProjectInput
               ref={projectInputRef}
-              onAnalyze={handleAnalyze}
+              onAnalyze={(options) => {
+                if (isCloudMode) cloudActions.resetCloudFlow();
+                void analyze.handleAnalyze(options);
+              }}
               isLoading={isLoading}
               onImport={() => fileInputRef.current?.click()}
-              onExport={handleExport}
+              onExport={fileFlow.handleExport}
               canExport={hasFlow}
             />
 
             {isCloudMode && (
-              <CloudToolbar hasFlow={hasFlow} state={cloudState} actions={cloudActions} />
+              <CloudToolbar
+                hasFlow={hasFlow}
+                state={cloudState}
+                actions={cloudActions}
+                isAnalyzing={isLoading}
+              />
             )}
           </div>
         </aside>
@@ -362,46 +245,69 @@ export function HomePage({ isCloudMode }: Props) {
 
           {state.status === 'loading' && (
             <div className="flex flex-col items-center gap-3">
-              {!overlayError && (
-                <>
-                  <Loader2Icon size={36} className="animate-spin text-brand-primary" />
-                  <p className="text-sm text-muted-foreground">{t.home.analyzing}</p>
-                </>
-              )}
-
-              {overlayError ? (
-                <div className="flex flex-col items-center gap-2 rounded-lg border border-destructive bg-destructive/10 px-5 py-3 text-sm">
-                  <p className="font-medium text-destructive">{overlayError}</p>
-                  <Button size="sm" variant="outline" onClick={handleOverlayErrorDismiss}>
-                    {t.home.confirmError}
-                  </Button>
+              <Loader2Icon size={36} className="animate-spin text-brand-primary" />
+              {analyze.screenshotProgress ? (
+                <div className="flex w-64 flex-col gap-1.5">
+                  <Progress
+                    value={Math.round(
+                      (analyze.screenshotProgress.done / analyze.screenshotProgress.total) * 100,
+                    )}
+                  />
+                  <p className="text-center text-xs text-muted-foreground">
+                    {t.home.capturingScreenshots(
+                      analyze.screenshotProgress.done,
+                      analyze.screenshotProgress.total,
+                    )}
+                  </p>
+                  {analyze.screenshotProgress.currentRoute && (
+                    <p className="text-center text-xs break-all text-muted-foreground/60">
+                      {analyze.screenshotProgress.currentRoute}
+                    </p>
+                  )}
                 </div>
-              ) : slowWarning ? (
-                <div className="flex flex-col items-center gap-2 rounded-lg border border-warning bg-warning/10 px-5 py-3 text-sm">
-                  <p className="font-medium text-warning">{t.home.slowWarning}</p>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={handleKeepWaiting}>
-                      {t.home.keepWaiting}
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={handleCancel}>
-                      {t.home.cancel}
-                    </Button>
-                  </div>
+              ) : analyze.analyzeProgress &&
+                analyze.analyzeProgress.done === analyze.analyzeProgress.total ? (
+                <p className="text-sm text-muted-foreground">{t.home.analysisDone}</p>
+              ) : analyze.analyzeProgress ? (
+                <div className="flex w-64 flex-col gap-1.5">
+                  <Progress
+                    value={Math.round(
+                      (analyze.analyzeProgress.done / analyze.analyzeProgress.total) * 100,
+                    )}
+                  />
+                  <p className="text-center text-xs text-muted-foreground">
+                    {t.home.analyzingFiles(
+                      analyze.analyzeProgress.done,
+                      analyze.analyzeProgress.total,
+                    )}
+                  </p>
+                  {analyze.analyzeProgress.currentFile && (
+                    <p className="text-center text-xs break-all text-muted-foreground/60">
+                      {analyze.analyzeProgress.currentFile}
+                    </p>
+                  )}
                 </div>
               ) : (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleCancel}
-                  className="text-muted-foreground"
-                >
-                  {t.home.cancel}
-                </Button>
+                <p className="text-sm text-muted-foreground">{t.home.analyzing}</p>
               )}
+
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={analyze.handleCancel}
+                className="text-muted-foreground"
+              >
+                {t.home.cancel}
+              </Button>
             </div>
           )}
 
-          {state.status === 'error' && <p className="text-sm text-destructive">{state.message}</p>}
+          {state.status === 'error' && (
+            <div className="flex max-w-sm flex-col items-center gap-2 rounded-lg border border-destructive bg-destructive/10 px-6 py-4 text-sm">
+              <AlertCircleIcon size={22} className="shrink-0 text-destructive" />
+              <p className="text-center font-medium text-destructive">{state.message}</p>
+            </div>
+          )}
 
           {state.status === 'success' && (
             <FlowViewer
@@ -419,16 +325,74 @@ export function HomePage({ isCloudMode }: Props) {
         </main>
       </div>
 
-      {pendingImport && (
+      {fileFlow.pendingConvert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="flex w-96 flex-col gap-4 rounded-xl border bg-popover p-5 shadow-lg">
+            <div>
+              <p className="text-sm font-medium">{t.home.convertAuthorPrompt}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t.home.convertAuthorDesc}</p>
+            </div>
+            <div className="max-h-64 overflow-y-auto rounded-md border border-border">
+              {fileFlow.pendingConvert.uuidEntries.map((entry) => {
+                const checked = fileFlow.convertSelectedUuids.includes(entry.authorId);
+                const id = `uuid-${entry.authorId}`;
+                return (
+                  <label
+                    key={entry.authorId}
+                    htmlFor={id}
+                    className="flex cursor-pointer items-start gap-3 border-b border-border px-3 py-2.5 last:border-b-0 hover:bg-accent/40"
+                  >
+                    <Checkbox
+                      id={id}
+                      checked={checked}
+                      onCheckedChange={() => fileFlow.toggleUuid(entry.authorId)}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-mono text-xs text-muted-foreground">
+                        {entry.authorId}
+                      </p>
+                      <p className="mt-0.5 text-sm">
+                        {entry.names.length > 0 ? entry.names.join(', ') : t.home.convertAuthorNone}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t.home.convertAuthorComments(entry.count)}
+                      </p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => fileFlow.applyConvert(false)}>
+                {t.home.skip}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => fileFlow.applyConvert(true)}
+                disabled={fileFlow.convertSelectedUuids.length === 0}
+              >
+                {t.home.convertAuthorConfirm}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {fileFlow.pendingImport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="flex w-80 flex-col gap-4 rounded-xl border bg-popover p-5 shadow-lg">
             <p className="text-sm font-medium">{t.home.importConfigPrompt}</p>
             <p className="text-xs text-muted-foreground">{t.home.importConfigDesc}</p>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => applyPendingImport(false)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileFlow.applyPendingImport(false)}
+              >
                 {t.home.skip}
               </Button>
-              <Button size="sm" onClick={() => applyPendingImport(true)}>
+              <Button size="sm" onClick={() => fileFlow.applyPendingImport(true)}>
                 {t.home.load}
               </Button>
             </div>

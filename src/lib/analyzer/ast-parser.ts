@@ -41,16 +41,19 @@ function loadAliases(projectRoot: string): Map<string, string> {
   return aliases;
 }
 
-export function extractEdges(
+export async function extractEdges(
   entryPoints: { route: string; filePath: string }[],
   projectRoot: string,
-): FlowEdge[] {
+  onProgress?: (done: number, currentFile: string) => void,
+): Promise<FlowEdge[]> {
   const aliases = loadAliases(projectRoot);
   const all: RawEdge[] = [];
 
-  for (const entry of entryPoints) {
+  for (const [i, entry] of entryPoints.entries()) {
     const visited = new Set<string>();
     all.push(...collectEdges(entry.filePath, entry.route, visited, projectRoot, aliases));
+    onProgress?.(i + 1, entry.filePath);
+    await new Promise<void>((resolve) => setImmediate(resolve));
   }
 
   // 같은 source → target → trigger 중복 제거
@@ -185,19 +188,99 @@ function extractStringValue(node: Node | undefined): string | undefined {
     return node.getText().replace(/^['"]|['"]$/g, '');
   }
   if (node.getKind() === SyntaxKind.JsxExpression) {
-    const inner = node.getFirstChildByKind(SyntaxKind.StringLiteral);
-    if (inner) return inner.getText().replace(/^['"]|['"]$/g, '');
+    const strLit = node.getFirstChildByKind(SyntaxKind.StringLiteral);
+    if (strLit) return strLit.getText().replace(/^['"]|['"]$/g, '');
+    // {`/path/${id}/edit`} 형태의 템플릿 리터럴
+    const tmpl =
+      node.getFirstChildByKind(SyntaxKind.TemplateExpression) ??
+      node.getFirstChildByKind(SyntaxKind.NoSubstitutionTemplateLiteral);
+    if (tmpl) return extractTemplatePattern(tmpl);
+  }
+  // router.push(`/path/${id}`) 등 직접 전달된 템플릿 리터럴
+  if (
+    node.getKind() === SyntaxKind.TemplateExpression ||
+    node.getKind() === SyntaxKind.NoSubstitutionTemplateLiteral
+  ) {
+    return extractTemplatePattern(node);
   }
   return undefined;
 }
 
+// 템플릿 리터럴을 Next.js 동적 라우트 패턴으로 변환
+// `/dashboard/invoices/${id}/edit` → `/dashboard/invoices/[id]/edit`
+function extractTemplatePattern(node: Node): string | undefined {
+  if (Node.isNoSubstitutionTemplateLiteral(node)) {
+    // NoSubstitutionTemplateLiteral getText(): "`/path/`" → strip both backticks
+    const val = node.getText().slice(1, -1);
+    return val.startsWith('/') ? val : undefined;
+  }
+  if (!Node.isTemplateExpression(node)) return undefined;
+
+  // TemplateHead getText(): "`/path/${" → strip leading ` and trailing ${
+  let result = node.getHead().getText().slice(1, -2);
+
+  for (const span of node.getTemplateSpans()) {
+    const exprText = span.getExpression().getText();
+    // "invoice.id" → "id", "id" → "id"
+    const paramName =
+      exprText
+        .split('.')
+        .pop()
+        ?.replace(/[^a-zA-Z0-9_]/g, '') || 'param';
+    result += `[${paramName}]`;
+    const literal = span.getLiteral();
+    const litRaw = literal.getText();
+    // TemplateTail "}/rest`" → slice(1,-1) strips } and `
+    // TemplateMiddle "}/mid/${" → slice(1,-2) strips } and ${
+    result +=
+      literal.getKind() === SyntaxKind.TemplateTail ? litRaw.slice(1, -1) : litRaw.slice(1, -2);
+  }
+
+  return result.startsWith('/') ? result : undefined;
+}
+
+// 최상위(outermost) 감싸는 컴포넌트 이름 반환
+function extractOutermostComponentName(node: Node): string | undefined {
+  let current: Node | undefined = node.getParent();
+  let lastName: string | undefined;
+  while (current) {
+    const kind = current.getKind();
+    if (kind === SyntaxKind.FunctionDeclaration) {
+      const name = current.getFirstChildByKind(SyntaxKind.Identifier)?.getText();
+      if (name) lastName = name;
+    }
+    if (kind === SyntaxKind.ArrowFunction || kind === SyntaxKind.FunctionExpression) {
+      const varDecl = current.getParent();
+      if (varDecl?.getKind() === SyntaxKind.VariableDeclaration) {
+        const name = varDecl.getFirstChildByKind(SyntaxKind.Identifier)?.getText();
+        if (name) lastName = name;
+      }
+    }
+    current = current.getParent();
+  }
+  return lastName;
+}
+
 function extractLinkText(node: Node): string | undefined {
   const parent = node.getParent();
-  if (!parent) return undefined;
-  return parent
-    .getDescendantsOfKind(SyntaxKind.JsxText)
+
+  // 1. JSX 텍스트 콘텐츠
+  const jsxText = parent
+    ?.getDescendantsOfKind(SyntaxKind.JsxText)
     .map((n) => n.getText().trim())
     .find(Boolean);
+  if (jsxText) return jsxText;
+
+  // 2. aria-label
+  const ariaLabel = node
+    .getChildrenOfKind(SyntaxKind.JsxAttributes)[0]
+    ?.getChildrenOfKind(SyntaxKind.JsxAttribute)
+    .find((attr) => attr.getFirstChild()?.getText() === 'aria-label');
+  const ariaValue = ariaLabel ? extractStringValue(ariaLabel.getLastChild()) : undefined;
+  if (ariaValue) return ariaValue;
+
+  // 3. 최상위 감싸는 컴포넌트 이름
+  return extractOutermostComponentName(node);
 }
 
 function resolveLocalImports(

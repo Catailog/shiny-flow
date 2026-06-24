@@ -9,36 +9,44 @@ import type { AnalyzeFormValues } from '@/features/project-input';
 import { type FlowData, type FlowMeta, cloudFlowAdapter } from '@/lib/adapters';
 import type { FlowGraph } from '@/lib/analyzer';
 
+import { refreshCommentAuthorNames } from '../services/refreshCommentAuthorNames';
+
 export type CloudFlowState = {
   cloudFlowId: string | null;
   cloudFlowName: string;
-  saveDialogOpen: boolean;
-  saveNameInput: string;
   myFlowsOpen: boolean;
   flowsList: FlowMeta[];
   busyAction: 'save' | 'myFlows' | 'share' | null;
   shareCopied: boolean;
-  rowBusy: { id: string; action: 'share' | 'delete' } | null;
+  rowBusy: { id: string; action: 'share' | 'delete' | 'rename' } | null;
   copiedFlowId: string | null;
   confirmDeleteId: string | null;
+  editingNameId: string | null;
+  editingNameValue: string;
 };
 
 export type CloudFlowActions = {
-  setSaveDialogOpen: (open: boolean) => void;
-  setSaveNameInput: (name: string) => void;
   setMyFlowsOpen: (open: boolean) => void;
   setConfirmDeleteId: (id: string | null) => void;
-  handleCloudSave: () => void;
-  handleSaveConfirm: () => Promise<void>;
+  setEditingNameId: (id: string | null) => void;
+  setEditingNameValue: (value: string) => void;
+  resetCloudFlow: () => void;
+  handleRenameTitle: (newName: string) => Promise<void>;
+  handleCloudSave: () => Promise<void>;
   handleOpenMyFlows: () => Promise<void>;
   handleLoadFlow: (id: string, name: string) => Promise<void>;
   handleShare: () => Promise<void>;
   handleShareFlow: (id: string) => Promise<void>;
   handleDeleteFlow: (id: string) => Promise<void>;
+  handleStartRename: (id: string, currentName: string) => void;
+  handleRenameConfirm: (id: string) => Promise<void>;
+  handleRefreshCommentAuthors: () => Promise<void>;
 };
 
 type Deps = {
   getCurrentFlowData: () => FlowData | null;
+  getViewerNodes: () => Node[];
+  setViewerNodes: (nodes: Node[]) => void;
   onFlowLoaded: (params: {
     graph: FlowGraph;
     rfNodes: Node[];
@@ -47,46 +55,64 @@ type Deps = {
     id: string;
     name: string;
   }) => void;
+  onMissingTitle?: () => void;
 };
 
-export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
+export function useCloudFlow({
+  getCurrentFlowData,
+  getViewerNodes,
+  setViewerNodes,
+  onFlowLoaded,
+  onMissingTitle,
+}: Deps): {
   state: CloudFlowState;
   actions: CloudFlowActions;
 } {
   const [cloudFlowId, setCloudFlowId] = useState<string | null>(null);
   const [cloudFlowName, setCloudFlowName] = useState('');
-  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [saveNameInput, setSaveNameInput] = useState('');
   const [myFlowsOpen, setMyFlowsOpen] = useState(false);
   const [flowsList, setFlowsList] = useState<FlowMeta[]>([]);
   const [busyAction, setBusyAction] = useState<'save' | 'myFlows' | 'share' | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
-  const [rowBusy, setRowBusy] = useState<{ id: string; action: 'share' | 'delete' } | null>(null);
+  const [rowBusy, setRowBusy] = useState<{
+    id: string;
+    action: 'share' | 'delete' | 'rename';
+  } | null>(null);
   const [copiedFlowId, setCopiedFlowId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState('');
 
-  const handleCloudSave = () => {
-    const data = getCurrentFlowData();
-    if (!data) return;
-    const fallback = data.graph.projectPath.split(/[\\/]/).at(-1) ?? 'flow';
-    setSaveNameInput(cloudFlowName || fallback);
-    setSaveDialogOpen(true);
+  const resetCloudFlow = () => {
+    setCloudFlowId(null);
+    setCloudFlowName('');
   };
 
-  const handleSaveConfirm = async () => {
+  const handleRenameTitle = async (newName: string) => {
+    const name = newName.trim();
+    if (name === cloudFlowName) return;
+    setCloudFlowName(name);
+    if (!name || !cloudFlowId) return;
+    await cloudFlowAdapter.rename(cloudFlowId, name);
+  };
+
+  const handleCloudSave = async () => {
     const data = getCurrentFlowData();
-    if (!data || !saveNameInput.trim()) return;
-    const name = saveNameInput.trim();
+    if (!data) return;
+    if (!cloudFlowId && !cloudFlowName) {
+      onMissingTitle?.();
+      return;
+    }
     try {
       setBusyAction('save');
-      if (cloudFlowId && name === cloudFlowName) {
-        await cloudFlowAdapter.save(cloudFlowId, data);
+      const rfNodes = await refreshCommentAuthorNames(data.rfNodes);
+      const refreshedData = { ...data, rfNodes };
+      if (cloudFlowId) {
+        await cloudFlowAdapter.save(cloudFlowId, refreshedData);
       } else {
-        const id = await cloudFlowAdapter.create(name, data);
+        const id = await cloudFlowAdapter.create(cloudFlowName, refreshedData);
         setCloudFlowId(id);
       }
-      setCloudFlowName(name);
-      setSaveDialogOpen(false);
     } finally {
       setBusyAction(null);
     }
@@ -149,6 +175,34 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
     }
   };
 
+  const handleStartRename = (id: string, currentName: string) => {
+    setEditingNameId(id);
+    setEditingNameValue(currentName);
+  };
+
+  const handleRenameConfirm = async (id: string) => {
+    const name = editingNameValue.trim();
+    if (!name) return;
+    const current = flowsList.find((f) => f.id === id);
+    if (current?.name === name) {
+      setEditingNameId(null);
+      return;
+    }
+    try {
+      setRowBusy({ id, action: 'rename' });
+      const { updatedAt } = await cloudFlowAdapter.rename(id, name);
+      setFlowsList((prev) =>
+        prev
+          .map((f) => (f.id === id ? { ...f, name, updatedAt } : f))
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
+      );
+      setEditingNameId(null);
+      if (cloudFlowId === id) setCloudFlowName(name);
+    } finally {
+      setRowBusy(null);
+    }
+  };
+
   const handleDeleteFlow = async (id: string) => {
     try {
       setRowBusy({ id, action: 'delete' });
@@ -164,12 +218,15 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
     }
   };
 
+  const handleRefreshCommentAuthors = async () => {
+    const refreshed = await refreshCommentAuthorNames(getViewerNodes());
+    setViewerNodes(refreshed);
+  };
+
   return {
     state: {
       cloudFlowId,
       cloudFlowName,
-      saveDialogOpen,
-      saveNameInput,
       myFlowsOpen,
       flowsList,
       busyAction,
@@ -177,19 +234,25 @@ export function useCloudFlow({ getCurrentFlowData, onFlowLoaded }: Deps): {
       rowBusy,
       copiedFlowId,
       confirmDeleteId,
+      editingNameId,
+      editingNameValue,
     },
     actions: {
-      setSaveDialogOpen,
-      setSaveNameInput,
       setMyFlowsOpen,
       setConfirmDeleteId,
+      setEditingNameId,
+      setEditingNameValue,
+      resetCloudFlow,
+      handleRenameTitle,
       handleCloudSave,
-      handleSaveConfirm,
       handleOpenMyFlows,
       handleLoadFlow,
       handleShare,
       handleShareFlow,
       handleDeleteFlow,
+      handleStartRename,
+      handleRenameConfirm,
+      handleRefreshCommentAuthors,
     },
   };
 }

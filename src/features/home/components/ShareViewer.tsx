@@ -2,6 +2,8 @@
 
 import { FlowViewer } from '@/features/flow-viewer';
 
+import { AppHeader } from '@/components/AppHeader';
+
 import type { FlowData } from '@/lib/adapters';
 
 import { useT } from '@/hooks/useT';
@@ -15,16 +17,14 @@ export function ShareViewer({ name, data }: Props) {
   const t = useT();
   return (
     <div className="flex h-screen flex-col bg-background">
-      <header className="flex items-center gap-3 border-b border-border px-6 py-4">
-        <h1 className="text-sm font-medium">{name}</h1>
-        <span className="text-xs text-muted-foreground">{t.shareViewer.readOnly}</span>
-      </header>
+      <AppHeader isCloudMode={true} pageTitle={name} readOnlyLabel={t.shareViewer.readOnly} />
       <main className="flex flex-1 overflow-hidden">
         <FlowViewer
           graph={data.graph}
           screenshotOptions={null}
           savedRfNodes={data.rfNodes}
           savedRfEdges={data.rfEdges}
+          readOnly
         />
       </main>
     </div>

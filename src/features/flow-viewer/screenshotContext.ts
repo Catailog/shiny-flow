@@ -10,10 +10,10 @@ export type ScreenshotContextValue = {
   validateForCapture: () => Promise<void>;
 };
 
-export const ScreenshotContext = createContext<ScreenshotContextValue>({
-  available: false,
-  captureNode: async () => {},
-  validateForCapture: async () => {},
-});
+export const ScreenshotContext = createContext<ScreenshotContextValue | null>(null);
 
-export const useScreenshotContext = () => useContext(ScreenshotContext);
+export function useScreenshotContext() {
+  const ctx = useContext(ScreenshotContext);
+  if (!ctx) throw new Error('useScreenshotContext must be inside ScreenshotContext.Provider');
+  return ctx;
+}

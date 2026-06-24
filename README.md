@@ -13,28 +13,27 @@ Visualize your Next.js App Router project as an interactive page-flow graph.
 **Analyzer**
 
 - Scans pages and layouts across your Next.js App Router project
-- Recursively traces `<Link>`, `router.push`, and `redirect` calls to build edges
-- Automatically resolves `tsconfig.json` path aliases
+- Traces `<Link>`, `router.push`, `router.replace`, and `redirect` calls to build edges
+- Handles dynamic route segments: `[param]`, `[...slug]`, `[[...slug]]`
+- Resolves `tsconfig.json` path aliases
 
-**Flow Viewer**
+**Canvas**
 
-- Auto-layout via Dagre
-- Node grouping with collapse / expand
-- Memos, color tags, and comment nodes
-- Context menu on nodes, edges, and canvas
-- JSON export / import to save and restore your graph
+- Node grouping, memos, color tags, and connections
+- Comment nodes
+- JSON import / export
 
-**Screenshots**
+**Page Capture**
 
-- Captures each page using Playwright
-- Supports cookie-based and form-based authentication
-- Re-capture with custom dynamic route parameters
+- Captures each page as a screenshot using Playwright and attaches it to the node
+- Supports form-based login authentication
+- Specify dynamic route parameters via `params.json`
 - Detects and flags redirects
 
 **Cloud (SaaS)**
 
-- Save and load flows across sessions (GitHub login required)
-- Generate shareable read-only links
+- Save and load flows (GitHub login required)
+- Generate read-only share links
 
 ---
 
@@ -42,51 +41,47 @@ Visualize your Next.js App Router project as an interactive page-flow graph.
 
 ### Basic usage
 
-Run inside your Next.js project directory with the dev server already running:
+Run with the target project's dev server already running.
 
 ```bash
-# Analyze the current directory and open with screenshots
+# Open the canvas without analysis or page capture
+npx shiny-flow
+
+# Analyze the current directory
 npx shiny-flow .
 
 # Specify a path explicitly
-npx shiny-flow <path/to/your/project>
-
-# Open the viewer only, without analysis or screenshots
-npx shiny-flow
+npx shiny-flow <path/to/project>
 ```
 
-Passing a path (including `.`) automatically enables screenshot capture and project analysis. Without a path, only the viewer opens.
+Without a path, only the canvas opens. Passing a path analyzes the project and builds the graph.
 
 ### Options
 
-| Flag           | Alias | Default                 | Description                                          |
-| -------------- | ----- | ----------------------- | ---------------------------------------------------- |
-| `--url`        | `-u`  | `http://localhost:3000` | URL of the target dev server                         |
-| `--port`       | `-p`  | `3000`                  | Port for the shiny-flow server                       |
-| `--screenshot` | `-s`  | —                       | Enable screenshots (auto-enabled when path is given) |
-| `--lang`       | `-l`  | `en`                    | Language (`en` / `ko`)                               |
-| `--version`    | `-v`  | —                       | Print version                                        |
+| Flag           | Alias | Default                 | Description                    |
+| -------------- | ----- | ----------------------- | ------------------------------ |
+| `--url`        | `-u`  | `http://localhost:3000` | URL of the target dev server   |
+| `--port`       | `-p`  | `3000`                  | Port for the shiny-flow server |
+| `--screenshot` | `-s`  | -                       | Enable page capture            |
+| `--lang`       | `-l`  | `en`                    | Language (`en` / `ko`)         |
+| `--version`    | `-v`  | -                       | Print version                  |
 
-### Authentication
+### Capture setup
 
-To capture screenshots of pages behind a login wall, generate an auth script in your project directory:
+Configuration required when using page capture (`-s`). Run `init` to generate the config files in `.shiny-flow/`.
 
 ```bash
 npx shiny-flow init
-# or Korean template:
+# Korean template:
 npx shiny-flow init --lang ko
 ```
 
-This creates `shiny-flow.auth.js` — edit it with your login logic (Playwright API). It is auto-loaded when you pass a project path.
+#### Authentication (`auth.js`)
 
-```bash
-npx shiny-flow <path/to/your/project>
-```
-
-**Example: form-based login**
+Used when capturing pages behind a login wall. Loaded automatically when running with `-s`.
 
 ```js
-// shiny-flow.auth.js
+// .shiny-flow/auth.js
 module.exports = async function authenticate(page, baseUrl) {
   await page.goto(baseUrl + '/login');
   await page.fill('#email', 'user@example.com');
@@ -98,13 +93,24 @@ module.exports = async function authenticate(page, baseUrl) {
 
 Replace the selectors and credentials with the values for your app. The `page` argument is a [Playwright `Page`](https://playwright.dev/docs/api/class-page) object, so any Playwright API is available.
 
+#### Dynamic route parameters (`params.json`)
+
+Pre-filled with every dynamic route found in your project. Assign a value to each parameter — routes with no entry are skipped during capture.
+
+```json
+{
+  "/blog/[slug]": { "slug": "hello-world" },
+  "/users/[id]/posts/[postId]": { "id": "1", "postId": "42" }
+}
+```
+
 ---
 
 ## Web App
 
-Visit [shiny-flow.vercel.app](https://shiny-flow.vercel.app) and point it at your running local dev server.
+Analyze locally with the CLI, export as JSON, then upload it at [shiny-flow.vercel.app](https://shiny-flow.vercel.app) to open it in the canvas.
 
-Sign in with GitHub to save flows and share them with a link.
+Sign in with GitHub to save flows and generate share links.
 
 ---
 
