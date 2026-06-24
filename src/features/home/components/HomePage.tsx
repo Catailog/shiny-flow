@@ -123,7 +123,7 @@ export function HomePage({ isCloudMode }: Props) {
       cliAuthType === 'script' ? { type: 'script' as const, scriptPath: cliScriptPath } : undefined;
 
     handleAnalyzeRef.current({ path: cliPath, screenshot: cliScreenshot, baseUrl: cliUrl, auth });
-  }, []);
+  }, [setLocale]);
 
   const [titleFocusTrigger, setTitleFocusTrigger] = useState(0);
 
