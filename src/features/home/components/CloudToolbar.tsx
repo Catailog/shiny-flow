@@ -37,7 +37,6 @@ export function CloudToolbar({ hasFlow, state, actions, isAnalyzing }: Props) {
   const { data: session } = useSession();
   const {
     cloudFlowId,
-    cloudFlowName,
     myFlowsOpen,
     flowsList,
     busyAction,

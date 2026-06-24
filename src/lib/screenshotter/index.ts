@@ -90,12 +90,9 @@ export async function setupBrowserSession({
   viewportWidth = 1280,
   viewportHeight = 800,
   deviceScaleFactor = 2,
-  waitUntil = 'networkidle',
-  timeoutMs = 30000,
 }: SessionOptions): Promise<BrowserSession> {
   await checkServerAvailable(baseUrl, 5000);
 
-  // eslint-disable-next-line no-eval
   const { chromium } = eval('require')('playwright') as typeof import('playwright');
   const browser = await chromium.launch();
   try {
