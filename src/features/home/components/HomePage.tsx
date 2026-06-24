@@ -292,35 +292,14 @@ export function HomePage({ isCloudMode }: Props) {
                 </>
               )}
 
-              {analyze.overlayError ? (
-                <div className="flex flex-col items-center gap-2 rounded-lg border border-destructive bg-destructive/10 px-5 py-3 text-sm">
-                  <p className="font-medium text-destructive">{analyze.overlayError}</p>
-                  <Button size="sm" variant="outline" onClick={analyze.handleOverlayErrorDismiss}>
-                    {t.home.confirmError}
-                  </Button>
-                </div>
-              ) : analyze.slowWarning ? (
-                <div className="flex flex-col items-center gap-2 rounded-lg border border-warning bg-warning/10 px-5 py-3 text-sm">
-                  <p className="font-medium text-warning">{t.home.slowWarning}</p>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={analyze.handleKeepWaiting}>
-                      {t.home.keepWaiting}
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={analyze.handleCancel}>
-                      {t.home.cancel}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={analyze.handleCancel}
-                  className="text-muted-foreground"
-                >
-                  {t.home.cancel}
-                </Button>
-              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={analyze.handleCancel}
+                className="text-muted-foreground"
+              >
+                {t.home.cancel}
+              </Button>
             </div>
           )}
 

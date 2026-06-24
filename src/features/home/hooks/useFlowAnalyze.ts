@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import type { AnalyzeOptions } from '@/features/project-input';
 
@@ -7,8 +7,6 @@ import type { FlowGraph } from '@/lib/analyzer';
 import { useT } from '@/hooks/useT';
 
 import type { ScreenshotOptions } from '../types';
-
-const SLOW_TIMEOUT_MS = 20000;
 
 type Options = {
   onLoading: (opts: ScreenshotOptions | null) => void;
@@ -19,7 +17,6 @@ type Options = {
 
 export function useFlowAnalyze({ onLoading, onSuccess, onError, onCancelled }: Options) {
   const t = useT();
-  const [isLoading, setIsLoading] = useState(false);
   const [analyzeProgress, setAnalyzeProgress] = useState<{
     done: number;
     total: number;
@@ -30,43 +27,14 @@ export function useFlowAnalyze({ onLoading, onSuccess, onError, onCancelled }: O
     total: number;
     currentRoute?: string;
   } | null>(null);
-  const [overlayError, setOverlayError] = useState<string | null>(null);
-  const [slowWarning, setSlowWarning] = useState(false);
-  const [staleTimerKey, setStaleTimerKey] = useState(0);
 
   const abortRef = useRef<AbortController | null>(null);
-  const slowWarningRef = useRef(false);
-
-  const analyzeProgressKey = analyzeProgress
-    ? `${analyzeProgress.done}/${analyzeProgress.total}`
-    : null;
-  const screenshotProgressKey = screenshotProgress
-    ? `${screenshotProgress.done}/${screenshotProgress.total}`
-    : null;
-
-  useEffect(() => {
-    if (!isLoading || overlayError) return;
-
-    slowWarningRef.current = false;
-    const timer = setTimeout(() => {
-      slowWarningRef.current = true;
-      setSlowWarning(true);
-    }, SLOW_TIMEOUT_MS);
-
-    return () => {
-      clearTimeout(timer);
-      slowWarningRef.current = false;
-      setSlowWarning(false);
-    };
-  }, [isLoading, analyzeProgressKey, screenshotProgressKey, staleTimerKey, overlayError]);
 
   const handleAnalyze = async ({ path, screenshot, baseUrl, auth }: AnalyzeOptions) => {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setIsLoading(true);
-    setOverlayError(null);
     setAnalyzeProgress(null);
     setScreenshotProgress(null);
     onLoading(screenshot && baseUrl ? { baseUrl, auth, projectPath: path } : null);
@@ -125,7 +93,6 @@ export function useFlowAnalyze({ onLoading, onSuccess, onError, onCancelled }: O
           } else if (event.type === 'result') {
             setAnalyzeProgress(null);
             setScreenshotProgress(null);
-            setIsLoading(false);
             onSuccess(event.graph);
             return;
           } else if (event.type === 'error') {
@@ -137,46 +104,22 @@ export function useFlowAnalyze({ onLoading, onSuccess, onError, onCancelled }: O
       if (controller.signal.aborted) return;
       setAnalyzeProgress(null);
       setScreenshotProgress(null);
-      const message = err instanceof Error ? err.message : t.home.unknownError;
-
-      if (slowWarningRef.current) {
-        slowWarningRef.current = false;
-        setOverlayError(message);
-      } else {
-        setIsLoading(false);
-        onError(message);
-      }
+      onError(err instanceof Error ? err.message : t.home.unknownError);
     }
   };
 
   const handleCancel = () => {
     abortRef.current?.abort();
     abortRef.current = null;
-    setOverlayError(null);
     setAnalyzeProgress(null);
     setScreenshotProgress(null);
-    setIsLoading(false);
-    onCancelled();
-  };
-
-  const handleKeepWaiting = () => {
-    setStaleTimerKey((k) => k + 1);
-  };
-
-  const handleOverlayErrorDismiss = () => {
-    setOverlayError(null);
-    setIsLoading(false);
     onCancelled();
   };
 
   return {
     analyzeProgress,
     screenshotProgress,
-    overlayError,
-    slowWarning,
     handleAnalyze,
     handleCancel,
-    handleKeepWaiting,
-    handleOverlayErrorDismiss,
   };
 }
