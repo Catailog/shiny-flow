@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useLayoutEffect, useRef } from 'react';
 
 import type { Edge, Node } from '@xyflow/react';
 
@@ -6,7 +6,9 @@ import { getAbsolutePosition } from '../lib/nodeUtils';
 
 export function useEdgeCpSync(nodes: Node[], setEdges: (fn: (prev: Edge[]) => Edge[]) => void) {
   const nodesRef = useRef(nodes);
-  nodesRef.current = nodes;
+  useLayoutEffect(() => {
+    nodesRef.current = nodes;
+  });
 
   const prevAbsPos = useRef<{ x: number; y: number } | null>(null);
 
