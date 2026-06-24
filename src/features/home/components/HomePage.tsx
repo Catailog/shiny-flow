@@ -46,6 +46,7 @@ export function HomePage({ isCloudMode }: Props) {
 
   const viewerRef = useRef<FlowViewerHandle>(null);
   const projectInputRef = useRef<ProjectInputHandle>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getCurrentFlowData = (): FlowData | null => {
     if (state.status !== 'success') return null;
@@ -203,7 +204,7 @@ export function HomePage({ isCloudMode }: Props) {
             )}
           >
             <input
-              ref={fileFlow.fileInputRef}
+              ref={fileInputRef}
               type="file"
               accept=".json"
               className="hidden"
@@ -216,7 +217,7 @@ export function HomePage({ isCloudMode }: Props) {
                 void analyze.handleAnalyze(options);
               }}
               isLoading={isLoading}
-              onImport={() => fileFlow.fileInputRef.current?.click()}
+              onImport={() => fileInputRef.current?.click()}
               onExport={fileFlow.handleExport}
               canExport={hasFlow}
             />

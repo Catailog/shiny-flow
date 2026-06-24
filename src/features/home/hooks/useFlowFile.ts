@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 import type { Session } from 'next-auth';
 
@@ -53,7 +53,6 @@ export function useFlowFile({
   setScreenshotOptions,
 }: Options) {
   const t = useT();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [pendingConvert, setPendingConvert] = useState<PendingConvert | null>(null);
   const [convertSelectedUuids, setConvertSelectedUuids] = useState<string[]>([]);
@@ -191,7 +190,6 @@ export function useFlowFile({
   };
 
   return {
-    fileInputRef,
     pendingImport,
     pendingConvert,
     convertSelectedUuids,
