@@ -45,6 +45,8 @@ type CloudTitleProps = {
 type Props = {
   isCloudMode: boolean;
   cloudTitle?: CloudTitleProps;
+  pageTitle?: string;
+  readOnlyLabel?: string;
   onRefreshCommentAuthors?: () => Promise<void>;
   isAnalyzing?: boolean;
 };
@@ -137,6 +139,8 @@ function FlowTitle({ name, onRename, focusTrigger, disabled }: CloudTitleProps) 
 export function AppHeader({
   isCloudMode,
   cloudTitle,
+  pageTitle,
+  readOnlyLabel,
   onRefreshCommentAuthors,
   isAnalyzing,
 }: Props) {
@@ -196,7 +200,17 @@ export function AppHeader({
 
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
-      <div className="flex min-w-0 items-center">{cloudTitle && <FlowTitle {...cloudTitle} />}</div>
+      <div className="flex min-w-0 items-center">
+        {cloudTitle && <FlowTitle {...cloudTitle} />}
+        {pageTitle && (
+          <div className="flex items-center gap-2 px-2">
+            <span className="text-sm font-semibold">{pageTitle}</span>
+            {readOnlyLabel && (
+              <span className="text-xs text-muted-foreground">{readOnlyLabel}</span>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="flex items-center gap-1">
         {/* 언어 선택 */}
