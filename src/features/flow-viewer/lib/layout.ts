@@ -73,7 +73,7 @@ function layoutGroupInternally(
 }
 
 export function applyDagreLayout(nodes: Node[], edges: Edge[]): Node[] {
-  // layoutGroupId별 그룹 멤버 분류
+  // Classify group members by layoutGroupId
   const groupMemberMap = new Map<string, Node[]>();
   for (const node of nodes) {
     const gid = (node.data as { layoutGroupId?: string })?.layoutGroupId;
@@ -82,7 +82,7 @@ export function applyDagreLayout(nodes: Node[], edges: Edge[]): Node[] {
     groupMemberMap.get(gid)!.push(node);
   }
 
-  // 그룹 내부 레이아웃 계산 + groupNode 객체 사전 생성
+  // Compute internal layout and pre-build groupNode objects
   type GroupLayout = {
     width: number;
     height: number;
@@ -107,11 +107,11 @@ export function applyDagreLayout(nodes: Node[], edges: Edge[]): Node[] {
     });
   }
 
-  // 메인 Dagre에서 제외할 ID
+  // IDs to exclude from the main Dagre layout
   const groupedIds = new Set([...groupMemberMap.values()].flatMap((ms) => ms.map((m) => m.id)));
   const existingGroupIds = new Set(nodes.filter((n) => n.type === 'groupNode').map((n) => n.id));
 
-  // 메인 Dagre 레이아웃
+  // Main Dagre layout
   const graph = new dagre.graphlib.Graph();
   graph.setDefaultEdgeLabel(() => ({}));
   graph.setGraph({ rankdir: 'TB', nodesep: 80, ranksep: 100 });
@@ -147,7 +147,7 @@ export function applyDagreLayout(nodes: Node[], edges: Edge[]): Node[] {
 
   dagre.layout(graph);
 
-  // 결과 조립 — groupNode를 먼저 배치해야 ReactFlow가 자식보다 먼저 렌더링
+  // Assemble result — groupNodes must come before their children for ReactFlow to render correctly
   const groupNodes: Node[] = [];
   const memberNodes: Node[] = [];
   const regularNodes: Node[] = [];

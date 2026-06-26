@@ -1,6 +1,6 @@
 ﻿# shiny-flow
 
-> [English](./README.md)
+> [English](https://github.com/Catailog/shiny-flow/blob/main/README.md)
 
 Next.js App Router 프로젝트를 인터랙티브 페이지 플로우 그래프로 시각화하는 도구.
 

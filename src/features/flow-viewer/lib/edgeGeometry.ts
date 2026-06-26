@@ -26,7 +26,7 @@ export function getFace(node: InternalNode, otherCenter: { x: number; y: number 
   return dy >= 0 ? 'bottom' : 'top';
 }
 
-// 변 위에서 n+2개 등간격 중 i+1번째 위치 (꼭지점 제외, space-between)
+// Returns the (i+1)-th position among n+2 evenly spaced points on a face, excluding corners (space-between)
 export function faceHandlePos(
   node: InternalNode,
   face: Face,
@@ -70,7 +70,7 @@ export function computeHandlePlacement(
     if (!otherNode) continue;
     const oc = getCenter(otherNode);
     const face = getFace(thisNode, oc);
-    // 같은 변 안에서 정렬 기준: 수직 변은 Y, 수평 변은 X
+    // Sort key within the same face: Y for vertical faces, X for horizontal
     const sortKey = face === 'left' || face === 'right' ? oc.y : oc.x;
     entries.push({ id: e.id, face, sortKey });
   }
@@ -82,7 +82,7 @@ export function computeHandlePlacement(
     .filter((e) => e.face === thisEntry.face)
     .sort((a, b) => {
       const diff = a.sortKey - b.sortKey;
-      // sortKey가 같을 때(같은 타겟 노드) id로 안정 정렬
+      // Stable sort by id when sortKey ties (same target node)
       if (Math.abs(diff) < 0.5) return a.id < b.id ? -1 : 1;
       return diff;
     });
@@ -152,7 +152,7 @@ export function buildCustomSelfLoopPath(
 
   const dist = Math.sqrt((tp.x - sp.x) ** 2 + (tp.y - sp.y) ** 2);
   const defaultLen = Math.max(LOOP_BASE_HEIGHT, dist * 1.5);
-  // loopCtrl: sp·tp에 동일하게 더해지는 2D 오프셋. 라벨 위치 = midCanvas + 0.75 * ctrl
+  // loopCtrl: 2D offset added equally to both sp and tp. Label position = midCanvas + 0.75 * ctrl
   const ctrl = loopCtrl ?? { x: outX * defaultLen, y: outY * defaultLen };
 
   const cp1 = { x: sp.x + ctrl.x, y: sp.y + ctrl.y };

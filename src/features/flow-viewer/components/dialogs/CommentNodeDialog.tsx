@@ -56,7 +56,7 @@ export function CommentNodeDialog({
   const isCloudComment = !!existing?.accountId;
   const sessionAuthorName = session?.user?.name ?? session?.user?.email ?? '';
   const fetchedAuthorName = useCloudAuthorName(existing?.accountId);
-  // 클라우드 댓글: 서버에서 최신 이름 조회. 로딩 중에는 스냅샷 표시
+  // Cloud comment: fetch latest author name from server. Show snapshot while loading.
   const cloudAuthorName = isCloudComment
     ? (fetchedAuthorName ?? existing?.author ?? sessionAuthorName)
     : sessionAuthorName;
@@ -66,13 +66,13 @@ export function CommentNodeDialog({
   const [nameInput, setNameInput] = useState('');
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  // 클라우드 댓글: 저장된 author 그대로 표시
-  // 로컬 댓글(또는 신규): pendingName > 저장된 author > 로컬 기본값(or 클라우드 계정명)
+  // Cloud comment: show stored author as-is.
+  // Local comment (or new): pendingName > stored author > local default (or cloud account name)
   const displayName = isCloudComment
     ? (existing?.author ?? cloudAuthorName)
     : (pendingName ?? existing?.author ?? (isCloudMode ? cloudAuthorName : authorName));
 
-  // 클라우드 댓글(accountId 있음)은 수정 불가, 로컬 댓글은 클라우드 모드에서도 수정 가능
+  // Cloud comments (with accountId) are read-only; local comments can be edited even in cloud mode
   const canEditAuthor = !isCloudComment && (!isCloudMode || !!existing?.content?.trim());
 
   useEffect(() => {
@@ -134,7 +134,7 @@ export function CommentNodeDialog({
                 isLocal: true as const,
                 createdAt: now,
               }),
-            // 로컬 댓글 편집 시 이름을 변경했으면 이 댓글의 author만 갱신
+            // When editing a local comment, update author only if the name was changed
             ...(wasNonEmpty && !isCloudComment && pendingName && { author: pendingName }),
             updatedAt: wasNonEmpty ? now : undefined,
           },
@@ -144,7 +144,7 @@ export function CommentNodeDialog({
     onClose();
   };
 
-  // 클라우드 모드에서는 로컬 사용자명/기기명 제안 숨김
+  // Hide local username/device suggestions in cloud mode
   const showSuggestions = editing && !isCloudMode && (options.author || options.device);
 
   return (
@@ -160,7 +160,7 @@ export function CommentNodeDialog({
           )}
         </DialogHeader>
 
-        {/* 작성자 영역 */}
+        {/* Author section */}
         <div className="space-y-1.5">
           {!editing ? (
             <div className="flex items-center gap-1.5">

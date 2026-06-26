@@ -49,7 +49,7 @@ export function useFlowConnect({ pushSnapshot, setEdges }: Options) {
   const onConnect = useCallback(
     (connection: Connection) => {
       const connecting = connectingRef.current;
-      // 시작 노드가 항상 source가 되도록 보정
+      // Ensure the initiating node is always the source
       const conn =
         connecting && connection.source !== connecting.nodeId
           ? {
@@ -76,8 +76,8 @@ export function useFlowConnect({ pushSnapshot, setEdges }: Options) {
     ) => {
       if (!params.nodeId || !params.handleType) return;
       connectingRef.current = { nodeId: params.nodeId, handleId: params.handleId };
-      // 드래그 중 노드 바디 호버 하이라이트
-      // ReactFlow가 드래그 중 이벤트 캡처 레이어를 올리므로 elementsFromPoint로 탐색
+      // Highlight node body on hover during drag.
+      // ReactFlow raises an event capture layer during drag, so use elementsFromPoint to hit-test.
       let highlightedEl: HTMLElement | null = null;
       const onMouseMove = (e: MouseEvent) => {
         const stack = document.elementsFromPoint(e.clientX, e.clientY);
@@ -112,9 +112,9 @@ export function useFlowConnect({ pushSnapshot, setEdges }: Options) {
       const clientX = 'clientX' in event ? event.clientX : event.changedTouches[0].clientX;
       const clientY = 'clientY' in event ? event.clientY : event.changedTouches[0].clientY;
       const stack = document.elementsFromPoint(clientX, clientY);
-      // 핸들 위에 드롭 → onConnect가 이미 처리
+      // Dropped on a handle — onConnect already handled it
       if (stack.some((el) => el.classList.contains('react-flow__handle'))) return;
-      // 노드 바디 위에 드롭?
+      // Dropped on a node body?
       const nodeEl = stack.find((el) =>
         el.classList.contains('react-flow__node'),
       ) as HTMLElement | null;
@@ -125,14 +125,14 @@ export function useFlowConnect({ pushSnapshot, setEdges }: Options) {
       const { screenToFlowPosition } = connectBridgeRef.current;
       const mousePos = screenToFlowPosition({ x: clientX, y: clientY });
 
-      // 노드 DOM에서 flow 좌표 계산
+      // Compute flow coordinates from node DOM rect
       const rect = nodeEl.getBoundingClientRect();
       const tl = screenToFlowPosition({ x: rect.left, y: rect.top });
       const br = screenToFlowPosition({ x: rect.right, y: rect.bottom });
       const nodeW = br.x - tl.x;
       const nodeH = br.y - tl.y;
 
-      // 시작 노드가 항상 source가 되도록: neededType은 항상 'target'
+      // Initiating node is always source, so the needed handle type is always 'target'
       const nearestId = getNearestHandleId(tl.x, tl.y, nodeW, nodeH, mousePos, 'target');
 
       const newConnection = {

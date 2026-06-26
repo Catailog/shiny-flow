@@ -36,7 +36,7 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
       );
     });
 
-    // 겹치는 그룹이 여럿이면 가장 안쪽(자식) 그룹 우선
+    // If multiple groups overlap, prefer the innermost (deepest child) group
     const group = matching.find(
       (g) => !matching.some((other) => isDescendantOf(other.id, g.id, allNodes)),
     );
@@ -61,20 +61,20 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
       setNodes((prev) => {
         const { group: targetGroup, absX, absY } = findTargetGroup(draggedNode, prev);
 
-        // 다중 선택된 노드 중 드래그 대상 외 나머지 (그룹에 넣을 수 있는 타입만)
+        // Other selected nodes besides the drag target (only types that can enter a group)
         const otherSelected = prev.filter(
           (n) =>
             n.selected &&
             n.id !== draggedNode.id &&
             (n.type === 'flowNode' || n.type === 'groupNode') &&
-            // 순환 중첩 방지: target 그룹의 조상인 노드는 제외
+            // Prevent circular nesting: exclude nodes that are ancestors of the target group
             !(targetGroup && isDescendantOf(targetGroup.id, n.id, prev)),
         );
 
-        // 드래그 노드 + 다른 선택 노드 모두에 적용할 업데이트 계산
+        // Compute updates for the dragged node and all other selected nodes
         const updates = new Map<string, Partial<Node>>();
 
-        // parentId가 선택된 다른 노드를 가리키면 → 부모와 함께 이동 중이므로 parentId 변경 생략
+        // If parentId points to another selected node, it's moving with its parent — skip reparenting
         const selectedIds = new Set([draggedNode.id, ...otherSelected.map((n) => n.id)]);
         const movedWithParent = (n: Node) => !!n.parentId && selectedIds.has(n.parentId);
 
@@ -98,7 +98,7 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
             });
           }
         } else {
-          // 그룹 바깥으로 드래그
+          // Dragged outside any group
           if (draggedNode.parentId && !movedWithParent(draggedNode)) {
             updates.set(draggedNode.id, {
               parentId: undefined,
@@ -121,7 +121,7 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
           return update ? { ...n, ...update } : n;
         });
 
-        // ReactFlow requires parent before children — 이동한 노드들을 부모 뒤에 배치
+        // ReactFlow requires parent before children — place moved nodes after their parent
         if (targetGroup) {
           const movedIds = [...updates.keys()];
           const withoutMoved = mapped.filter((n) => !movedIds.includes(n.id));
@@ -137,7 +137,7 @@ export function useDragIntoGroup(nodes: Node[], setNodes: (fn: (prev: Node[]) =>
             ];
           }
         } else if (updates.size === 1) {
-          // 단일 노드 이탈 시 기존 ordering 유지
+          // Single node leaving a group — preserve existing ordering
           mapped = placeAfterParent(mapped, draggedNode.id, draggedNode.parentId ?? '');
         }
 

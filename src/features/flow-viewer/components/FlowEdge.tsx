@@ -32,7 +32,7 @@ import {
   snapToNodePerimeter,
 } from '../lib/edgeGeometry';
 
-// 엣지 스트로크 스타일 상수 — 변경 시 이 곳만 편집
+// Edge stroke style constant — edit only here
 const STROKE_WIDTH = 1.5;
 
 export type EdgeLineStyle = 'solid' | 'dashed';
@@ -189,7 +189,7 @@ export function FlowEdge({
   if (!sourceNode || !targetNode) return null;
 
   const isSelfLoop = source === target;
-  // comment가 명시적으로 설정된 경우(''포함) 우선 사용. ''는 원본 label 억제 sentinel.
+  // Use comment if explicitly set (including ''). '' is a sentinel that suppresses the original label.
   const comment =
     data?.comment !== undefined ? data.comment || undefined : label ? String(label) : undefined;
 
@@ -246,7 +246,7 @@ export function FlowEdge({
       e.stopPropagation();
       e.preventDefault();
       startEdgeDrag(true);
-      // 드래그 시작 시점의 양쪽 attachment를 스냅샷으로 고정
+      // Snapshot both attachments at drag start
       const initSp: LoopAttachment = data?.loopSp ?? snapToNodePerimeter(sourceNode, currentSp);
       const initTp: LoopAttachment = data?.loopTp ?? snapToNodePerimeter(sourceNode, currentTp);
       const onMove = (ev: MouseEvent) => {
@@ -310,14 +310,14 @@ export function FlowEdge({
       e.stopPropagation();
       e.preventDefault();
       startEdgeDrag(false);
-      // 드래그 시작 시점의 루프 기하 정보 고정
+      // Snapshot loop geometry at drag start
       const midX = (sp.x + tp.x) / 2;
       const midY = (sp.y + tp.y) / 2;
       const initSp: LoopAttachment = data?.loopSp ?? snapToNodePerimeter(sourceNode, sp);
       const initTp: LoopAttachment = data?.loopTp ?? snapToNodePerimeter(sourceNode, tp);
       const onMove = (ev: MouseEvent) => {
         const B = screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
-        // 라벨 위치 = midXY + 0.75 * ctrl → ctrl 역산
+        // label pos = midXY + 0.75 * ctrl → solve for ctrl
         const loopCtrl = { x: (B.x - midX) / 0.75, y: (B.y - midY) / 0.75 };
         updateEdge(id, { loopSp: initSp, loopTp: initTp, loopCtrl });
       };
@@ -345,7 +345,7 @@ export function FlowEdge({
       const tpSnap = { ...tp };
       const onMove = (ev: MouseEvent) => {
         const B = screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
-        // 뱃지가 베지어 t=0.5 위에 오도록 cp 역산: B = 0.25*sp + 0.5*cp + 0.25*tp
+        // Place badge at bezier t=0.5, solve for cp: B = 0.25*sp + 0.5*cp + 0.25*tp
         updateEdge(id, {
           cp: {
             x: 2 * B.x - 0.5 * (spSnap.x + tpSnap.x),
