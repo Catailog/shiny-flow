@@ -72,7 +72,7 @@ const defaultEdgeOptions = {
   zIndex: Z_INDEX.edge,
 };
 
-// 노드를 배열 끝으로 올려 z-index 상승. groupNode인 경우 자식도 함께 이동 (부모가 자식보다 앞에 있어야 함)
+// Move node to end of array to raise its z-index. For groupNode, move children too (parent must precede children).
 function bringToFront(nds: Node[], nodeId: string): Node[] {
   const node = nds.find((n) => n.id === nodeId);
   if (!node) return nds;
@@ -157,8 +157,6 @@ function KeyboardDeleteHandler() {
   return null;
 }
 
-// --- Main component ---
-
 export type FlowViewerHandle = {
   getNodes: () => Node[];
   getEdges: () => Edge[];
@@ -197,7 +195,6 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     setNodes,
   ]);
 
-  // --- History ---
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const past = useRef<Array<{ nodes: Node[]; edges: Edge[]; collapsedIds: Set<string> }>>([]);
@@ -263,7 +260,6 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     setEdges,
   });
 
-  // --- Collapse ---
   const childrenMap = useMemo(() => buildChildrenMap(edges), [edges]);
   const hiddenIds = useMemo(
     () => computeHiddenIds(nodes, edges, collapsedIds),
@@ -294,8 +290,8 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
       nodes.map((n) => ({
         ...n,
         hidden: hiddenIds.has(n.id),
-        // flowNode에 'nokey' 추가: Shift+드래그가 리사이즈 핸들에서 시작할 때
-        // ReactFlow 러버밴드 선택을 건너뛰어 비율 고정 리사이즈로 처리되도록 함
+        // Add 'nokey' to flowNode: when Shift+drag starts from a resize handle,
+        // skip ReactFlow rubber-band selection so the resize handler takes over.
         className:
           n.type === 'flowNode' ? [n.className, 'nokey'].filter(Boolean).join(' ') : n.className,
       })),
@@ -309,10 +305,9 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
       })),
     [edges, hiddenIds],
   );
-  // --- Drag into group ---
+
   const { dragOverGroupId, handleNodeDrag, handleNodeDragStop } = useDragIntoGroup(nodes, setNodes);
 
-  // --- Edge cp sync ---
   const { onDragStart, syncCp } = useEdgeCpSync(nodes, setEdges);
   const handleNodeDragStart = useCallback(
     (_e: React.MouseEvent, node: Node) => {
@@ -342,7 +337,6 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     [collapsedIds, toggleCollapse, hasChildren, hiddenCount, dragOverGroupId],
   );
 
-  // --- Context menu & dialogs ---
   const [contextMenuState, setContextMenuState] = useState<ContextMenuState>(null);
   const [dialogRequest, setDialogRequest] = useState<DialogRequest | null>(null);
 
@@ -366,8 +360,8 @@ export const FlowViewer = forwardRef<FlowViewerHandle, Props>(function FlowViewe
     pendingTargetRef.current = { type: 'edge', edgeId: edge.id };
   }, []);
 
-  // NodeResizer가 있는 노드는 ReactFlow 내부 클릭→단독 선택 로직이 동작하지 않아
-  // Shift 없이 클릭해도 다중 선택이 유지되는 버그가 있음. 명시적으로 처리.
+  // ReactFlow's click-to-select logic doesn't work for nodes with NodeResizer —
+  // multi-selection stays active even without Shift. Handle it explicitly.
   const handleNodeClick = useCallback(
     (e: React.MouseEvent, clickedNode: Node) => {
       if (e.shiftKey) return;

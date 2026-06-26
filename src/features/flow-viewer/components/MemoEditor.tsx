@@ -139,7 +139,7 @@ export function MemoEditor({ value, onChange }: Props) {
   const currentFontSize =
     (editor.getAttributes('textStyle').fontSize as string | undefined) ?? FONT_SIZES[1].size;
 
-  // 브라우저 DOM이 HTML 파싱 시 hex → rgb(r, g, b) 로 정규화하므로 두 형식 모두 비교
+  // The browser normalizes hex colors to rgb(r, g, b) when parsing HTML, so compare both formats
   const hexToRgb = (hex: string) => {
     const n = parseInt(hex.slice(1), 16);
     return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
@@ -148,9 +148,9 @@ export function MemoEditor({ value, onChange }: Props) {
 
   return (
     <div className="overflow-hidden rounded-lg border border-input focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
-      {/* 툴바 */}
+      {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-0.5 border-b border-input bg-muted/40 px-2 py-1.5">
-        {/* 서식 */}
+        {/* Format */}
         <ToolbarButton
           active={editor.isActive('bold')}
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -175,7 +175,7 @@ export function MemoEditor({ value, onChange }: Props) {
 
         <div className="mx-1 h-4 w-px bg-border" />
 
-        {/* 목록 */}
+        {/* Lists */}
         <ToolbarButton
           active={editor.isActive('bulletList')}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -193,7 +193,7 @@ export function MemoEditor({ value, onChange }: Props) {
 
         <div className="mx-1 h-4 w-px bg-border" />
 
-        {/* 폰트 크기 */}
+        {/* Font size */}
         {FONT_SIZES.map(({ label, size }) => (
           <Tooltip key={label}>
             <TooltipTrigger
@@ -219,7 +219,7 @@ export function MemoEditor({ value, onChange }: Props) {
 
         <div className="mx-1 h-4 w-px bg-border" />
 
-        {/* 텍스트 색상 */}
+        {/* Text color */}
         <div className="flex items-center gap-1">
           {TEXT_COLORS.map(({ label, value: color }) => {
             const isActive =
@@ -263,7 +263,7 @@ export function MemoEditor({ value, onChange }: Props) {
         </div>
       </div>
 
-      {/* 에디터 본문 */}
+      {/* Editor body */}
       <div className="bg-background">
         <EditorContent editor={editor} />
       </div>

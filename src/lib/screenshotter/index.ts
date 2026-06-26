@@ -165,7 +165,7 @@ export async function captureRoutesOnPage(
         redirectedTo: redirected ? finalUrl.pathname : undefined,
       });
     } catch {
-      // 캡처 실패 시 해당 라우트는 건너뜀
+      // Skip route on capture failure
     }
     done++;
     onProgress?.(done, routes.length, route);

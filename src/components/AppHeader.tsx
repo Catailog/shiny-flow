@@ -213,7 +213,7 @@ export function AppHeader({
       </div>
 
       <div className="flex items-center gap-1">
-        {/* 언어 선택 */}
+        {/* Language selector */}
         <DropdownMenu>
           <DropdownMenuTrigger className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
             <span className={`fi fi-${current.flag} text-sm`} />
@@ -234,7 +234,7 @@ export function AppHeader({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* 다크모드 토글 */}
+        {/* Dark mode toggle */}
         <Tooltip>
           <TooltipTrigger
             render={

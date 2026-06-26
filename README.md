@@ -1,6 +1,6 @@
 # shiny-flow
 
-> [한국어](./README.ko.md)
+> [한국어](https://github.com/Catailog/shiny-flow/blob/main/README.ko.md)
 
 Visualize your Next.js App Router project as an interactive page-flow graph.
 

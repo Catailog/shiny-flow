@@ -79,12 +79,12 @@ export async function POST(req: NextRequest) {
         if (defaultParams) {
           graph.defaultParams = defaultParams;
 
-          // Required catch-all ([...slug]) 노드를 params의 구체적 노드로 교체
+          // Expand required catch-all ([...slug]) nodes into concrete nodes from params
           const patternToConcreteIds = new Map<string, string[]>();
           graph.nodes = graph.nodes.flatMap((n) => {
             if (!/\[\.\.\.([^\]]+)\]/.test(n.id)) return [n];
             const entry = defaultParams[n.id];
-            if (!entry) return [n]; // params 없으면 패턴 노드 유지
+            if (!entry) return [n]; // no params entry — keep pattern node as-is
             const sets = Array.isArray(entry) ? entry : [entry];
             const concreteIds: string[] = [];
             const expanded = sets.map((set) => {
@@ -128,11 +128,11 @@ export async function POST(req: NextRequest) {
             const routes = graph.nodes.map((n) => {
               const entry = defaultParams?.[n.id];
               const params = Array.isArray(entry) ? entry[0] : entry;
-              // [id] 세그먼트 치환 (required catch-all은 이미 확장됨)
+              // Substitute [id] segments (required catch-alls are already expanded above)
               let resolved = params
                 ? n.id.replace(/\[\.{0,3}([^\]]+)\]/g, (_, key) => params[key] ?? `[${key}]`)
                 : n.id;
-              // [[...key]] optional catch-all 값 append
+              // Append [[...key]] optional catch-all value
               const catchAllKey = n.filePath
                 .replace(/\\/g, '/')
                 .match(/\[\[\.\.\.([^\]]+)\]\]/)?.[1];

@@ -8,7 +8,7 @@ type RawEdge = Omit<FlowEdge, 'id'>;
 
 const EXTENSIONS = ['.tsx', '.ts', '.jsx', '.js'];
 
-// tsconfig.json(JSONC) 에서 paths alias 로드
+// Load paths aliases from tsconfig.json (JSONC)
 function loadAliases(projectRoot: string): Map<string, string> {
   const aliases = new Map<string, string>();
   const tsconfigPath = path.join(projectRoot, 'tsconfig.json');
@@ -16,7 +16,7 @@ function loadAliases(projectRoot: string): Map<string, string> {
 
   try {
     const raw = fs.readFileSync(tsconfigPath, 'utf-8');
-    // JSONC: 주석 제거 + trailing comma 제거
+    // JSONC: strip comments and trailing commas
     const stripped = raw
       .replace(/\/\/[^\n]*/g, '')
       .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -35,7 +35,7 @@ function loadAliases(projectRoot: string): Map<string, string> {
       aliases.set(aliasPrefix, path.resolve(projectRoot, targetRaw));
     }
   } catch {
-    // 파싱 실패 시 빈 맵 반환 → resolveImportPath에서 폴백 처리
+    // On parse failure, return empty map — resolveImportPath handles the fallback
   }
 
   return aliases;
@@ -56,7 +56,7 @@ export async function extractEdges(
     await new Promise<void>((resolve) => setImmediate(resolve));
   }
 
-  // 같은 source → target → trigger 중복 제거
+  // Deduplicate edges with the same source, target, and trigger
   const seen = new Set<string>();
   let idx = 0;
   return all
@@ -84,7 +84,7 @@ function collectEdges(
 
   const content = fs.readFileSync(filePath, 'utf-8');
 
-  // 'use server' 파일은 CRUD 액션이므로 엣지 탐색 대상에서 제외
+  // Skip 'use server' files — they are CRUD actions, not navigation sources
   if (/^\s*['"]use server['"]/.test(content)) return [];
 
   const edges: RawEdge[] = parseFileForEdges(content, filePath, sourceRoute);
@@ -101,7 +101,7 @@ function parseFileForEdges(content: string, filePath: string, sourceRoute: strin
   const sourceFile = project.createSourceFile('__tmp__.tsx', content, { overwrite: true });
   const edges: RawEdge[] = [];
 
-  // href 배열 패턴 사전 수집: const links = [{href: '/path'}, ...]
+  // Pre-collect hrefs from array patterns: const links = [{href: '/path'}, ...]
   const arrayHrefs: string[] = [];
   sourceFile.forEachDescendant((node) => {
     if (node.getKind() !== SyntaxKind.PropertyAssignment) return;
@@ -136,7 +136,7 @@ function parseFileForEdges(content: string, filePath: string, sourceRoute: strin
           label: extractLinkText(node),
         });
       } else if (!href && arrayHrefs.length > 0) {
-        // 변수 참조 href (ex. link.href) — 사전 수집한 href 배열로 대체
+        // Variable href (e.g. link.href) — substitute with pre-collected href array
         for (const h of arrayHrefs) {
           edges.push({
             source: sourceRoute,
@@ -190,13 +190,13 @@ function extractStringValue(node: Node | undefined): string | undefined {
   if (node.getKind() === SyntaxKind.JsxExpression) {
     const strLit = node.getFirstChildByKind(SyntaxKind.StringLiteral);
     if (strLit) return strLit.getText().replace(/^['"]|['"]$/g, '');
-    // {`/path/${id}/edit`} 형태의 템플릿 리터럴
+    // Template literal in JSX: {`/path/${id}/edit`}
     const tmpl =
       node.getFirstChildByKind(SyntaxKind.TemplateExpression) ??
       node.getFirstChildByKind(SyntaxKind.NoSubstitutionTemplateLiteral);
     if (tmpl) return extractTemplatePattern(tmpl);
   }
-  // router.push(`/path/${id}`) 등 직접 전달된 템플릿 리터럴
+  // Template literal passed directly: router.push(`/path/${id}`)
   if (
     node.getKind() === SyntaxKind.TemplateExpression ||
     node.getKind() === SyntaxKind.NoSubstitutionTemplateLiteral
@@ -206,7 +206,7 @@ function extractStringValue(node: Node | undefined): string | undefined {
   return undefined;
 }
 
-// 템플릿 리터럴을 Next.js 동적 라우트 패턴으로 변환
+// Convert template literal to a Next.js dynamic route pattern.
 // `/dashboard/invoices/${id}/edit` → `/dashboard/invoices/[id]/edit`
 function extractTemplatePattern(node: Node): string | undefined {
   if (Node.isNoSubstitutionTemplateLiteral(node)) {
@@ -239,7 +239,7 @@ function extractTemplatePattern(node: Node): string | undefined {
   return result.startsWith('/') ? result : undefined;
 }
 
-// 최상위(outermost) 감싸는 컴포넌트 이름 반환
+// Return the outermost wrapping component name
 function extractOutermostComponentName(node: Node): string | undefined {
   let current: Node | undefined = node.getParent();
   let lastName: string | undefined;
@@ -264,7 +264,7 @@ function extractOutermostComponentName(node: Node): string | undefined {
 function extractLinkText(node: Node): string | undefined {
   const parent = node.getParent();
 
-  // 1. JSX 텍스트 콘텐츠
+  // 1. JSX text content
   const jsxText = parent
     ?.getDescendantsOfKind(SyntaxKind.JsxText)
     .map((n) => n.getText().trim())
@@ -279,7 +279,7 @@ function extractLinkText(node: Node): string | undefined {
   const ariaValue = ariaLabel ? extractStringValue(ariaLabel.getLastChild()) : undefined;
   if (ariaValue) return ariaValue;
 
-  // 3. 최상위 감싸는 컴포넌트 이름
+  // 3. outermost wrapping component name
   return extractOutermostComponentName(node);
 }
 
@@ -313,7 +313,7 @@ function resolveImportPath(
   if (spec.startsWith('./') || spec.startsWith('../')) {
     bases = [path.resolve(path.dirname(fromFile), spec)];
   } else {
-    // alias 매핑에서 가장 긴 prefix 매칭
+    // Match longest alias prefix
     let matched = false;
     for (const [aliasPrefix, resolvedBase] of aliases) {
       if (spec === aliasPrefix || spec.startsWith(aliasPrefix + '/')) {
@@ -324,14 +324,14 @@ function resolveImportPath(
       }
     }
     if (!matched) {
-      // tsconfig 없거나 매핑 실패 → @/ 폴백: src/ 와 루트 둘 다 시도
+      // No tsconfig or alias miss — @/ fallback: try both src/ and root
       if (spec.startsWith('@/')) {
         bases = [
           path.join(projectRoot, 'src', spec.slice(2)),
           path.join(projectRoot, spec.slice(2)),
         ];
       } else {
-        return null; // 외부 패키지
+        return null; // external package
       }
     }
   }

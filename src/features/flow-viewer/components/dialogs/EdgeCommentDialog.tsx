@@ -27,7 +27,7 @@ export function EdgeCommentDialog({
   const edge = edges.find((e) => e.id === edgeId);
   const edgeComment = (edge?.data as { comment?: string } | undefined)?.comment;
   const [value, setValue] = useState(
-    // comment가 명시적으로 설정된 경우 그 값을, 없으면 원본 label을 기본값으로 표시
+    // Use the stored comment if explicitly set; otherwise fall back to the original label
     edgeComment !== undefined ? edgeComment : edge?.label ? String(edge.label) : '',
   );
   const t = useT();

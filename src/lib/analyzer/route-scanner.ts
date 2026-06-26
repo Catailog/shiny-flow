@@ -47,7 +47,7 @@ export function scanRoutes(projectPath: string): RouteEntry[] {
   if (!fs.existsSync(resolvedAppDir)) return [];
 
   const routes = collectRoutes(resolvedAppDir, resolvedAppDir);
-  // [[...slug]] 디렉토리가 부모 page.tsx와 동일한 route로 정규화될 때 중복 제거 (부모 우선)
+  // Deduplicate when [[...slug]] normalizes to the same route as its parent page.tsx (parent wins)
   const seen = new Set<string>();
   return routes.filter((r) => {
     if (seen.has(r.route)) return false;
@@ -71,14 +71,14 @@ function collectRoutes(appDir: string, currentDir: string): RouteEntry[] {
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     const isPrivate = entry.name.startsWith('_');
-    // @slot 은 URL 세그먼트가 아니므로 하위 page가 부모 route와 중복 등록됨 → 건너뜀
+    // @slot is not a URL segment — its child pages would duplicate the parent route
     const isParallel = entry.name.startsWith('@');
-    // (.)seg, (..)seg, (..)(..)seg, (...)seg 형태 — '(' 시작이지만 ')'로 끝나지 않음
+    // Intercepting routes: (.)seg, (..)seg, (..)(..)seg — start with '(' but do not end with ')'
     const isIntercepting = entry.name.startsWith('(') && !entry.name.endsWith(')');
 
     if (isPrivate || isParallel || isIntercepting) continue;
 
-    // (group) 은 dirToRoute에서 URL 세그먼트가 제거되므로 그대로 재귀
+    // Route groups are stripped by dirToRoute, so recurse normally
     results.push(...collectRoutes(appDir, path.join(currentDir, entry.name)));
   }
 
@@ -90,11 +90,11 @@ function dirToRoute(appDir: string, dirPath: string): string {
   if (!relative) return '/';
 
   const segments = relative.split(path.sep).filter((seg) => {
-    // 라우트 그룹 (group) 은 URL에서 제거
+    // Strip route group segment
     if (seg.startsWith('(') && seg.endsWith(')')) return false;
-    // @slot 은 URL에서 제거
+    // Strip parallel route (@slot) segment
     if (seg.startsWith('@')) return false;
-    // [[...slug]] optional catch-all — 세그먼트 자체가 옵션이므로 부모 경로로 정규화
+    // [[...slug]] optional catch-all — segment is optional, normalize to parent path
     if (seg.startsWith('[[') && seg.endsWith(']]')) return false;
     return true;
   });

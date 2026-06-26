@@ -23,7 +23,7 @@ export async function refreshCommentAuthorNames(nodes: Node[]): Promise<Node[]> 
           nameMap.set(accountId, json.name);
         }
       } catch {
-        // fetch 실패 시 기존 이름 유지
+        // Keep existing name on fetch failure
       }
     }),
   );

@@ -59,13 +59,13 @@ export function buildGraph(
     }
   }
 
-  // dead-end 탐지: 나가는 edge가 없는 노드
+  // Mark dead ends: nodes with no outgoing edges
   const sourcesWithOutgoing = new Set(edges.map((e) => e.source));
   for (const node of nodes) {
     node.isDeadEnd = !sourcesWithOutgoing.has(node.id);
   }
 
-  // 알려지지 않은 target → 노드로 추가 (동적 라우트 등)
+  // Add unknown targets as nodes (e.g. external dynamic routes)
   const knownTargets = new Set(edges.map((e) => e.target));
   for (const target of knownTargets) {
     if (!routeSet.has(target)) {

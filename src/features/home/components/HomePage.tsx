@@ -170,7 +170,7 @@ export function HomePage({ isCloudMode }: Props) {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* 좌측 사이드 패널 */}
+        {/* Left side panel */}
         <aside
           className={cn(
             'relative shrink-0 overflow-hidden border-r border-border transition-[width] duration-normal',
@@ -237,7 +237,7 @@ export function HomePage({ isCloudMode }: Props) {
           </div>
         </aside>
 
-        {/* 메인 콘텐츠 */}
+        {/* Main content */}
         <main className="flex flex-1 flex-col items-center justify-center overflow-hidden">
           {state.status === 'idle' && (
             <p className="text-sm text-muted-foreground">{t.home.idle}</p>
