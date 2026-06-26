@@ -29,19 +29,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '요청 본문이 올바른 JSON이 아닙니다.' }, { status: 400 });
   }
 
-  const { baseUrl, route, auth, projectPath } = body;
+  const { baseUrl, route, auth: bodyAuth, projectPath } = body;
 
   if (!baseUrl || !route) {
     return NextResponse.json({ error: 'baseUrl과 route가 필요합니다.' }, { status: 400 });
   }
 
   let parsedAuth: AuthOptions | undefined;
-  if (auth) {
-    if (auth.type === 'script' && projectPath) {
-      const relScript = auth.scriptPath.replace(/^[/\\]+/, '');
+  if (bodyAuth) {
+    if (bodyAuth.type === 'script' && projectPath) {
+      const relScript = bodyAuth.scriptPath.replace(/^[/\\]+/, '');
       parsedAuth = { type: 'script', scriptPath: path.join(normalizePath(projectPath), relScript) };
     } else {
-      parsedAuth = parseAuth(auth);
+      parsedAuth = parseAuth(bodyAuth);
     }
   }
 
