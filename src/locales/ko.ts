@@ -17,6 +17,7 @@ export const ko: Translations = {
     idle: '프로젝트 경로를 입력하고 분석 버튼을 눌러보세요.',
     analyzing: '분석 중...',
     analyzeDisabled: '분석 중입니다.',
+    analyzeLocalOnly: '현재 분석 기능은 로컬에서만 가능합니다.',
     cancel: '취소',
     importConfigPrompt: '분석 설정도 불러올까요?',
     importConfigDesc: '프로젝트 경로, 서버 URL, 인증 정보 등 분석 설정을 함께 복원합니다.',

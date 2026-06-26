@@ -214,6 +214,9 @@ export function HomePage({ isCloudMode }: Props) {
               className="hidden"
               onChange={fileFlow.handleImportFile}
             />
+            {isCloudMode && (
+              <p className="text-xs text-muted-foreground">{t.home.analyzeLocalOnly}</p>
+            )}
             <ProjectInput
               ref={projectInputRef}
               onAnalyze={(options) => {

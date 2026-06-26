@@ -15,6 +15,7 @@ export const en = {
     idle: 'Enter a project path and click Analyze.',
     analyzing: 'Analyzing...',
     analyzeDisabled: 'Analysis in progress.',
+    analyzeLocalOnly: 'Analysis is only available when running locally.',
     cancel: 'Cancel',
     importConfigPrompt: 'Restore analysis settings?',
     importConfigDesc: 'Restore project path, server URL, and auth settings along with the flow.',
